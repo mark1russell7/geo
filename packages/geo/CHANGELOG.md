@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- The polygon tests refuse a position with a longitude out of -540 to 540, with the error `longitude-range`. Before, a polygon with a very large longitude, for example 1e12, made `locatePoint`, `polygonsIntersect` and `polygonIntersectsBBox` run for a very long time. The new constant `MAX_GEOMETRY_LONGITUDE` gives the limit.
+- This change refuses an input that 0.1.0 accepted. Thus the version is a MINOR change.
+
 ## 0.1.0
 
 The first version.

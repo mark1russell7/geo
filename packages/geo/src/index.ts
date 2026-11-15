@@ -39,6 +39,7 @@ export {
 export {
   followsRightHandRule,
   locatePoint,
+  MAX_GEOMETRY_LONGITUDE,
   polygonIntersectsBBox,
   polygonsIntersect,
   rewind,

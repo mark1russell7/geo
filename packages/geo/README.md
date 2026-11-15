@@ -79,6 +79,7 @@ The distance and the destination use a sphere, not the ellipsoid of WGS84. Again
 | `polygonIntersectsBBox(polygon, box)` | Gives `true` when a polygon and a box have a common point. |
 | `ringWinding(ring)` | Gives `"counterclockwise"`, `"clockwise"` or `"degenerate"`, from the exact sign of the area. |
 | `followsRightHandRule(polygon)`, `rewind(polygon)` | Examine the right-hand rule of RFC 7946, and give a copy that follows it. |
+| `MAX_GEOMETRY_LONGITUDE` | The largest absolute longitude of a polygon in a test: 540. |
 
 ### Geohashes
 
@@ -122,7 +123,8 @@ The orientation and segment tests are exact. A test across the antimeridian also
 - A move of a longitude `x` by 360 against the sign of `x` has no rounding when `|x|` is 128 or more. For example, `200 - 360` and `-200 + 360` are exact.
 - `locatePoint` moves the point when that move is exact. Otherwise, it moves the polygon when the move of each vertex is exact. So `locatePoint` is exact for each polygon with longitudes from -232 to 232.
 - `polygonsIntersect` and `polygonIntersectsBBox` move one polygon. The result is exact when the move of each vertex of one of the two polygons is exact. The result does not change when the two polygons change places.
-- When no exact move exists, the move can round. Then an incorrect result is possible only for a point or an edge nearer than 1e-12 degrees to an edge of the other polygon. This limit is for longitudes from -540 to 540.
+- When no exact move exists, the move can round. Then an incorrect result is possible only for a point or an edge nearer than 1e-12 degrees to an edge of the other polygon.
+- The polygon tests refuse a position with a longitude out of -540 to 540 (`MAX_GEOMETRY_LONGITUDE`) with the error `longitude-range`. The limits above are for that range. Each area of the Earth has a written form in that range, and the limit keeps the time of a test small.
 
 ### Rings
 
@@ -164,7 +166,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | Code | The cause |
 | --- | --- |
 | `not-finite` | A number is `NaN` or infinite. |
-| `latitude-range`, `longitude-range` | A latitude is out of -90 to 90, or a longitude of a `BBox` is out of -180 to 180. A GeoJSON `bbox` accepts each finite longitude. |
+| `latitude-range`, `longitude-range` | A latitude is out of -90 to 90, a longitude of a `BBox` is out of -180 to 180, or a longitude of a polygon in a test is out of -540 to 540. A GeoJSON `bbox` and `parseGeoJson` accept each finite longitude. |
 | `not-a-point` | A value is not an object with the numbers `lat` and `lon`. |
 | `geojson-type`, `geojson-member` | A GeoJSON object has an unknown type, or a member is missing or incorrect. |
 | `position`, `too-few-positions`, `ring-not-closed` | A position, a line or a ring is incorrect. |

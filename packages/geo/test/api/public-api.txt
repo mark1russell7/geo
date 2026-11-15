@@ -29,6 +29,7 @@ type LatLon: dist/index.d.ts#LatLon
 type LineString: dist/index.d.ts#LineString
 MAX_GEOHASH_PRECISION: dist/index.d.ts#MAX_GEOHASH_PRECISION
 MAX_GEOJSON_DEPTH: dist/index.d.ts#MAX_GEOJSON_DEPTH
+MAX_GEOMETRY_LONGITUDE: dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
 type MultiLineString: dist/index.d.ts#MultiLineString
 type MultiPoint: dist/index.d.ts#MultiPoint
 type MultiPolygon: dist/index.d.ts#MultiPolygon
@@ -174,6 +175,9 @@ export declare const MAX_GEOHASH_PRECISION = 12;
 
 ### dist/index.d.ts#MAX_GEOJSON_DEPTH
 export declare const MAX_GEOJSON_DEPTH = 32;
+
+### dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
+export declare const MAX_GEOMETRY_LONGITUDE = 540;
 
 ### dist/index.d.ts#MultiLineString
 interface MultiLineString extends GeoJsonObject {

@@ -9,7 +9,8 @@
  *
  * - `not-finite`: a number is `NaN` or infinite.
  * - `latitude-range`: a latitude is not from -90 to 90.
- * - `longitude-range`: a longitude of a box is not from -180 to 180.
+ * - `longitude-range`: a longitude of a box is not from -180 to 180. Or a longitude of a polygon in a test is not from
+ *   -540 to 540 (`MAX_GEOMETRY_LONGITUDE`).
  * - `not-a-point`: a value is not an object with the numbers `lat` and `lon`.
  * - `geojson-type`: a GeoJSON object has no known `type`.
  * - `geojson-member`: a GeoJSON member is missing or has the wrong type.
