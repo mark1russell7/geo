@@ -18,4 +18,5 @@ export {
   type Read,
   type Report,
   report,
+  speedFaults,
 } from "./report.ts";

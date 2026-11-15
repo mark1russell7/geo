@@ -8,6 +8,7 @@
  * - The growth verdict reads the growth of the time of `head` for each 10 times more positions on the 552 regions.
  *   Each round is one job, so a slow round changes each size of that round.
  * - The hashes show if `base` and `head` give the same result on each case.
+ * - The speed gate holds the budget and the growth of `head`. A verdict that cannot decide does not pass the gate.
  *
  * @packageDocumentation
  */
@@ -73,6 +74,22 @@ const sizeOf = (id: string): number | undefined => {
   const spec = CASES.find((entry) => entry.id === id);
   return spec !== undefined && spec.columns * spec.rows === 552 ? spec.positions : undefined;
 };
+
+/**
+ * This function gives the faults of the speed gate of a run, or an empty list. The gate holds the budget when the run
+ * has its case, and the growth when the run has 2 or more sizes. Each outcome other than `within` is a fault. Thus a
+ * noisy run does not pass the gate.
+ */
+export function speedFaults(result: Pick<Report, "budget" | "growth">, ids: readonly string[]): string[] {
+  const faults: string[] = [];
+  if (ids.includes(BUDGET_CASE) && result.budget.outcome !== "within") {
+    faults.push(`The budget of ${BUDGET_CASE} is "${result.budget.outcome}". ${result.budget.reason}`);
+  }
+  if (ids.filter((id) => sizeOf(id) !== undefined).length >= 2 && result.growth.outcome !== "within") {
+    faults.push(`The growth is "${result.growth.outcome}". ${result.growth.reason}`);
+  }
+  return faults;
+}
 
 /** This function gives `true`, `false` or `undefined` for the hashes of `base` and `head` on one case. */
 function sameResult(hashes: readonly HashLine[], id: string): boolean | undefined {

@@ -10,7 +10,8 @@
  * `report.md`. The workflow
  * `bench-simplify.yml` starts it in CI. Do not start a full run on a shared computer.
  *
- * The exit code is 1 when a case has no read, or when `head` and `base` give different results on a case.
+ * The exit code is 1 when a case has no read, or when `head` and `base` give different results on a case. It is also 1
+ * when the speed gate has a fault: the budget or the growth is not `within`.
  *
  * @packageDocumentation
  */
@@ -20,7 +21,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { freshRun } from "@mark1russell7/rigor-bench/fresh";
 import { CASES } from "./map.ts";
-import { type HashLine, markdown, report } from "./report.ts";
+import { type HashLine, markdown, report, speedFaults } from "./report.ts";
 
 const USAGE = "Usage: node src/bench.ts --out <folder> [--rounds 7] [--cases <id,id>] [--timeout-ms 180000]";
 const args = process.argv.slice(2);
@@ -78,3 +79,8 @@ if (unsure.length > 0) {
   console.error(`The result of head is not the same as the result of geo 0.3.1, or has no read, on: ${unsure.join(", ")}`);
   process.exitCode = 1;
 }
+
+// The speed gate: the budget and the growth of head. A noisy verdict is a fault, so a noisy run does not pass.
+const faults = speedFaults(result, names);
+for (const fault of faults) console.error(`Speed gate: ${fault}`);
+if (faults.length > 0) process.exitCode = 1;
