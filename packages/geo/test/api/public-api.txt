@@ -48,6 +48,8 @@ destinationKm: dist/index.d.ts#destinationKm
 destinationMeters: dist/index.d.ts#destinationMeters
 distanceKm: dist/index.d.ts#distanceKm
 distanceMeters: dist/index.d.ts#distanceMeters
+distanceToGeometryKm: dist/index.d.ts#distanceToGeometryKm
+distanceToGeometryMeters: dist/index.d.ts#distanceToGeometryMeters
 followsRightHandRule: dist/index.d.ts#followsRightHandRule
 fromGeoJsonBBox: dist/index.d.ts#fromGeoJsonBBox
 fromPosition: dist/index.d.ts#fromPosition
@@ -247,6 +249,12 @@ export declare function distanceKm(a: LatLon, b: LatLon, radiusKm?: number): num
 
 ### dist/index.d.ts#distanceMeters
 export declare function distanceMeters(a: LatLon, b: LatLon, radiusMeters?: number): number;
+
+### dist/index.d.ts#distanceToGeometryKm
+export declare function distanceToGeometryKm(point: LatLon, geometry: Geometry, radiusKm?: number): number;
+
+### dist/index.d.ts#distanceToGeometryMeters
+export declare function distanceToGeometryMeters(point: LatLon, geometry: Geometry, radiusMeters?: number): number;
 
 ### dist/index.d.ts#followsRightHandRule
 export declare function followsRightHandRule(polygon: Polygon | MultiPolygon): boolean;

@@ -24,6 +24,8 @@ describe("the entry", () => {
         "destinationMeters",
         "distanceKm",
         "distanceMeters",
+        "distanceToGeometryKm",
+        "distanceToGeometryMeters",
         "followsRightHandRule",
         "fromGeoJsonBBox",
         "fromPosition",

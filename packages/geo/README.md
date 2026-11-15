@@ -1,6 +1,6 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
@@ -18,7 +18,7 @@ The package is an ES module with types. It has two dependencies, [`@mark1russell
 ## Example
 
 ```ts
-import { distanceKm, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
+import { distanceKm, distanceToGeometryKm, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
 
 // An area as a GeoJSON Polygon. The positions are [longitude, latitude].
 const area = parseGeometry({
@@ -32,6 +32,8 @@ const london = { lat: 51.5074, lon: -0.1278 }; // the center of London
 
 if (area.value.type === "Polygon") locatePoint(paris, area.value); // "inside"
 distanceKm(paris, london); // 343.556...
+distanceToGeometryKm(paris, area.value); // 0, because the area contains the point
+distanceToGeometryKm(london, area.value) <= 400; // true: London is in a buffer of 400 km around the area
 geohash(paris, 7); // "u09tvw0"
 ```
 
@@ -57,6 +59,7 @@ geohash(paris, 7); // "u09tvw0"
 | `centralAngleRadians(a, b)` | The angle between two points at the center of the sphere. |
 | `initialBearing(from, to)` | The bearing at the start of the great circle, from 0 to 360 (360 not included), clockwise from north. |
 | `destinationKm(from, bearing, distance, radiusKm?)`, `destinationMeters(...)` | The point at a distance from a point, on an initial bearing. |
+| `distanceToGeometryKm(point, geometry, radiusKm?)`, `distanceToGeometryMeters(...)` | The great-circle distance from a point to the nearest point of a GeoJSON geometry. It is 0 in a polygon. The section [The distance to a geometry](#the-distance-to-a-geometry) gives the rules. |
 
 The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance.
 
@@ -115,6 +118,18 @@ RFC 7946 (section 3.1) says that an edge is a straight line in longitude and lat
 - The boundary is the boundary of the written polygon. So it includes an edge that two parts of a MultiPolygon share. It also includes an edge on the cut at 180 or -180, and an edge at a pole.
 - So one area can give `boundary` in one written form and `inside` in a different form. For example, a polygon cut at the antimeridian gives `boundary` on the cut, and the same polygon with longitudes past 180 gives `inside` there.
 - To test if a polygon contains a point, use `locatePoint(point, polygon) !== "outside"`. This test gives the same result for each written form of an area.
+
+### The distance to a geometry
+
+`distanceToGeometryKm` and `distanceToGeometryMeters` give the great-circle distance from a point to the nearest point of a geometry. A test `distance <= buffer` thus tells if a place and its buffer touch an area.
+
+- An edge of a line or of a polygon is the straight line in longitude and latitude of RFC 7946, as in the polygon tests. The distance is the distance on the sphere to the nearest point of that line.
+- The distance to a polygon is 0 when `locatePoint` does not give `"outside"`. Otherwise, it is the distance to the nearest edge. The edges of the holes are edges too.
+- The distance is 0 only when the point is on the geometry: in a polygon, on a line, or equal to a point. The tests of a line use the exact predicates. A point that is not on the geometry gets a distance of `Number.MIN_VALUE` or more.
+- The distance to a `GeometryCollection` is the smallest distance to its members. A geometry with no position gives `Infinity`.
+- A line or a polygon must have its longitudes from -540 to 540 (`MAX_GEOMETRY_LONGITUDE`). A point of the geometry can have each finite longitude.
+
+The function divides each edge into pieces of 1 degree or less. In each piece, it finds the nearest point with a bisection on the slope of the haversine function. The property tests compare each result with a dense sample of the edge, refined by a golden-section search. No result is more than the reference by 1e-7 km or more.
 
 ### Exact results
 

@@ -47,6 +47,7 @@ export {
   type PointLocation,
   type RingWinding,
 } from "./polygon.ts";
+export { distanceToGeometryKm, distanceToGeometryMeters } from "./distance.ts";
 export {
   decodeGeohash,
   DEFAULT_GEOHASH_PRECISION,
