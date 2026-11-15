@@ -4,6 +4,7 @@
  * @packageDocumentation
  */
 
+import { dyadic } from "@mark1russell7/predicates";
 import { GeoError } from "./errors.ts";
 import {
   checkBBox,
@@ -216,20 +217,42 @@ export function toGeoJsonBBox(box: BBox): GeoJsonBBox {
   return [box.west, box.south, box.east, box.north];
 }
 
+const inLonRange = (lon: number): boolean => lon >= -180 && lon <= 180;
+
+/**
+ * This function gives the west and the east of a GeoJSON box, from -180 to 180, with no rounding. The box is the arc
+ * from the west to the east in the direction of the east.
+ */
+function boxLongitudes(west: number, east: number): readonly [west: number, east: number] {
+  if (inLonRange(west) && inLonRange(east)) return [west, east];
+  // The test of the width has no rounding. In floating point, `east - west` can round up to 360.
+  if (dyadic.compare(dyadic.sub(dyadic.fromFloat(east), dyadic.fromFloat(west)), dyadic.fromFloat(360)) >= 0) {
+    return [-180, 180];
+  }
+  const start = normalizeLon(west);
+  const end = normalizeLon(east);
+  // An east on the antimeridian ends the arc at 180. When the west is on the antimeridian too, the arc has no width.
+  return [start, end === -180 && start !== -180 ? 180 : end];
+}
+
 /**
  * This function reads a GeoJSON bounding box of 4 or 6 numbers, with the rules of `parseGeoJson`. It examines the
- * altitudes, and then it ignores them.
+ * altitudes, and then it ignores them. It gives a box with longitudes from -180 to 180, with no rounding:
  *
- * @throws GeoError - The code is `bbox`, `not-finite`, `longitude-range` or `latitude-range`.
+ * - A box with its two longitudes from -180 to 180 does not change. This is the form of RFC 7946, section 5.2.
+ * - A box with `east - west` of 360 or more has the full range of longitudes, from -180 to 180.
+ * - For each other box, the west is `normalizeLon(west)`, and the east is `normalizeLon(east)`.
+ * - In that last rule, an east that is 180 plus a multiple of 360 becomes 180. If the west is also on that meridian,
+ *   the east stays -180, and the box is only the antimeridian.
+ *
+ * So `[190, 540]` gives the box of `[-170, 180]`, and `[170, 190]` gives `[170, -170]`, a box that crosses the
+ * antimeridian.
+ *
+ * @throws GeoError - The code is `bbox`, `not-finite` or `latitude-range`.
  */
 export function fromGeoJsonBBox(bbox: readonly number[]): BBox {
   checkGeoJsonBBox(bbox, "");
   const half = bbox.length / 2;
-  const box: BBox = {
-    west: bbox[0] as number,
-    south: bbox[1] as number,
-    east: bbox[half] as number,
-    north: bbox[half + 1] as number,
-  };
-  return box;
+  const [west, east] = boxLongitudes(bbox[0] as number, bbox[half] as number);
+  return { west, south: bbox[1] as number, east, north: bbox[half + 1] as number };
 }

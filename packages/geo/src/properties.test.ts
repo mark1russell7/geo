@@ -1,4 +1,4 @@
-import { orient2dSign } from "@mark1russell7/predicates";
+import { dyadic, orient2dSign } from "@mark1russell7/predicates";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,6 +9,7 @@ import {
   decodeGeohash,
   destinationKm,
   distanceKm,
+  fromGeoJsonBBox,
   geohash,
   geohashNeighbor,
   geohashesInBBox,
@@ -18,6 +19,7 @@ import {
   parseGeoJson,
   polygonsIntersect,
   ringWinding,
+  toGeoJsonBBox,
   type GeohashDirection,
   type LatLon,
   type Polygon,
@@ -447,6 +449,61 @@ describe("the bounding box", () => {
         if (box === undefined) return false;
         const width = box.west <= box.east ? box.east - box.west : box.east - box.west + 360;
         return width <= 180;
+      }),
+    );
+  });
+});
+
+describe("the GeoJSON bounding box with longitudes past 180", () => {
+  /** A west in the RFC form. The west 180 is the west -180, so the west is from -180 to less than 180. */
+  const westLon = lon.filter((x) => x < 180);
+  /** An east in the RFC form. The east -180 is the east 180, so the east is from more than -180 to 180. */
+  const eastLon = lon.filter((x) => x > -180);
+  const latitudes = fc.tuple(lat, lat).map(([a, b]) => (a <= b ? ([a, b] as const) : ([b, a] as const)));
+  /** The number k of a shift 360 k: often small, sometimes near 2^40. */
+  const turns = fc.oneof(fc.integer({ min: -3, max: 3 }), fc.integer({ min: -(2 ** 40), max: 2 ** 40 }));
+
+  /**
+   * A longitude from -180 to 180 on a grid of steps 2^(e - 52), with 2^e more than 180 + |shift|. Then the sum of the
+   * longitude and each multiple of 360 up to |shift| is a multiple of the step below 2^e, and it has no rounding.
+   */
+  const onGrid = (x: number, shift: number, round: (value: number) => number): number => {
+    if (shift === 0) return x;
+    const step = 2 ** (Math.ceil(Math.log2(180 + Math.abs(shift))) - 52);
+    return round(x / step) * step;
+  };
+
+  /** It gives `true` when the floating-point sum has no rounding. */
+  const exactSum = (x: number, shift: number): boolean =>
+    dyadic.compare(dyadic.add(dyadic.fromFloat(x), dyadic.fromFloat(shift)), dyadic.fromFloat(x + shift)) === 0;
+
+  /** The numbers with -0 as 0. */
+  const plain = (numbers: readonly number[]): number[] => numbers.map((x) => x + 0);
+
+  it("gives the RFC form back after a shift of 360 k of the two longitudes", () => {
+    fc.assert(
+      fc.property(westLon, eastLon, latitudes, turns, (w, e, [south, north], k) => {
+        const shift = 360 * k;
+        const west = onGrid(w, shift, Math.floor);
+        const east = onGrid(e, shift, Math.ceil);
+        expect(exactSum(west, shift) && exactSum(east, shift)).toBe(true);
+        const box = fromGeoJsonBBox([west + shift, south, east + shift, north]);
+        expect(plain(toGeoJsonBBox(box))).toEqual(plain([west, south, east, north]));
+      }),
+    );
+  });
+
+  it("gives the RFC form back for a box that crosses the antimeridian, with its east written past its west", () => {
+    fc.assert(
+      fc.property(westLon, eastLon, latitudes, turns, (w, e, [south, north], k) => {
+        const shift = 360 * k;
+        const west = onGrid(w, Math.abs(shift) + 360, Math.floor);
+        const east = onGrid(e, Math.abs(shift) + 360, Math.ceil);
+        fc.pre(west > east);
+        expect(exactSum(west, shift) && exactSum(east, shift + 360)).toBe(true);
+        // For example, the written box [170, 190] is the RFC box [170, -170].
+        const box = fromGeoJsonBBox([west + shift, south, east + shift + 360, north]);
+        expect(plain(toGeoJsonBBox(box))).toEqual(plain([west, south, east, north]));
       }),
     );
   });
