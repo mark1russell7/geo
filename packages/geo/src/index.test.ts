@@ -13,6 +13,7 @@ describe("the entry", () => {
         "GeoError",
         "MAX_GEOHASH_PRECISION",
         "MAX_GEOJSON_DEPTH",
+        "MAX_GEOMETRY_LONGITUDE",
         "bboxContains",
         "bboxIntersects",
         "bboxOfGeoJson",

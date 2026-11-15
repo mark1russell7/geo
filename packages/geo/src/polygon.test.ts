@@ -3,6 +3,7 @@ import {
   GeoError,
   followsRightHandRule,
   locatePoint,
+  MAX_GEOMETRY_LONGITUDE,
   polygonIntersectsBBox,
   polygonsIntersect,
   rewind,
@@ -371,5 +372,46 @@ describe("polygonIntersectsBBox", () => {
 
   it("refuses an incorrect box", () => {
     expect(() => polygonIntersectsBBox(WITH_HOLE, { west: 0, south: 2, east: 1, north: 1 })).toThrow(GeoError);
+  });
+});
+
+describe("the longitude limit of the polygon tests", () => {
+  // A ring that goes around the Earth about 5.5 billion times. Before 0.2.0, locatePoint ran for more than 20 s on it.
+  const WIDE: Polygon = { type: "Polygon", coordinates: [[[-1e12, 0], [1e12, 0], [1e12, 1], [-1e12, 0]]] };
+
+  const codeOf = (run: () => unknown): { code: string; path: string } => {
+    try {
+      run();
+    } catch (error) {
+      if (error instanceof GeoError) return { code: error.code, path: error.path };
+      throw error;
+    }
+    throw new Error("The function did not throw");
+  };
+
+  it("refuses a longitude past 540 at once, with its path", () => {
+    expect(MAX_GEOMETRY_LONGITUDE).toBe(540);
+    const started = performance.now();
+    expect(codeOf(() => locatePoint({ lat: 0.5, lon: 10 }, WIDE))).toEqual({
+      code: "longitude-range",
+      path: "coordinates[0][0]",
+    });
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(codeOf(() => polygonsIntersect(square(0, 0, 1, 1), WIDE)).code).toBe("longitude-range");
+    expect(codeOf(() => polygonIntersectsBBox(WIDE, { west: 0, south: 0, east: 1, north: 1 })).code).toBe("longitude-range");
+  });
+
+  it("gives the path of the position in a MultiPolygon", () => {
+    const multi: MultiPolygon = { type: "MultiPolygon", coordinates: [square(0, 0, 1, 1).coordinates, square(540, 0, 540.5, 1).coordinates] };
+    expect(codeOf(() => locatePoint({ lat: 0.5, lon: 0.5 }, multi))).toEqual({
+      code: "longitude-range",
+      path: "coordinates[1][0][1]",
+    });
+  });
+
+  it("accepts each longitude from -540 to 540", () => {
+    expect(locatePoint({ lat: 0.5, lon: 179.5 }, square(539, 0, 540, 1))).toBe("inside");
+    expect(locatePoint({ lat: 0.5, lon: -179.5 }, square(-540, 0, -539, 1))).toBe("inside");
+    expect(locatePoint({ lat: 0.5, lon: 0.5 }, square(-540, 0, 540, 1))).toBe("inside");
   });
 });

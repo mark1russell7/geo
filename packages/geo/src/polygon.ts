@@ -36,7 +36,9 @@
  * - `polygonsIntersect` and `polygonIntersectsBBox` move one polygon. The result is exact when the move of each vertex
  *   of one of the two polygons is exact. The result does not change when the two polygons change places.
  * - When no exact move exists, the move can round. Then an incorrect result is possible only for a point or an edge
- *   nearer than 1e-12 degrees to an edge of the other polygon. This limit is for longitudes from -540 to 540.
+ *   nearer than 1e-12 degrees to an edge of the other polygon.
+ * - The tests refuse a polygon with a longitude out of -540 to 540 (`MAX_GEOMETRY_LONGITUDE`). The limits above are
+ *   for that range, and the limit keeps the work of a test small.
  * - An orientation with an exact offset in `@mark1russell7/predicates` removes these limits.
  *
  * @packageDocumentation
@@ -62,7 +64,7 @@ import {
 } from "./planar.ts";
 import { checkPoint, normalizeLon, type LatLon, type Position } from "./point.ts";
 
-export type { PointLocation } from "./planar.ts";
+export { MAX_GEOMETRY_LONGITUDE, type PointLocation } from "./planar.ts";
 
 /** The winding of a ring in the plane of longitude and latitude. A ring with an area of 0 is `degenerate`. */
 export type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
@@ -90,8 +92,8 @@ function locateInPart(part: Part, point: LatLon): PointLocation {
  * The rules are in the description of this module. A point on the boundary of one part and inside another part is
  * `inside`. A closed polygon contains the point when the result is not `outside`.
  *
- * @throws GeoError - The code is `geojson-type`, `position`, `too-few-positions`, `ring-not-closed`, `not-finite` or
- *   `latitude-range`.
+ * @throws GeoError - The code is `geojson-type`, `position`, `too-few-positions`, `ring-not-closed`, `not-finite`,
+ *   `latitude-range` or `longitude-range`.
  */
 export function locatePoint(point: LatLon, polygon: Polygon | MultiPolygon): PointLocation {
   checkPoint(point);

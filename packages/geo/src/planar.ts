@@ -31,8 +31,33 @@ export interface Part {
 }
 
 /**
+ * The largest absolute longitude of a position that the polygon tests accept: 540 degrees, one turn past the
+ * antimeridian on each side.
+ *
+ * - The work of a test is in proportion to the width of the longitudes over 360. This limit keeps it small.
+ * - The limits of the exact results in the README are for this range only.
+ * - Each part of the Earth has a form in this range, so the limit refuses no area.
+ */
+export const MAX_GEOMETRY_LONGITUDE = 540;
+
+/**
+ * This function refuses a position with a longitude out of the range of `MAX_GEOMETRY_LONGITUDE`. The function gets
+ * only a valid GeoJSON position.
+ */
+export function checkGeometryLongitude(position: Position, path: string): void {
+  const lon = position[0];
+  if (lon < -MAX_GEOMETRY_LONGITUDE || lon > MAX_GEOMETRY_LONGITUDE) {
+    throw new GeoError(
+      "longitude-range",
+      `The longitude ${lon} is not from -${MAX_GEOMETRY_LONGITUDE} to ${MAX_GEOMETRY_LONGITUDE}`,
+      path,
+    );
+  }
+}
+
+/**
  * This function examines a Polygon or a MultiPolygon, and gives its polygons with their extents. A polygon with no ring
- * is not in the result.
+ * is not in the result. A longitude out of the range of `MAX_GEOMETRY_LONGITUDE` gives the error `longitude-range`.
  */
 export function polygonParts(geometry: Polygon | MultiPolygon): readonly Part[] {
   let polygons: readonly Rings[];
@@ -47,22 +72,25 @@ export function polygonParts(geometry: Polygon | MultiPolygon): readonly Part[] 
     throw new GeoError("geojson-type", "The geometry must be a Polygon or a MultiPolygon");
   }
   const parts: Part[] = [];
-  for (const rings of polygons) {
-    if (rings.length === 0) continue;
+  polygons.forEach((rings, polygonIndex) => {
+    if (rings.length === 0) return;
+    const path = geometry.type === "Polygon" ? "coordinates" : `coordinates[${polygonIndex}]`;
     let minX = Number.POSITIVE_INFINITY;
     let maxX = Number.NEGATIVE_INFINITY;
     let minY = Number.POSITIVE_INFINITY;
     let maxY = Number.NEGATIVE_INFINITY;
-    for (const ring of rings) {
-      for (const [x, y] of ring) {
+    rings.forEach((ring, ringIndex) => {
+      ring.forEach((position, positionIndex) => {
+        checkGeometryLongitude(position, `${path}[${ringIndex}][${positionIndex}]`);
+        const [x, y] = position;
         minX = Math.min(minX, x);
         maxX = Math.max(maxX, x);
         minY = Math.min(minY, y);
         maxY = Math.max(maxY, y);
-      }
-    }
+      });
+    });
     parts.push({ rings, minX, maxX, minY, maxY });
-  }
+  });
   return parts;
 }
 
