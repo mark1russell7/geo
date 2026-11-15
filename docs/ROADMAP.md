@@ -5,10 +5,11 @@ This file is the plan of geo. The Status page of the site reads it, and the trac
 | ID | Item | Status | Summary |
 | --- | --- | --- | --- |
 | R1 | The first package | done | @mark1russell7/geo 0.1.0 is on npm: points, distance, boxes, a point in a polygon, overlap, geohash and GeoJSON. |
-| R11 | A limit on the longitudes of a polygon | in progress | A polygon with a longitude of 1e12 made `locatePoint` run for a very long time. The tests now refuse a longitude out of -540 to 540. Version 0.2.0. |
-| R2 | The distance from a place to an area | in progress | The great-circle distance from a point to a polygon, a line or a point. The alert system needs it to match a place and its buffer against the polygon of an alert. |
-| R3 | The alert system matches places by shape | next | The core of the alert system matches a place and its buffer against the polygon or the circle of an alert, with this package. |
+| R11 | A limit on the longitudes of a polygon | done | A polygon with a longitude of 1e12 made `locatePoint` run for a very long time. The tests now refuse a longitude out of -540 to 540. Version 0.2.0. |
+| R2 | The distance from a place to an area | done | `distanceToGeometryKm` gives the great-circle distance from a point to a polygon, a line or a point. The alert system needs it to match a place and its buffer against the polygon of an alert. Version 0.2.1. |
+| R3 | The alert system matches places by shape | in progress | The core of the alert system matches a place and its buffer against the polygon or the circle of an alert, with this package. |
 | R4 | Exact moves across the antimeridian | next | The exact orientation with an offset of 360, the point in a ring and the meet of two segments go to `@mark1russell7/predicates`. |
+| R12 | Simplify regions that share edges | in progress | The alert map draws the counties and zones of a state, and the real outlines are large. Neighbour regions keep one shared edge after the simplification, so no gap and no overlap opens. The tolerance is in km for each zoom level. |
 | R6 | The live demo site | next | An interactive map: draw an area, move a place, and see the location, the distance, the box and the geohash cells. |
 | R5 | `@procedures/geo` uses this package | later | `greatCircleKm` and the geohash of `@procedures/geo` become calls of this package. |
 | R7 | Circles and buffers as polygons | later | A circle on the Earth as a polygon, also across the antimeridian and around a pole. |
