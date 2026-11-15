@@ -1,4 +1,5 @@
 import fc from "fast-check";
+import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
 import {
   EARTH_MEAN_RADIUS_KM,
@@ -261,22 +262,22 @@ function reference(from: LatLon, a: Position, b: Position): { sampled: number; r
   return { sampled, refined, step };
 }
 
-const lat = fc.double({ min: -90, max: 90, noNaN: true });
-const lon = fc.double({ min: -180, max: 180, noNaN: true });
-const polar = fc.double({ min: 75, max: 90, noNaN: true }).chain((value) => fc.constantFrom(value, 0 - value));
+const lat = uniformDouble({ min: -90, max: 90 });
+const lon = uniformDouble({ min: -180, max: 180 });
+const polar = uniformDouble({ min: 75, max: 90 }).chain((value) => fc.constantFrom(value, 0 - value));
 
 /** An edge: short, long, near a pole, or across the antimeridian. */
 const edge: fc.Arbitrary<readonly [Position, Position]> = fc.oneof(
-  fc.tuple(lat, lon, fc.double({ min: -2, max: 2, noNaN: true }), fc.double({ min: -2, max: 2, noNaN: true })).map(
+  fc.tuple(lat, lon, uniformDouble({ min: -2, max: 2 }), uniformDouble({ min: -2, max: 2 })).map(
     ([y, x, dy, dx]): readonly [Position, Position] => [[x, y], [x + dx, Math.max(-90, Math.min(90, y + dy))]],
   ),
-  fc.tuple(lat, lon, lat, fc.double({ min: -200, max: 200, noNaN: true })).map(
+  fc.tuple(lat, lon, lat, uniformDouble({ min: -200, max: 200 })).map(
     ([y, x, y2, dx]): readonly [Position, Position] => [[x, y], [x + dx, y2]],
   ),
-  fc.tuple(polar, lon, polar, fc.double({ min: -180, max: 180, noNaN: true })).map(
+  fc.tuple(polar, lon, polar, uniformDouble({ min: -180, max: 180 })).map(
     ([y, x, y2, dx]): readonly [Position, Position] => [[x, y], [x + dx, Math.sign(y2) === Math.sign(y) ? y2 : 0 - y2]],
   ),
-  fc.tuple(lat, fc.double({ min: 170, max: 180, noNaN: true }), lat, fc.double({ min: 0, max: 30, noNaN: true })).map(
+  fc.tuple(lat, uniformDouble({ min: 170, max: 180 }), lat, uniformDouble({ min: 0, max: 30 })).map(
     ([y, x, y2, dx]): readonly [Position, Position] => [[x, y], [x + dx, y2]],
   ),
 );
@@ -286,7 +287,7 @@ const viewerFor = ([a, b]: readonly [Position, Position]): fc.Arbitrary<LatLon> 
   fc.oneof(
     fc.record({ lat, lon }),
     fc
-      .tuple(fc.double({ min: 0, max: 1, noNaN: true }), fc.double({ min: -1, max: 1, noNaN: true }), fc.double({ min: -1, max: 1, noNaN: true }))
+      .tuple(uniformDouble({ min: 0, max: 1 }), uniformDouble({ min: -1, max: 1 }), uniformDouble({ min: -1, max: 1 }))
       .map(([u, dy, dx]) => {
         const on = pointAt(a, b, u);
         return { lat: Math.max(-90, Math.min(90, on.lat + dy)), lon: on.lon + dx };
