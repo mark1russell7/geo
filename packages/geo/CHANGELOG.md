@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- `distanceToGeometryKm` and `distanceToGeometryMeters` give the great-circle distance from a point to the nearest point of a GeoJSON geometry. The distance to a polygon is 0 when `locatePoint` does not give `outside`. The distance is 0 only when the point is on the geometry. The README gives the rules.
+- This change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.2.0
 
 - The polygon tests refuse a position with a longitude out of -540 to 540, with the error `longitude-range`. Before, a polygon with a very large longitude, for example 1e12, made `locatePoint`, `polygonsIntersect` and `polygonIntersectsBBox` run for a very long time. The new constant `MAX_GEOMETRY_LONGITUDE` gives the limit.
