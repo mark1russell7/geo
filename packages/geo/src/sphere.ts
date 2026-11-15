@@ -20,7 +20,12 @@ function checkFinite(value: number, name: string): void {
   if (!Number.isFinite(value)) throw new GeoError("not-finite", `The ${name} ${value} is not a finite number`);
 }
 
-function checkRadius(value: number): void {
+/**
+ * This function refuses a radius that is not finite or not more than 0.
+ *
+ * @internal
+ */
+export function checkRadius(value: number): void {
   checkFinite(value, "radius");
   if (value <= 0) throw new GeoError("radius", `The radius ${value} must be more than 0`);
 }

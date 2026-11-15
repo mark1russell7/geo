@@ -41,18 +41,37 @@ export interface Part {
 export const MAX_GEOMETRY_LONGITUDE = 540;
 
 /**
- * This function refuses a position with a longitude out of the range of `MAX_GEOMETRY_LONGITUDE`. The function gets
- * only a valid GeoJSON position.
+ * This function refuses each position with a longitude out of the range of `MAX_GEOMETRY_LONGITUDE`. The positions are
+ * valid GeoJSON already. The path of the error is the path of the position.
  */
-export function checkGeometryLongitude(position: Position, path: string): void {
-  const lon = position[0];
-  if (lon < -MAX_GEOMETRY_LONGITUDE || lon > MAX_GEOMETRY_LONGITUDE) {
-    throw new GeoError(
-      "longitude-range",
-      `The longitude ${lon} is not from -${MAX_GEOMETRY_LONGITUDE} to ${MAX_GEOMETRY_LONGITUDE}`,
-      path,
-    );
+export function checkGeometryLongitudes(positions: readonly Position[], path: string): void {
+  positions.forEach((position, index) => {
+    const lon = position[0];
+    if (lon < -MAX_GEOMETRY_LONGITUDE || lon > MAX_GEOMETRY_LONGITUDE) {
+      throw new GeoError(
+        "longitude-range",
+        `The longitude ${lon} is not from -${MAX_GEOMETRY_LONGITUDE} to ${MAX_GEOMETRY_LONGITUDE}`,
+        `${path}[${index}]`,
+      );
+    }
+  });
+}
+
+/** This function gives the rings with their extent in the plane. The rings have one or more positions. */
+export function partOf(rings: Rings): Part {
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const ring of rings) {
+    for (const [x, y] of ring) {
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
   }
+  return { rings, minX, maxX, minY, maxY };
 }
 
 /**
@@ -73,23 +92,9 @@ export function polygonParts(geometry: Polygon | MultiPolygon): readonly Part[] 
   }
   const parts: Part[] = [];
   polygons.forEach((rings, polygonIndex) => {
-    if (rings.length === 0) return;
     const path = geometry.type === "Polygon" ? "coordinates" : `coordinates[${polygonIndex}]`;
-    let minX = Number.POSITIVE_INFINITY;
-    let maxX = Number.NEGATIVE_INFINITY;
-    let minY = Number.POSITIVE_INFINITY;
-    let maxY = Number.NEGATIVE_INFINITY;
-    rings.forEach((ring, ringIndex) => {
-      ring.forEach((position, positionIndex) => {
-        checkGeometryLongitude(position, `${path}[${ringIndex}][${positionIndex}]`);
-        const [x, y] = position;
-        minX = Math.min(minX, x);
-        maxX = Math.max(maxX, x);
-        minY = Math.min(minY, y);
-        maxY = Math.max(maxY, y);
-      });
-    });
-    parts.push({ rings, minX, maxX, minY, maxY });
+    rings.forEach((ring, ringIndex) => checkGeometryLongitudes(ring, `${path}[${ringIndex}]`));
+    if (rings.length > 0) parts.push(partOf(rings));
   });
   return parts;
 }

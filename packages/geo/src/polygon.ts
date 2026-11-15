@@ -69,7 +69,15 @@ export { MAX_GEOMETRY_LONGITUDE, type PointLocation } from "./planar.ts";
 /** The winding of a ring in the plane of longitude and latitude. A ring with an area of 0 is `degenerate`. */
 export type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
 
-function locateInPart(part: Part, point: LatLon): PointLocation {
+/**
+ * A test of a point against the rings of one part in the plane. The rings move by `dx` on the x axis. The default test
+ * is `locateInRings`.
+ *
+ * @internal
+ */
+export type PlaneTest = (rings: Rings, x: number, y: number, dx?: number) => PointLocation;
+
+function locateInPart(part: Part, point: LatLon, test: PlaneTest): PointLocation {
   if (Math.abs(point.lat) === 90) return touchesLatitude(part.rings, point.lat) ? "boundary" : "outside";
   if (point.lat < part.minY || point.lat > part.maxY) return "outside";
   const lon = normalizeLon(point.lon);
@@ -79,8 +87,24 @@ function locateInPart(part: Part, point: LatLon): PointLocation {
     // orientation with an exact offset in @mark1russell7/predicates replaces this.
     const where =
       !movesExactly(lon, shift) && partMovesExactly(part, 0 - shift)
-        ? locateInRings(part.rings, lon, point.lat, 0 - shift)
-        : locateInRings(part.rings, lon + shift, point.lat);
+        ? test(part.rings, lon, point.lat, 0 - shift)
+        : test(part.rings, lon + shift, point.lat);
+    if (where === "inside") return "inside";
+    if (where === "boundary") result = "boundary";
+  }
+  return result;
+}
+
+/**
+ * This function gives the location of a valid point against the parts, with the rules of this module. It tries the
+ * point at each of its longitudes in the range of each part. The plane test is `locateInRings` by default.
+ *
+ * @internal
+ */
+export function locateInParts(parts: readonly Part[], point: LatLon, test: PlaneTest = locateInRings): PointLocation {
+  let result: PointLocation = "outside";
+  for (const part of parts) {
+    const where = locateInPart(part, point, test);
     if (where === "inside") return "inside";
     if (where === "boundary") result = "boundary";
   }
@@ -97,13 +121,7 @@ function locateInPart(part: Part, point: LatLon): PointLocation {
  */
 export function locatePoint(point: LatLon, polygon: Polygon | MultiPolygon): PointLocation {
   checkPoint(point);
-  let result: PointLocation = "outside";
-  for (const part of polygonParts(polygon)) {
-    const where = locateInPart(part, point);
-    if (where === "inside") return "inside";
-    if (where === "boundary") result = "boundary";
-  }
-  return result;
+  return locateInParts(polygonParts(polygon), point);
 }
 
 /**

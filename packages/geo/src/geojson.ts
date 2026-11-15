@@ -222,7 +222,12 @@ export function checkGeoJsonBBox(value: unknown, path: string): void {
   }
 }
 
-function checkGeometry(value: unknown, path: string, depth: number): void {
+/**
+ * This function examines a GeoJSON geometry, with the members of its type and the nested collections.
+ *
+ * @internal
+ */
+export function checkGeometry(value: unknown, path: string = "", depth: number = 0): void {
   if (!isObject(value)) throw new GeoError("geojson-member", "A geometry must be an object", path);
   const coordinates = memberPath(path, "coordinates");
   switch (value["type"]) {
