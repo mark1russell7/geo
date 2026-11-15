@@ -1,7 +1,8 @@
 /**
  * This package has functions for places on the Earth: points on WGS84, great-circle distances and bearings, and
  * bounding boxes that can cross the antimeridian. It also has point-in-polygon and overlap tests for GeoJSON on exact
- * predicates, geohashes, and the types of GeoJSON (RFC 7946). The README gives the limits of the exact results.
+ * predicates, geohashes, and the types of GeoJSON (RFC 7946). It simplifies regions that share borders, for maps. The
+ * README gives the limits of the exact results.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * @packageDocumentation
@@ -48,6 +49,7 @@ export {
   type RingWinding,
 } from "./polygon.ts";
 export { distanceToGeometryKm, distanceToGeometryMeters } from "./distance.ts";
+export { regionSimplifier, simplifyRegions, type Region } from "./simplify.ts";
 export {
   decodeGeohash,
   DEFAULT_GEOHASH_PRECISION,

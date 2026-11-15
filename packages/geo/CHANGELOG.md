@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- `simplifyRegions` and `regionSimplifier` simplify Polygons and MultiPolygons that share borders, for a map. A shared border stays shared, so no gap and no overlap opens. The README gives the rules.
+- The type `Region` is a `Polygon` or a `MultiPolygon`.
+- The new error code `tolerance` refuses a tolerance less than 0.
+- `distanceToGeometryKm` gives the same distance to an edge in each of its two directions. Before, the last digits could change with the direction.
+- `GeoErrorCode` has a new value. A caller with a full `switch` on the codes must add it. Thus the version is a MINOR change (before 1.0.0, a breaking change is a MINOR change).
+
 ## 0.2.1
 
 - `distanceToGeometryKm` and `distanceToGeometryMeters` give the great-circle distance from a point to the nearest point of a GeoJSON geometry. The distance to a polygon is 0 when `locatePoint` does not give `outside`. The distance is 0 only when the point is on the geometry. The README gives the rules.

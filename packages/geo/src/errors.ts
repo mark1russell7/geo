@@ -25,6 +25,7 @@
  * - `too-many-cells`: a cover of a box needs more cells than the limit.
  * - `max-cells`: the limit of the cells of a cover is `NaN` or less than 0.
  * - `radius`: the radius of a sphere is not more than 0.
+ * - `tolerance`: a tolerance is less than 0.
  */
 export type GeoErrorCode =
   | "not-finite"
@@ -43,7 +44,8 @@ export type GeoErrorCode =
   | "geohash-character"
   | "too-many-cells"
   | "max-cells"
-  | "radius";
+  | "radius"
+  | "tolerance";
 
 /**
  * The error that each function of this package throws for an incorrect input. It is a `RangeError`, so code that
