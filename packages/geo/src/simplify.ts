@@ -29,7 +29,8 @@ import { classifySegments, orient2dSign } from "@mark1russell7/predicates";
 import { angleToEdge, angleToPosition, scale, viewerAt, type Viewer } from "./distance.ts";
 import { GeoError } from "./errors.ts";
 import { checkGeometry, type MultiPolygon, type Polygon } from "./geojson.ts";
-import { checkGeometryLongitudes, locateInRing } from "./planar.ts";
+import { locateInRings } from "@mark1russell7/predicates";
+import { checkGeometryLongitudes } from "./planar.ts";
 import type { Position } from "./point.ts";
 import { checkRadius, EARTH_MEAN_RADIUS_KM } from "./sphere.ts";
 
@@ -518,7 +519,7 @@ function badEdges(selection: Selection, edges: Edges): Set<number> {
     vertices.visit(lowX, lowY, highX, highY, (other) => {
       const [x, y] = points[other] as Position;
       if (x < lowX || x > highX || y < lowY || y > highY) return false;
-      if (locateInRing(lobe, x, y) !== "inside") return false;
+      if (locateInRings([lobe], x, y) !== "inside") return false;
       bad.add(edge);
       return true;
     });

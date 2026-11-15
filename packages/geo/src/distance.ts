@@ -25,7 +25,7 @@
  */
 
 import { checkGeometry, type Geometry } from "./geojson.ts";
-import { checkGeometryLongitudes, locateInRing, partOf, type Part, type PointLocation, type Rings } from "./planar.ts";
+import { checkGeometryLongitudes, onLine, partOf, type Part, type PointLocation, type Rings } from "./planar.ts";
 import { locateInParts } from "./polygon.ts";
 import { checkPoint, normalizeLon, type LatLon, type Position } from "./point.ts";
 import { checkRadius, EARTH_MEAN_RADIUS_KM, EARTH_MEAN_RADIUS_METERS } from "./sphere.ts";
@@ -93,7 +93,7 @@ function collect(geometry: Geometry, path: string, shapes: Shapes): void {
 
 /** The plane test of a line: a point on an edge is on the line. The line has no inside. */
 function onLines(rings: Rings, x: number, y: number, dx: number = 0): PointLocation {
-  return rings.some((line) => locateInRing(line, x, y, dx) === "boundary") ? "boundary" : "outside";
+  return rings.some((line) => onLine(line, x, y, dx)) ? "boundary" : "outside";
 }
 
 /** This function gives `true` when two positions are the same point of the sphere. The test has no rounding. */

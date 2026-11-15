@@ -2,37 +2,7 @@ import { dyadic } from "@mark1russell7/predicates";
 import fc from "fast-check";
 import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
-import { movesExactly, overlappingShifts, shiftsInto } from "./planar.ts";
-
-/** It gives `true` when the floating-point sum `x + shift` is equal to the exact sum. */
-const exactSum = (x: number, shift: number): boolean =>
-  dyadic.compare(dyadic.add(dyadic.fromFloat(x), dyadic.fromFloat(shift)), dyadic.fromFloat(x + shift)) === 0;
-
-const shift = fc.integer({ min: -4, max: 4 }).map((k) => 360 * k);
-
-describe("movesExactly", () => {
-  it("holds only for a sum with no rounding", () => {
-    fc.assert(fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), shift, (x, s) => !movesExactly(x, s) || exactSum(x, s)));
-    fc.assert(fc.property(uniformDouble({ min: -2000, max: 2000 }), shift, (x, s) => !movesExactly(x, s) || exactSum(x, s)));
-  });
-
-  it("holds for each longitude from 128 to 540 moved by 360 against its sign", () => {
-    fc.assert(fc.property(uniformDouble({ min: 128, max: 540 }), (x) => movesExactly(x, -360) && movesExactly(0 - x, 360)));
-  });
-
-  it("follows the rule at its limits", () => {
-    expect(movesExactly(5, 0)).toBe(true);
-    expect(movesExactly(128, -360)).toBe(true);
-    expect(movesExactly(127.99999999999999, -360)).toBe(false);
-    expect(movesExactly(200, 360)).toBe(false);
-    expect(movesExactly(0, 360)).toBe(false);
-    expect(movesExactly(256, -720)).toBe(true);
-    expect(movesExactly(255.99999999999997, -720)).toBe(false);
-    expect(movesExactly(2 ** 56, -360)).toBe(false);
-    expect(movesExactly(Number.NaN, 360)).toBe(false);
-    expect(movesExactly(Number.NEGATIVE_INFINITY, 360)).toBe(false);
-  });
-});
+import { overlappingShifts, shiftsInto } from "./planar.ts";
 
 describe("the shifts", () => {
   it("test the range with no rounding", () => {

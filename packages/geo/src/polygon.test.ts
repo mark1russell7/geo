@@ -54,6 +54,20 @@ const FAR_TRIANGLE: Polygon = { type: "Polygon", coordinates: [[[350, 0], [370, 
 // FAR_TRIANGLE, but the floating-point sum EDGE_LAT - 10 + 360 rounds to the east of the edge.
 const EDGE_LAT = 5 + 3 * 2 ** -46;
 
+// Two longitudes with a float sum with 360 that rounds. Before 0.3.1, the tests moved such a point in floating point,
+// because the rule of exact moves did not hold for the point (less than 128) or for the longitude 100 of the polygons.
+// - UP + 360 is 290 - 2^-46. Its float sum rounds up to 290.
+// - DOWN + 360 is 290 - 3 * 2^-46. Its float sum rounds down to 290 - 2^-44.
+const UP = -70 - 2 ** -46;
+const DOWN = -70 - 3 * 2 ** -46;
+const EDGE = 290 - 2 ** -44;
+
+// A polygon with a notch: the vertical edge x = EDGE goes from y = 10 to y = 20, and east of it, the notch is outside.
+const NOTCH: Polygon = {
+  type: "Polygon",
+  coordinates: [[[100, 10], [EDGE, 10], [EDGE, 20], [300, 20], [300, 30], [100, 30], [100, 10]]],
+};
+
 // A polar cap in the form of RFC 7946, section 5.3: the full range of longitudes up to the pole.
 const CAP: Polygon = {
   type: "Polygon",
@@ -161,6 +175,17 @@ describe("locatePoint", () => {
     const near: Polygon = { type: "Polygon", coordinates: [[[-10, 0], [10, 20], [-10, 20], [-10, 0]]] };
     expect(locatePoint({ lat: 0.1, lon: -9.9 }, near)).toBe("inside");
     expect(locatePoint({ lat: EDGE_LAT, lon: EDGE_LAT - 10 }, near)).toBe("boundary");
+  });
+
+  it("is exact when the float sum of the point and 360 rounds", () => {
+    expect(UP + 360).toBe(290);
+    expect(DOWN + 360).toBe(EDGE);
+    // The exact moved point is west of the east edge x = 290. The float sum is on that edge.
+    expect(locatePoint({ lat: 20, lon: UP }, square(100, 10, 290, 30))).toBe("inside");
+    // The exact moved point is east of the edge x = EDGE, in the notch. The float sum is on that edge.
+    expect(locatePoint({ lat: 15, lon: DOWN }, NOTCH)).toBe("outside");
+    // The point one float step to the west of DOWN moves exactly onto the edge.
+    expect(locatePoint({ lat: 15, lon: EDGE - 360 }, NOTCH)).toBe("boundary");
   });
 
   it("is exact for a point written past 180 with fine bits", () => {
@@ -330,6 +355,17 @@ describe("polygonsIntersect", () => {
     expect(polygonsIntersect(b, a)).toBe(true);
     expect(polygonsIntersect(a, c)).toBe(false);
     expect(polygonsIntersect(c, a)).toBe(false);
+  });
+
+  it("is exact in the two orders when the float sums of the vertices and 360 round", () => {
+    // Moved by 360, the west edge of the box is east of the edge x = EDGE of the notch, with a gap of 2^-46.
+    const apart = square(DOWN, 12, DOWN + 5, 14);
+    expect(polygonsIntersect(NOTCH, apart)).toBe(false);
+    expect(polygonsIntersect(apart, NOTCH)).toBe(false);
+    // Moved by 360, the west edge of this box is on the edge x = EDGE.
+    const touching = square(EDGE - 360, 12, DOWN + 5, 14);
+    expect(polygonsIntersect(NOTCH, touching)).toBe(true);
+    expect(polygonsIntersect(touching, NOTCH)).toBe(true);
   });
 
   it("finds two polygons that meet at a pole", () => {

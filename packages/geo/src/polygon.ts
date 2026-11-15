@@ -5,7 +5,7 @@
  * The rules:
  *
  * - An edge is a straight line in longitude and latitude (RFC 7946, section 3.1). The tests use exact predicates in that
- *   plane. A move by 360 degrees can round. The section "Exact results" below gives the limits.
+ *   plane. A test across the antimeridian moves the point or a polygon by a multiple of 360 degrees, with no rounding.
  * - A polygon is a closed set. A point on an edge or on a vertex is on the boundary, and the boundary is in the polygon.
  * - The even-odd rule gives the inside of a ring. The first ring is the exterior, and the other rings are holes. A point
  *   in a hole is outside, and a point on the edge of a hole is on the boundary.
@@ -27,19 +27,12 @@
  *
  * Exact results:
  *
- * - A test across the antimeridian moves the point or the polygon by a multiple of 360 degrees.
- * - A move of a longitude `x` by 360 against the sign of `x` has no rounding when `|x|` is 128 or more.
- *   `movesExactly` of the module `planar` gives the full rule.
- * - `locatePoint` moves the point when that move is exact. Else it moves the polygon when the move of each vertex is
- *   exact. Then the result is exact.
- * - Thus `locatePoint` is exact for each polygon with longitudes from -232 to 232.
- * - `polygonsIntersect` and `polygonIntersectsBBox` move one polygon. The result is exact when the move of each vertex
- *   of one of the two polygons is exact. The result does not change when the two polygons change places.
- * - When no exact move exists, the move can round. Then an incorrect result is possible only for a point or an edge
- *   nearer than 1e-12 degrees to an edge of the other polygon.
- * - The tests refuse a polygon with a longitude out of -540 to 540 (`MAX_GEOMETRY_LONGITUDE`). The limits above are
- *   for that range, and the limit keeps the work of a test small.
- * - An orientation with an exact offset in `@mark1russell7/predicates` removes these limits.
+ * - A test across the antimeridian moves the point or a polygon by a multiple of 360 degrees.
+ * - The shifted predicates of `@mark1russell7/predicates` give the signs of the exact moved points. So each result is
+ *   exact, also when the float sum of a longitude and 360 rounds.
+ * - The result of `polygonsIntersect` does not change when the two polygons change places.
+ * - The tests refuse a polygon with a longitude out of -540 to 540 (`MAX_GEOMETRY_LONGITUDE`). The limit keeps the work
+ *   of a test small.
  *
  * @packageDocumentation
  */
@@ -50,9 +43,7 @@ import { checkBBox, checkRing, type MultiPolygon, type Polygon } from "./geojson
 import type { BBox } from "./bbox.ts";
 import {
   locateInRings,
-  movesExactly,
   overlappingShifts,
-  partMovesExactly,
   partsMeet,
   polygonParts,
   shiftsInto,
@@ -83,12 +74,8 @@ function locateInPart(part: Part, point: LatLon, test: PlaneTest): PointLocation
   const lon = normalizeLon(point.lon);
   let result: PointLocation = "outside";
   for (const shift of shiftsInto(lon, part.minX, part.maxX)) {
-    // The move is exact only when movesExactly holds: for a move by 360, each |x| from 128 against the sign of x. An
-    // orientation with an exact offset in @mark1russell7/predicates replaces this.
-    const where =
-      !movesExactly(lon, shift) && partMovesExactly(part, 0 - shift)
-        ? test(part.rings, lon, point.lat, 0 - shift)
-        : test(part.rings, lon + shift, point.lat);
+    // The rings move by -shift in place of the point by shift. The plane test makes this move with no rounding.
+    const where = test(part.rings, lon, point.lat, 0 - shift);
     if (where === "inside") return "inside";
     if (where === "boundary") result = "boundary";
   }
@@ -196,15 +183,9 @@ function partsIntersect(a: Part, b: Part): boolean {
   for (const pole of [90, -90]) {
     if (touchesLatitude(a.rings, pole) && touchesLatitude(b.rings, pole)) return true;
   }
-  // The move is exact only when movesExactly holds: for a move by 360, each |x| from 128 against the sign of x. An
-  // orientation with an exact offset in @mark1russell7/predicates replaces this. The choice of the moved part does not
-  // depend on the order of a and b. A change of the order gives the negative shifts (overlappingShifts has no rounding),
-  // and it changes the two branches of each test.
-  return overlappingShifts(a.minX, a.maxX, b.minX, b.maxX).some((shift) => {
-    if (partMovesExactly(b, shift)) return partsMeet(a, b, shift);
-    if (partMovesExactly(a, 0 - shift)) return partsMeet(b, a, 0 - shift);
-    return partsMeet(a, b, shift) || partsMeet(b, a, 0 - shift);
-  });
+  // The move of b by the shift has no rounding, so the result is exact. The shifts of b against a are the negatives of
+  // the shifts of a against b, so the result does not depend on the order of a and b.
+  return overlappingShifts(a.minX, a.maxX, b.minX, b.maxX).some((shift) => partsMeet(a, b, shift));
 }
 
 /**
