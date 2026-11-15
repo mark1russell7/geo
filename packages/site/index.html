@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>geo</title>
-<meta name="description" content="Points on the Earth: distance, bearing, polygons, geohash and GeoJSON, as plain functions with no dependencies.">
+<meta name="description" content="Points on the Earth: distance, bearing, polygons, boxes, geohash and GeoJSON, as plain functions with no dependencies. Try them on a live globe.">
 <script>
   // The theme before the first paint: the choice of the visitor, else the theme of the system.
   try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
@@ -24,15 +24,79 @@
 </header>
 
 <main>
-  <h1>geo</h1>
-  <p class="lead">Points on the Earth: distance, bearing, polygons, geohash and GeoJSON, as plain functions with no dependencies.</p>
+  <section class="intro">
+    <h1>Points on the Earth, as plain functions</h1>
+    <p class="lead">geo gives the distance, the bearing, the area that holds a place, the box and the geohash. It has no dependencies on a map library. Move the place, turn the globe, or draw an area.</p>
+    <div class="command">
+      <code id="install">pnpm add @mark1russell7/geo</code>
+      <button id="copy" type="button">Copy</button>
+    </div>
+  </section>
 
-  <h2>Install</h2>
-  <div class="command">
-    <code id="install">pnpm add @mark1russell7/geo</code>
-    <button id="copy" type="button">Copy</button>
-  </div>
-  <p class="note">This package has no release on npm yet. <a href="./releases/">Releases</a> shows each version, and <a href="./status/">Status</a> shows the open work.</p>
+  <section class="demo" aria-label="Live demo">
+    <div class="chart">
+      <div class="controls">
+        <div class="choice" role="group" aria-label="Area">
+          <button type="button" class="pick" data-preset="antimeridian" aria-pressed="true">Across the antimeridian</button>
+          <button type="button" class="pick" data-preset="long-way" aria-pressed="false">The long way round</button>
+          <button type="button" class="pick" data-preset="pole" aria-pressed="false">Around the North Pole</button>
+          <button type="button" class="pick" id="draw" aria-pressed="false">Draw an area</button>
+        </div>
+        <div class="view-tools">
+          <div class="choice" role="group" aria-label="View">
+            <button type="button" class="pick" data-projection="globe" aria-pressed="true">Globe</button>
+            <button type="button" class="pick" data-projection="flat" aria-pressed="false">Flat map</button>
+          </div>
+          <div class="zoom" role="group" aria-label="Zoom">
+            <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="frame">
+        <svg id="map" tabindex="0" role="application" aria-label="The map. Drag to turn it. Drag the place or tap the map to move the place. The arrow keys turn the map, and Shift with the arrow keys moves the place." aria-describedby="note"></svg>
+      </div>
+      <div id="draw-bar" class="draw-bar" hidden>
+        <p id="draw-help">Tap the map to add the corners of the area.</p>
+        <button type="button" id="draw-close" disabled>Close the area</button>
+        <button type="button" id="draw-cancel">Cancel</button>
+      </div>
+      <p id="note" class="note"></p>
+    </div>
+
+    <aside class="readout" aria-label="What geo gives">
+      <div class="answer" aria-live="polite">
+        <p id="sentence" class="sentence"></p>
+        <p id="buffer-sentence" class="quiet"></p>
+      </div>
+      <div class="fields">
+        <label class="field">Latitude <input id="lat" type="number" inputmode="decimal" step="0.01" min="-90" max="90"></label>
+        <label class="field">Longitude <input id="lon" type="number" inputmode="decimal" step="0.01" min="-180" max="180"></label>
+        <label class="field range">Buffer <output id="buffer-out" for="buffer"></output> <input id="buffer" type="range" min="0" max="2000" step="50" value="600"></label>
+        <label class="field range">Geohash length <output id="precision-out" for="precision"></output> <input id="precision" type="range" min="1" max="7" step="1" value="3"></label>
+      </div>
+      <pre class="code"><code id="code"></code></pre>
+      <ul class="legend">
+        <li><span class="key area"></span>The area</li>
+        <li><span class="key buffer"></span>The buffer of the place</li>
+        <li><span class="key cell"></span>The geohash cell and its neighbors</li>
+        <li><span class="key box"></span>The bounding box of the area</li>
+      </ul>
+    </aside>
+  </section>
+
+  <section class="contents">
+    <h2>What the package has</h2>
+    <dl class="groups">
+      <div><dt>Distance and bearing</dt><dd><code>distanceKm</code> <code>initialBearing</code> <code>destinationKm</code> <code>centralAngleRadians</code></dd></div>
+      <div><dt>Places and areas</dt><dd><code>locatePoint</code> <code>distanceToGeometryKm</code> <code>polygonsIntersect</code> <code>polygonIntersectsBBox</code></dd></div>
+      <div><dt>Boxes</dt><dd><code>bboxOfPoints</code> <code>bboxOfGeoJson</code> <code>bboxContains</code> <code>bboxIntersects</code></dd></div>
+      <div><dt>Geohash</dt><dd><code>geohash</code> <code>decodeGeohash</code> <code>geohashNeighbors</code> <code>geohashesInBBox</code></dd></div>
+      <div><dt>GeoJSON</dt><dd><code>parseGeoJson</code> <code>parseGeometry</code> <code>rewind</code> <code>ringWinding</code></dd></div>
+      <div><dt>Maps of regions</dt><dd><code>simplifyRegions</code> <code>regionSimplifier</code></dd></div>
+    </dl>
+    <p class="quiet">Each edge of a polygon is a straight line in longitude and latitude, as RFC 7946 tells. <a href="./releases/">Releases</a> shows each version, and <a href="./status/">Status</a> shows the open work.</p>
+  </section>
 </main>
 
 <script type="module" src="./src/index.ts"></script>

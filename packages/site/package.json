@@ -12,9 +12,15 @@
     "dev": "vite",
     "build": "vite build"
   },
+  "dependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@mark1russell7/geo": "workspace:*",
+    "d3-geo": "3.1.1"
+  },
   "devDependencies": {
     "@mark1russell7/cue": "^2.0.0",
     "@mark1russell7/site-pages": "^0.4.8",
+    "@types/d3-geo": "^3.1.1",
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^5.0.3",
     "typescript": "^7.0.2",
