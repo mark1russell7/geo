@@ -1,5 +1,6 @@
 import { classifySegments } from "@mark1russell7/predicates";
 import fc from "fast-check";
+import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
 import { distanceToGeometryKm } from "./distance.ts";
 import { GeoError } from "./errors.ts";
@@ -206,14 +207,7 @@ function problems(input: readonly Region[], output: readonly Region[], tolerance
   return found;
 }
 
-/**
- * A uniform value from `min` to `max` in steps of 1/1000 of the range. `fc.double` takes floats uniformly by their
- * bits, so most of its values are very near 0.
- */
-const uniform = (min: number, max: number): fc.Arbitrary<number> =>
-  fc.integer({ min: 0, max: 1000 }).map((value) => min + ((max - min) * value) / 1000);
-
-const noise = fc.array(uniform(-1, 1), { minLength: 64, maxLength: 256 });
+const noise = fc.array(uniformDouble({ min: -1, max: 1 }), { minLength: 64, maxLength: 256 });
 
 describe("simplifyRegions", () => {
   it("keeps each position at the tolerance 0 when no position is on the edge of its neighbors", () => {
@@ -343,7 +337,7 @@ describe("simplifyRegions", () => {
 
   it("keeps the error bound, the borders and the topology of generated maps", () => {
     fc.assert(
-      fc.property(noise, fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 3 }), uniform(0, 6), (values, columns, rows, toleranceKm) => {
+      fc.property(noise, fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 3 }), uniformDouble({ min: 0, max: 6 }), (values, columns, rows, toleranceKm) => {
         const { regions, area } = tiling(values, columns, rows);
         const result = simplifyRegions(regions, toleranceKm);
         expect(problems(regions, result, toleranceKm)).toEqual([]);
@@ -355,7 +349,7 @@ describe("simplifyRegions", () => {
 
   it("puts each sample point in one region at most", () => {
     fc.assert(
-      fc.property(noise, uniform(0.5, 6), (values, toleranceKm) => {
+      fc.property(noise, uniformDouble({ min: 0.5, max: 6 }), (values, toleranceKm) => {
         const { regions } = tiling(values, 2, 2);
         const result = simplifyRegions(regions, toleranceKm);
         for (let sample = 0; sample < 60; sample += 1) {

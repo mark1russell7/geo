@@ -1,5 +1,6 @@
 import { dyadic } from "@mark1russell7/predicates";
 import fc from "fast-check";
+import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
 import { movesExactly, overlappingShifts, shiftsInto } from "./planar.ts";
 
@@ -12,11 +13,11 @@ const shift = fc.integer({ min: -4, max: 4 }).map((k) => 360 * k);
 describe("movesExactly", () => {
   it("holds only for a sum with no rounding", () => {
     fc.assert(fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), shift, (x, s) => !movesExactly(x, s) || exactSum(x, s)));
-    fc.assert(fc.property(fc.double({ min: -2000, max: 2000, noNaN: true }), shift, (x, s) => !movesExactly(x, s) || exactSum(x, s)));
+    fc.assert(fc.property(uniformDouble({ min: -2000, max: 2000 }), shift, (x, s) => !movesExactly(x, s) || exactSum(x, s)));
   });
 
   it("holds for each longitude from 128 to 540 moved by 360 against its sign", () => {
-    fc.assert(fc.property(fc.double({ min: 128, max: 540, noNaN: true }), (x) => movesExactly(x, -360) && movesExactly(0 - x, 360)));
+    fc.assert(fc.property(uniformDouble({ min: 128, max: 540 }), (x) => movesExactly(x, -360) && movesExactly(0 - x, 360)));
   });
 
   it("follows the rule at its limits", () => {
@@ -50,7 +51,7 @@ describe("the shifts", () => {
 
   it("are the negatives of the shifts in the other order", () => {
     const range = fc
-      .tuple(fc.double({ min: -540, max: 540, noNaN: true }), fc.double({ min: -540, max: 540, noNaN: true }))
+      .tuple(uniformDouble({ min: -540, max: 540 }), uniformDouble({ min: -540, max: 540 }))
       .map(([p, q]): readonly [number, number] => (p <= q ? [p, q] : [q, p]));
     fc.assert(
       fc.property(range, range, ([minA, maxA], [minB, maxB]) => {
@@ -61,9 +62,9 @@ describe("the shifts", () => {
   });
 
   it("include each shift that moves the value into the range, and no other shift", () => {
-    const value = fc.double({ min: -180, max: 180, noNaN: true });
-    const min = fc.double({ min: -540, max: 540, noNaN: true });
-    const width = fc.oneof(fc.constant(0), fc.double({ min: 0, max: 400, noNaN: true }));
+    const value = uniformDouble({ min: -180, max: 180 });
+    const min = uniformDouble({ min: -540, max: 540 });
+    const width = fc.oneof(fc.constant(0), uniformDouble({ min: 0, max: 400 }));
     fc.assert(
       fc.property(value, min, width, (x, low, size) => {
         const high = low + size;

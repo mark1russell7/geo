@@ -1,5 +1,6 @@
 import { dyadic, orient2dSign } from "@mark1russell7/predicates";
 import fc from "fast-check";
+import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
 import {
   EARTH_MEAN_RADIUS_KM,
@@ -26,8 +27,8 @@ import {
   type Position,
 } from "./index.ts";
 
-const lat = fc.double({ min: -90, max: 90, noNaN: true });
-const lon = fc.double({ min: -180, max: 180, noNaN: true });
+const lat = uniformDouble({ min: -90, max: 90 });
+const lon = uniformDouble({ min: -180, max: 180 });
 const point: fc.Arbitrary<LatLon> = fc.record({ lat, lon });
 
 /** The difference of two angles in degrees, from 0 to 180. */
@@ -65,8 +66,8 @@ describe("the distance", () => {
 });
 
 describe("the destination", () => {
-  const bearing = fc.double({ min: 0, max: 360, maxExcluded: true, noNaN: true });
-  const distance = fc.double({ min: 0, max: 19_000, noNaN: true });
+  const bearing = uniformDouble({ min: 0, max: 360 }).filter((value) => value < 360);
+  const distance = uniformDouble({ min: 0, max: 19_000 });
 
   it("is at the distance from the start", () => {
     fc.assert(
@@ -78,9 +79,9 @@ describe("the destination", () => {
   });
 
   it("is on the initial bearing from the start", () => {
-    const start = fc.record({ lat: fc.double({ min: -89, max: 89, noNaN: true }), lon });
+    const start = fc.record({ lat: uniformDouble({ min: -89, max: 89 }), lon });
     fc.assert(
-      fc.property(start, bearing, fc.double({ min: 1, max: 19_000, noNaN: true }), (from, theta, d) => {
+      fc.property(start, bearing, uniformDouble({ min: 1, max: 19_000 }), (from, theta, d) => {
         const end = destinationKm(from, theta, d);
         return angleGap(initialBearing(from, end), theta) <= 1e-6;
       }),
@@ -158,9 +159,9 @@ describe("the geohash", () => {
     const box = fc.record({
       west: lon,
       // Wide boxes that cross the antimeridian often have the east column at or past the west column.
-      width: fc.oneof(fc.double({ min: 0, max: 360, noNaN: true }), fc.double({ min: 300, max: 360, noNaN: true })),
-      south: fc.double({ min: -90, max: 80, noNaN: true }),
-      height: fc.double({ min: 0, max: 10, noNaN: true }),
+      width: fc.oneof(uniformDouble({ min: 0, max: 360 }), uniformDouble({ min: 300, max: 360 })),
+      south: uniformDouble({ min: -90, max: 80 }),
+      height: uniformDouble({ min: 0, max: 10 }),
       precision: fc.integer({ min: 1, max: 2 }),
     });
     fc.assert(
@@ -176,11 +177,11 @@ describe("the geohash", () => {
   it("covers each point of a box", () => {
     const box = fc.record({
       west: lon,
-      width: fc.double({ min: 0, max: 20, noNaN: true }),
-      south: fc.double({ min: -90, max: 80, noNaN: true }),
-      height: fc.double({ min: 0, max: 10, noNaN: true }),
-      s: fc.double({ min: 0, max: 1, noNaN: true }),
-      t: fc.double({ min: 0, max: 1, noNaN: true }),
+      width: uniformDouble({ min: 0, max: 20 }),
+      south: uniformDouble({ min: -90, max: 80 }),
+      height: uniformDouble({ min: 0, max: 10 }),
+      s: uniformDouble({ min: 0, max: 1 }),
+      t: uniformDouble({ min: 0, max: 1 }),
       precision: fc.integer({ min: 1, max: 3 }),
     });
     fc.assert(
@@ -212,7 +213,7 @@ const coarseRing: fc.Arbitrary<Position[]> = fc
 /** A ring of doubles with fine bits, with longitudes from `min` to `max`. */
 const fineRing = (min: number, max: number): fc.Arbitrary<Position[]> =>
   fc
-    .array(fc.tuple(fc.double({ min, max, noNaN: true }), fc.double({ min: -10, max: 10, noNaN: true })), {
+    .array(fc.tuple(uniformDouble({ min, max }), uniformDouble({ min: -10, max: 10 })), {
       minLength: 3,
       maxLength: 6,
     })
@@ -227,8 +228,8 @@ const farShift = fc.constantFrom(360, -360);
 
 /** A point with fine bits near 0. */
 const finePoint: fc.Arbitrary<LatLon> = fc.record({
-  lat: fc.double({ min: -9, max: 9, noNaN: true }),
-  lon: fc.double({ min: -9, max: 9, noNaN: true }),
+  lat: uniformDouble({ min: -9, max: 9 }),
+  lon: uniformDouble({ min: -9, max: 9 }),
 });
 
 const moved = (positions: readonly Position[], dx: number): Position[] => positions.map(([x, y]): Position => [x + dx, y]);
@@ -366,7 +367,7 @@ describe("the overlap", () => {
    * closed polygons have the point P in common.
    */
   const touchingPair: fc.Arbitrary<readonly [Polygon, Polygon]> = fc
-    .tuple(coarseRing, farShift, fc.nat(), edgeFraction, fc.array(fc.double({ min: -1, max: 1, noNaN: true }), { minLength: 4, maxLength: 4 }))
+    .tuple(coarseRing, farShift, fc.nat(), edgeFraction, fc.array(uniformDouble({ min: -1, max: 1 }), { minLength: 4, maxLength: 4 }))
     .map(([near, shift, edge, k, [a = 0, b = 0, c = 0, d = 0]]) => {
       const { point } = onEdge(near, edge, k);
       const p: Position = [point.lon, point.lat];
@@ -405,12 +406,12 @@ describe("the overlap", () => {
 
 describe("normalizeLon", () => {
   it("does not change a longitude from -180 to less than 180, other than -0", () => {
-    fc.assert(fc.property(fc.double({ min: -180, max: 180, maxExcluded: true, noNaN: true }), (x) => Object.is(normalizeLon(x), x + 0)));
+    fc.assert(fc.property(uniformDouble({ min: -180, max: 180 }).filter((value) => value < 180), (x) => Object.is(normalizeLon(x), x + 0)));
   });
 
   it("is x - 360 from 180 to less than 540, and x + 360 from -540 to less than -180, with no rounding", () => {
-    fc.assert(fc.property(fc.double({ min: 180, max: 540, maxExcluded: true, noNaN: true }), (x) => normalizeLon(x) === x - 360));
-    fc.assert(fc.property(fc.double({ min: -540, max: -180, maxExcluded: true, noNaN: true }), (x) => normalizeLon(x) === x + 360));
+    fc.assert(fc.property(uniformDouble({ min: 180, max: 540 }).filter((value) => value < 540), (x) => normalizeLon(x) === x - 360));
+    fc.assert(fc.property(uniformDouble({ min: -540, max: -180 }).filter((value) => value < -180), (x) => normalizeLon(x) === x + 360));
   });
 
   it("gives a longitude from -180 to less than 180 for each finite value", () => {
