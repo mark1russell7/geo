@@ -43,7 +43,7 @@ interface Shapes {
 }
 
 /** The point of view: the point from which the function measures, with its latitude and longitude in degrees. */
-interface Viewer {
+export interface Viewer {
   readonly lat: number;
   readonly lon: number;
   readonly cosLat: number;
@@ -128,11 +128,16 @@ function gapBound(gap: number): number {
   return a * a;
 }
 
+/** This function gives `true` when the position `b` comes before the position `a`, by longitude and then by latitude. */
+const comesBefore = (b: Position, a: Position): boolean => b[0] < a[0] || (b[0] === a[0] && b[1] < a[1]);
+
 /**
  * This function gives the smallest haversine value from the viewer to the edge from `a` to `b`, or `best` when that is
- * smaller. A point of the edge is `(latA + u dLat, lonA + u dLon)`, with `u` from 0 to 1.
+ * smaller. A point of the edge is `(latA + u dLat, lonA + u dLon)`, with `u` from 0 to 1. The function measures each
+ * edge from its first position by longitude and latitude. Thus the edge from `b` to `a` gives the same value.
  */
-function edgeMinimum(viewer: Viewer, a: Position, b: Position, best: number): number {
+function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number): number {
+  const [a, b] = comesBefore(to, from) ? [to, from] : [from, to];
   const latA = a[1];
   const latB = b[1];
   // The central angle is not less than the difference of the latitudes.
@@ -192,6 +197,40 @@ function ringsMinimum(viewer: Viewer, rings: Rings, best: number): number {
   return result;
 }
 
+/** This function gives the central angle in radians for a haversine value. */
+const angleOfHaversine = (value: number): number => 2 * Math.asin(Math.min(1, Math.sqrt(value)));
+
+/**
+ * This function gives the viewer at a valid position.
+ *
+ * @internal
+ */
+export function viewerAt(position: Position): Viewer {
+  const lat = position[1];
+  return { lat, lon: normalizeLon(position[0]), cosLat: Math.cos(lat * RADIANS) };
+}
+
+/**
+ * This function gives the central angle in radians from the viewer to a position, with the method of
+ * `distanceToGeometryKm`. It is not less than the angle from the viewer to an edge from that position.
+ *
+ * @internal
+ */
+export function angleToPosition(viewer: Viewer, position: Position): number {
+  return angleOfHaversine(haversineOf(viewer, position));
+}
+
+/**
+ * This function gives the central angle in radians from the viewer to the edge from `a` to `b`, with the method of
+ * `distanceToGeometryKm`. The edge from `b` to `a` gives the same angle. The angle can be 0 for a viewer that is
+ * very near the edge but not on it.
+ *
+ * @internal
+ */
+export function angleToEdge(viewer: Viewer, a: Position, b: Position): number {
+  return angleOfHaversine(edgeMinimum(viewer, a, b, Math.min(haversineOf(viewer, a), haversineOf(viewer, b))));
+}
+
 /** This function gives the central angle from a valid point to the shapes, in radians. */
 function angleToShapes(point: LatLon, shapes: Shapes): number {
   if (locateInParts(shapes.polygons, point) !== "outside") return 0;
@@ -207,7 +246,7 @@ function angleToShapes(point: LatLon, shapes: Shapes): number {
   for (const part of [...shapes.lines, ...shapes.polygons]) best = ringsMinimum(viewer, part.rings, best);
   if (best === Number.POSITIVE_INFINITY) return best;
   // The point is not on the geometry, so the angle is more than 0. A rounding can give 0 for a very near point.
-  return Math.max(Number.MIN_VALUE, 2 * Math.asin(Math.min(1, Math.sqrt(best))));
+  return Math.max(Number.MIN_VALUE, angleOfHaversine(best));
 }
 
 function angleToGeometry(point: LatLon, geometry: Geometry): number {
@@ -218,8 +257,12 @@ function angleToGeometry(point: LatLon, geometry: Geometry): number {
   return angleToShapes(point, shapes);
 }
 
-/** This function multiplies the angle by the radius. An angle that is more than 0 gives a distance that is more than 0. */
-function scale(angle: number, radius: number): number {
+/**
+ * This function multiplies the angle by the radius. An angle that is more than 0 gives a distance that is more than 0.
+ *
+ * @internal
+ */
+export function scale(angle: number, radius: number): number {
   return angle === 0 ? 0 : Math.max(Number.MIN_VALUE, angle * radius);
 }
 

@@ -84,6 +84,14 @@ The distance and the destination use a sphere, not the ellipsoid of WGS84. Again
 | `followsRightHandRule(polygon)`, `rewind(polygon)` | Examine the right-hand rule of RFC 7946, and give a copy that follows it. |
 | `MAX_GEOMETRY_LONGITUDE` | The largest absolute longitude of a polygon in a test: 540. |
 
+### Simplification of regions
+
+| Name | What it does |
+| --- | --- |
+| `simplifyRegions(regions, toleranceKm, radiusKm?)` | Simplifies Polygons and MultiPolygons that share borders, for a map. Shared borders stay shared, so no gap and no overlap opens. |
+| `regionSimplifier(regions, radiusKm?)` | Prepares the shared borders one time, and gives a function that simplifies the regions for a tolerance. Use it for many zoom levels. |
+| `Region` | A `Polygon` or a `MultiPolygon`. |
+
 ### Geohashes
 
 | Name | What it does |
@@ -130,6 +138,23 @@ RFC 7946 (section 3.1) says that an edge is a straight line in longitude and lat
 - A line or a polygon must have its longitudes from -540 to 540 (`MAX_GEOMETRY_LONGITUDE`). A point of the geometry can have each finite longitude.
 
 The function divides each edge into pieces of 1 degree or less. In each piece, it finds the nearest point with a bisection on the slope of the haversine function. The property tests compare each result with a dense sample of the edge, refined by a golden-section search. No result is more than the reference by 1e-7 km or more.
+
+### Simplification of regions
+
+`simplifyRegions` simplifies regions that share borders, for example the counties of a state, with the method of Douglas and Peucker. The result has one region for each input region, with the same type.
+
+- Each removed position is at most `toleranceKm` from the result, as `distanceToGeometryKm` measures it. Each position of the result is a position of the input.
+- Equal positions join the regions. A border that two regions share stays one border, so no gap and no overlap opens.
+- A position where three or more regions meet stays in the result. A ring with no such position is one closed border.
+- No edge of the result crosses another edge. No kept position goes to the other side of a border, for example an island in a bay. When a removal breaks a rule, the function keeps more positions.
+- Each ring keeps 3 or more different positions, so no region and no hole goes out of the map.
+- A ring with fewer than 3 different positions in the input stays as it is.
+- A ring of the result starts at the first position of the input ring, when the function keeps that position.
+- The tolerance 0 removes only a position on the straight line between its neighbors, and a position equal to the position before it.
+
+The function measures each distance on the sphere, to the straight edge in longitude and latitude of RFC 7946. The tests of the crossings use exact predicates on the longitudes as written. So write all the regions in one range of longitudes. For regions across the antimeridian, use longitudes past 180, for example from 170 to 190.
+
+A position of one region on an edge of another region does not join the two regions. So give the neighbors equal positions on their shared borders. The outlines of the US Census and of the NWS do this.
 
 ### Exact results
 
@@ -191,6 +216,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `too-many-cells` | A cover of a box has more cells than `maxCells`. |
 | `max-cells` | The value of `maxCells` is `NaN` or less than 0. |
 | `radius` | The radius of the sphere is not more than 0. |
+| `tolerance` | The tolerance of a simplification is less than 0. |
 
 ## The differences from @procedures/geo
 
