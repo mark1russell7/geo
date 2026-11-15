@@ -14,4 +14,16 @@ describe("the home page", () => {
     expect(page).toContain('href="./status/"');
     expect(page).toContain('href="https://github.com/mark1russell7/geo"');
   });
+
+  it("has the live demo: the map, the areas, the views and the readout", () => {
+    expect(page).toContain('<svg id="map"');
+    for (const id of ["antimeridian", "long-way", "pole"]) expect(page).toContain(`data-preset="${id}"`);
+    expect(page).toContain('data-projection="globe"');
+    expect(page).toContain('data-projection="flat"');
+    for (const id of ["sentence", "code", "lat", "lon", "buffer", "precision", "draw", "zoom-in", "zoom-out"]) expect(page).toContain(`id="${id}"`);
+  });
+
+  it("does not say that the package has no release", () => {
+    expect(page).not.toContain("no release on npm yet");
+  });
 });

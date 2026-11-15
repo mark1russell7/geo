@@ -53,6 +53,9 @@ jobs:
       site-name: geo
       # The open items for the Status page. check:conventions parses the file on each pull request (roadmap-parses).
       roadmap: docs/ROADMAP.md
-      # The check opens each page in a browser at 360, 400 and 1280 pixels, in light and dark.
+      # The check opens each page in a browser at 360, 390 and 1280 pixels, in light and dark.
       site-check: true
       site-check-pages: /,/releases/,/status/
+      site-check-widths: "360,390,1280"
+      # The probe uses the demo of the home page as a visitor does, at each width.
+      site-check-probe: packages/site/src/check-probe.ts
