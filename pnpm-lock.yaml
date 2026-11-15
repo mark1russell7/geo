@@ -209,8 +209,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       '@mark1russell7/predicates':
-        specifier: ^0.1.2
-        version: 0.1.2
+        specifier: ^0.1.4
+        version: 0.1.4
     devDependencies:
       '@mark1russell7/cue':
         specifier: ^2.0.0
@@ -498,8 +498,8 @@ packages:
     resolution: {integrity: sha512-vS5jF21WC/VApRv4p8afRZahcMl9cuNp03LxbVngY9nYkzq+S7Oit6ksySt2baML+tp46UF60sxnHxn1jlwtTg==}
     engines: {node: '>=22.12'}
 
-  '@mark1russell7/predicates@0.1.2':
-    resolution: {integrity: sha512-ANUaJ6npqn1AaEZgydHn8dgqBN9vyO5lrCkwV6DfnWRQ0E4wIwkMIOnBnPpquOZo10FmeNPimLx80oYYlMqTmg==}
+  '@mark1russell7/predicates@0.1.4':
+    resolution: {integrity: sha512-1lh7XAAejuygPdes/Ze4XV+p+CqxzLGRW9aUwavnSk5hhnc5YkhZN2rjz1ps7oEC9eImd2yfmbt6QKZktT4XPQ==}
     engines: {node: '>=22'}
 
   '@mark1russell7/rigor-generators@0.1.16':
@@ -1823,7 +1823,7 @@ snapshots:
 
   '@mark1russell7/optional@1.2.0': {}
 
-  '@mark1russell7/predicates@0.1.2': {}
+  '@mark1russell7/predicates@0.1.4': {}
 
   '@mark1russell7/rigor-generators@0.1.16': {}
 
