@@ -35,6 +35,8 @@ export interface Preset {
   readonly place: LatLon;
   /** The longitude and the latitude at the center of the view. */
   readonly view: readonly [lon: number, lat: number];
+  /** The zoom of the first view of the area: 1 shows the full globe. */
+  readonly zoom: number;
 }
 
 /** The ring of the Pacific area, with its longitudes past 180 written as `east`. */
@@ -57,6 +59,7 @@ export const PRESETS: readonly Preset[] = [
     ring: pacific((lon) => lon),
     place: { lat: -18, lon: 179.5 },
     view: [180, -18],
+    zoom: 2.25,
   },
   {
     id: "long-way",
@@ -65,6 +68,7 @@ export const PRESETS: readonly Preset[] = [
     ring: pacific((lon) => lon - 360),
     place: { lat: -18, lon: 179.5 },
     view: [180, -18],
+    zoom: 1,
   },
   {
     id: "pole",
@@ -82,6 +86,7 @@ export const PRESETS: readonly Preset[] = [
     ],
     place: { lat: 78, lon: -40 },
     view: [-40, 60],
+    zoom: 1.5,
   },
 ];
 

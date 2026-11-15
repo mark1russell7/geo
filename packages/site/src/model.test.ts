@@ -29,6 +29,7 @@ describe("the presets", () => {
   it("has the three areas, each with a closed ring", () => {
     expect(PRESETS.map((one) => one.id)).toEqual(["antimeridian", "long-way", "pole"]);
     for (const one of PRESETS) expect(one.ring[0]).toEqual(one.ring[one.ring.length - 1]);
+    expect(PRESETS.map((one) => one.zoom)).toEqual([2.25, 1, 1.5]);
   });
 
   it("puts the place of the antimeridian area inside it", () => {

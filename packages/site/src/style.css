@@ -355,7 +355,7 @@ button:disabled {
 
 .labels text {
   fill: var(--quiet);
-  font: 500 13px Barlow, system-ui, sans-serif;
+  font: 500 16px Barlow, system-ui, sans-serif;
 }
 
 .draw-bar {

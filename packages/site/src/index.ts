@@ -13,6 +13,8 @@ copy.addEventListener("click", () => {
 });
 
 const ZOOMS = [1, 1.5, 2.25, 3.5, 5, 8] as const;
+/** This function gives the index of a zoom in `ZOOMS`, or 0 for a zoom that is not in it. */
+const zoomIndex = (zoom: number): number => Math.max(0, ZOOMS.indexOf(zoom as (typeof ZOOMS)[number]));
 const first = PRESETS[0] as (typeof PRESETS)[number];
 
 /** The state of the demo. A render reads it, and each event changes it. */
@@ -25,7 +27,7 @@ const state = {
   place: first.place,
   center: first.view as readonly [number, number],
   projection: "globe" as Projection,
-  zoom: 0,
+  zoom: zoomIndex(first.zoom),
   bufferKm: 600,
   precision: 3,
 };
@@ -149,7 +151,7 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-preset]
   button.addEventListener("click", () => {
     const preset = presetOf(button.dataset["preset"] ?? "");
     if (preset === undefined) return;
-    Object.assign(state, { preset: preset.id, ring: preset.ring, note: preset.note, place: preset.place, center: preset.view, drawing: false, draft: [] });
+    Object.assign(state, { preset: preset.id, ring: preset.ring, note: preset.note, place: preset.place, center: preset.view, zoom: zoomIndex(preset.zoom), drawing: false, draft: [] });
     render();
   });
 }
