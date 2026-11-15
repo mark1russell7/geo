@@ -165,18 +165,16 @@ interface BoxEdges {
 }
 
 /**
- * This function examines a box. It refuses a value that is not finite, and a longitude that is not from -180 to 180.
- * It also refuses a latitude that is not from -90 to 90, and a south that is more than the north. The functions of
- * boxes and the GeoJSON parser use this one function.
- *
- * @internal
+ * This function examines the edges of a box. It refuses a value that is not finite and a latitude that is not from
+ * -90 to 90. It also refuses a south that is more than the north. When `lonRange` is `true`, it refuses a longitude
+ * that is not from -180 to 180.
  */
-export function checkBBox(box: BoxEdges, path: string = ""): void {
+function checkEdges(box: BoxEdges, path: string, lonRange: boolean): void {
   for (const name of ["west", "south", "east", "north"] as const) {
     const value = box[name];
     if (!Number.isFinite(value)) throw new GeoError("not-finite", `The ${name} ${value} of the box is not a finite number`, path);
   }
-  if (box.west < -180 || box.west > 180 || box.east < -180 || box.east > 180) {
+  if (lonRange && (box.west < -180 || box.west > 180 || box.east < -180 || box.east > 180)) {
     throw new GeoError("longitude-range", "A longitude of the box is not from -180 to 180", path);
   }
   if (box.south < -90 || box.north > 90) throw new GeoError("latitude-range", "A latitude of the box is not from -90 to 90", path);
@@ -184,8 +182,19 @@ export function checkBBox(box: BoxEdges, path: string = ""): void {
 }
 
 /**
- * This function examines a GeoJSON bounding box: an array of 4 or 6 numbers. The box must obey `checkBBox`. With 6
- * numbers, the low altitude must not be more than the high altitude.
+ * This function examines a box of the type `BBox`. It refuses a value that is not finite, and a longitude that is not
+ * from -180 to 180. It also refuses a latitude that is not from -90 to 90, and a south that is more than the north.
+ *
+ * @internal
+ */
+export function checkBBox(box: BoxEdges, path: string = ""): void {
+  checkEdges(box, path, true);
+}
+
+/**
+ * This function examines a GeoJSON bounding box: an array of 4 or 6 numbers. It uses the rules of `checkBBox`, but it
+ * accepts each finite longitude, as for a position. With 6 numbers, the low altitude must not be more than the high
+ * altitude.
  *
  * @internal
  */
@@ -198,9 +207,10 @@ export function checkGeoJsonBBox(value: unknown, path: string): void {
   }
   const numbers = value as readonly number[];
   const half = numbers.length / 2;
-  checkBBox(
+  checkEdges(
     { west: numbers[0] as number, south: numbers[1] as number, east: numbers[half] as number, north: numbers[half + 1] as number },
     path,
+    false,
   );
   if (half === 3) {
     const low = numbers[2] as number;
@@ -305,8 +315,9 @@ function attempt<T>(value: unknown, check: (value: unknown) => void): Result<T, 
  * - A linear ring has four or more positions, and its last position is equal to its first position. The function
  *   refuses a ring that is not closed. It does not examine the winding of a ring (RFC 7946, section 3.1.6).
  * - A Feature has the members `geometry` (a geometry or `null`) and `properties` (an object or `null`).
- * - A bounding box has 4 or 6 finite numbers. Its longitudes are from -180 to 180, its latitudes are from -90 to 90,
- *   and its south is not more than its north. With 6 numbers, its low altitude is not more than its high altitude.
+ * - A bounding box has 4 or 6 finite numbers. Each finite longitude is correct, as for a position. Its latitudes are
+ *   from -90 to 90, and its south is not more than its north. With 6 numbers, its low altitude is not more than its
+ *   high altitude. `fromGeoJsonBBox` gives the box with longitudes from -180 to 180.
  *
  * @returns The typed object, or the `GeoError` with the reason and the path of the first incorrect value.
  */

@@ -171,12 +171,15 @@ describe("parseGeoJson", () => {
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, 1, Number.NaN] })?.code).toBe("not-finite");
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 10, 1, 5] })?.code).toBe("bbox");
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, -95, 1, 5] })?.code).toBe("latitude-range");
-    // The rules of a box are the rules of the box functions: longitudes from -180 to 180.
-    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [200, 0, 210, 1] })).toEqual({
-      code: "longitude-range",
+    // A bounding box accepts each finite longitude, as a position does.
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [200, 0, 210, 1] })).toBeUndefined();
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [-180.5, 0, 10, 1] })).toBeUndefined();
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [Number.POSITIVE_INFINITY, 0, 10, 1] })).toEqual({
+      code: "not-finite",
       path: "bbox",
     });
-    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [-180.5, 0, 10, 1] })?.code).toBe("longitude-range");
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [200, 0, 210, 95] })?.code).toBe("latitude-range");
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [200, 10, 210, 5] })?.code).toBe("bbox");
     // With 6 numbers, the low altitude must not be more than the high altitude.
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, 10, 1, 1, 5] })).toEqual({ code: "bbox", path: "bbox" });
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, 5, 1, 1, 5] })).toBeUndefined();
@@ -184,6 +187,21 @@ describe("parseGeoJson", () => {
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 20, 0, 1, 10, 5] })?.code).toBe("bbox");
     expect(refusal({ type: "Feature", geometry: null, properties: null, bbox: [1] })?.path).toBe("bbox");
     expect(refusal({ type: "FeatureCollection", features: [], bbox: [1] })?.path).toBe("bbox");
+  });
+
+  it("accepts a bbox in the frame of the coordinates, past 180", () => {
+    const polygon = {
+      type: "Polygon",
+      bbox: [170, -20, 190, -16],
+      coordinates: [[[170, -20], [190, -20], [190, -16], [170, -16], [170, -20]]],
+    };
+    const result = parseGeoJson(polygon);
+    expect(result.tag).toBe("ok");
+    expect(result.tag === "ok" && result.value).toBe(polygon);
+    // RFC 7946, section 5.2, writes the same box as [170, -20, -170, -16]. That form stays correct.
+    expect(refusal({ ...polygon, bbox: [170, -20, -170, -16] })).toBeUndefined();
+    expect(refusal({ type: "Feature", geometry: polygon, properties: null, bbox: [-190, -20, -170, -16] })).toBeUndefined();
+    expect(refusal({ type: "FeatureCollection", features: [], bbox: [530, -20, 0, 550, -16, 1] })).toBeUndefined();
   });
 
   it("refuses collections that are nested too deep", () => {

@@ -68,7 +68,7 @@ The distance and the destination use a sphere, not the ellipsoid of WGS84. Again
 | `bboxOfPoints(points)` | The smallest box of the points, or `undefined` for no point. |
 | `bboxOfGeoJson(geojson)` | The smallest box of a GeoJSON object, from its coordinates. |
 | `bboxContains(box, point)`, `bboxIntersects(a, b)` | Tests on the closed area of a box. |
-| `toGeoJsonBBox(box)`, `fromGeoJsonBBox(numbers)` | Change a box to the member `bbox` of GeoJSON, and back. |
+| `toGeoJsonBBox(box)`, `fromGeoJsonBBox(numbers)` | Change a box to the member `bbox` of GeoJSON, and back. `fromGeoJsonBBox` gives longitudes from -180 to 180. |
 
 ### Polygons
 
@@ -136,6 +136,11 @@ The orientation and segment tests are exact. A test across the antimeridian also
 - A box with `west` more than `east` crosses the antimeridian. The box of RFC 7946 (section 5.2) for the Fiji islands is `[177, -20, -178, -16]`.
 - An edge from 170 to -170 goes through 0, because an edge is straight in longitude. To cross the antimeridian, cut the geometry there (RFC 7946, section 3.1.9), or use longitudes past 180, for example from 170 to 190.
 - `bboxOfPoints` and `bboxOfGeoJson` take the narrower box. When the two boxes have the same width, they take the box that does not cross.
+- A GeoJSON `bbox` accepts each finite longitude, as a position does. So a box can be in the frame of its coordinates, for example `[170, -20, 190, -16]`.
+- `fromGeoJsonBBox` gives the same box with longitudes from -180 to 180, with no rounding. A box with its two longitudes from -180 to 180 does not change.
+- A box with `east - west` of 360 or more has the full range, from -180 to 180. For each other box, the function normalizes the west and the east.
+- In that normalization, an east that is 180 plus a multiple of 360 becomes 180, not -180. So `[170, 190]` gives `[170, -170]`, and `[190, 540]` gives `[-170, 180]`.
+- If the west of that box is also on the antimeridian, the box is only the antimeridian. For example, `[540, 540]` gives `[-180, -180]`.
 
 ### Poles
 
@@ -159,7 +164,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | Code | The cause |
 | --- | --- |
 | `not-finite` | A number is `NaN` or infinite. |
-| `latitude-range`, `longitude-range` | A latitude is out of -90 to 90, or the longitude of a box is out of -180 to 180. |
+| `latitude-range`, `longitude-range` | A latitude is out of -90 to 90, or a longitude of a `BBox` is out of -180 to 180. A GeoJSON `bbox` accepts each finite longitude. |
 | `not-a-point` | A value is not an object with the numbers `lat` and `lon`. |
 | `geojson-type`, `geojson-member` | A GeoJSON object has an unknown type, or a member is missing or incorrect. |
 | `position`, `too-few-positions`, `ring-not-closed` | A position, a line or a ring is incorrect. |
