@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "@geo/bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "bench": "node src/bench.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json"
+  },
+  "devDependencies": {
+    "@mark1russell7/predicates": "^0.1.4",
+    "@mark1russell7/cue": "^2.0.0",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "description": "The bench of simplifyRegions of @mark1russell7/geo (R14): seeded maps, fresh processes, and the verdicts of rigor-bench.",
+  "dependencies": {
+    "@mark1russell7/geo": "workspace:*",
+    "@mark1russell7/rigor-bench": "^0.2.46",
+    "@mark1russell7/rigor-generators": "^0.1.16",
+    "@mark1russell7/rigor-statistics": "^0.2.4",
+    "geo-base": "npm:@mark1russell7/geo@0.3.1"
+  }
+}
