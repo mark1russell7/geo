@@ -171,6 +171,17 @@ describe("parseGeoJson", () => {
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, 1, Number.NaN] })?.code).toBe("not-finite");
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 10, 1, 5] })?.code).toBe("bbox");
     expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, -95, 1, 5] })?.code).toBe("latitude-range");
+    // The rules of a box are the rules of the box functions: longitudes from -180 to 180.
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [200, 0, 210, 1] })).toEqual({
+      code: "longitude-range",
+      path: "bbox",
+    });
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [-180.5, 0, 10, 1] })?.code).toBe("longitude-range");
+    // With 6 numbers, the low altitude must not be more than the high altitude.
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, 10, 1, 1, 5] })).toEqual({ code: "bbox", path: "bbox" });
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, 5, 1, 1, 5] })).toBeUndefined();
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 0, Number.NaN, 1, 1, 5] })?.code).toBe("not-finite");
+    expect(refusal({ type: "Point", coordinates: [0, 0], bbox: [0, 20, 0, 1, 10, 5] })?.code).toBe("bbox");
     expect(refusal({ type: "Feature", geometry: null, properties: null, bbox: [1] })?.path).toBe("bbox");
     expect(refusal({ type: "FeatureCollection", features: [], bbox: [1] })?.path).toBe("bbox");
   });

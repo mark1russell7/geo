@@ -6,8 +6,9 @@
  * @packageDocumentation
  */
 
-import { checkBBox, type BBox } from "./bbox.ts";
+import type { BBox } from "./bbox.ts";
 import { GeoError } from "./errors.ts";
+import { checkBBox } from "./geojson.ts";
 import { checkCoordinates, normalizeLon, type LatLon } from "./point.ts";
 
 /** The base-32 alphabet of the geohash. It has no `a`, `i`, `l` or `o`. */
@@ -113,6 +114,11 @@ function decodeIndex(hash: string): CellIndex {
   if (hash.length === 0 || hash.length > MAX_GEOHASH_PRECISION) {
     throw new GeoError("geohash-length", `A geohash has 1 to ${MAX_GEOHASH_PRECISION} characters`);
   }
+  // The test comes before the change to lower case. That change makes a "k" of the KELVIN SIGN (U+212A).
+  if (!/^[0-9a-zA-Z]+$/.test(hash)) {
+    const char = [...hash].find((item) => !/^[0-9a-zA-Z]$/.test(item)) ?? hash;
+    throw new GeoError("geohash-character", `"${char}" is not a character of a geohash`);
+  }
   let lon = 0;
   let lat = 0;
   let bit = 0;
@@ -131,7 +137,9 @@ function decodeIndex(hash: string): CellIndex {
 
 /**
  * This function gives the geohash of a point. A coordinate on the edge between two cells goes to the cell on the
- * north or on the east. A longitude out of the range from -180 to 180 is normalized first.
+ * north or on the east. A longitude from -180 to 180 does not change. The longitude 180 goes to the last cell on the
+ * east, and -180 goes to the first cell on the west. A longitude out of that range is normalized first, so 540 goes to
+ * the cell of -180.
  *
  * @param precision - The number of characters, from 1 to 12. The default is `DEFAULT_GEOHASH_PRECISION`.
  * @throws GeoError - The code is `not-finite`, `latitude-range` or `geohash-precision`.
@@ -145,7 +153,8 @@ export function geohash(point: LatLon, precision: number = DEFAULT_GEOHASH_PRECI
 }
 
 /**
- * This function gives the cell of a geohash: its edges and its center. Upper case letters are correct.
+ * This function gives the cell of a geohash: its edges and its center. Upper case letters are correct. Each character
+ * must be an ASCII digit or an ASCII letter.
  *
  * @throws GeoError - The code is `geohash-length` or `geohash-character`. A `GeoError` is a `RangeError`.
  */
@@ -196,14 +205,19 @@ export function geohashNeighbors(hash: string): GeohashNeighbors {
 
 /**
  * This function gives the geohashes of the cells that cover a closed box, with one precision. The list has each cell
- * that has a point of the box, with the rule of `geohash` for a point on an edge. So a cell that touches the box only
- * on its south edge or its west edge is not in the list. The order is from south to north, then from west to east. A
+ * that has a point of the box one time, with the rule of `geohash` for a point on an edge. So a cell that touches the
+ * box only on the south edge or the west edge of the box is not in the list. A cell that touches the box only on the
+ * north edge or the east edge of the box is in the list. The order is from south to north, then from west to east. A
  * box that crosses the antimeridian is correct.
  *
+ * The edges of the box use the rule of `geohash` at the antimeridian. So the box from 170 to 180 gives the last column
+ * only, and the box from 170 to -180 also gives the first column.
+ *
  * @param precision - The number of characters, from 1 to 12.
- * @param maxCells - The limit of the number of cells. The default is `DEFAULT_MAX_GEOHASH_CELLS`.
- * @throws GeoError - The code is `too-many-cells` when the cover needs more cells than `maxCells`, or a code of the box
- *   or of the precision.
+ * @param maxCells - The limit of the number of cells. It must not be `NaN` or less than 0. The default is
+ *   `DEFAULT_MAX_GEOHASH_CELLS`.
+ * @throws GeoError - The code is `too-many-cells` when the cover needs more cells than `maxCells`. The code is
+ *   `max-cells` when `maxCells` is `NaN` or less than 0. Other codes come from the box or the precision.
  */
 export function geohashesInBBox(
   box: BBox,
@@ -213,20 +227,23 @@ export function geohashesInBBox(
   checkBBox(box, "box");
   checkPrecision(precision);
   if (Number.isNaN(maxCells) || maxCells < 0) {
-    throw new GeoError("too-many-cells", `The limit ${maxCells} of cells must be a number of 0 or more`);
+    throw new GeoError("max-cells", `The limit ${maxCells} of cells must be a number of 0 or more`);
   }
   const lonBits = lonBitsOf(precision);
   const latBits = latBitsOf(precision);
   const lastColumn = 2 ** lonBits - 1;
   const westColumn = bisect(box.west, -180, 180, lonBits);
   const eastColumn = bisect(box.east, -180, 180, lonBits);
+  // A box that crosses the antimeridian covers each column when its east column is not west of its west column.
   const spans: readonly (readonly [number, number])[] =
     box.west <= box.east
       ? [[westColumn, eastColumn]]
-      : [
-          [westColumn, lastColumn],
-          [0, eastColumn],
-        ];
+      : eastColumn >= westColumn
+        ? [[0, lastColumn]]
+        : [
+            [westColumn, lastColumn],
+            [0, eastColumn],
+          ];
   const southRow = bisect(box.south, -90, 90, latBits);
   const northRow = bisect(box.north, -90, 90, latBits);
   const columns = spans.reduce((sum, [from, to]) => sum + (to - from + 1), 0);

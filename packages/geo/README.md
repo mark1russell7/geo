@@ -1,11 +1,11 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It also has exact point-in-polygon and overlap tests for GeoJSON, geohashes, and the GeoJSON types of RFC 7946.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
 - An incorrect input gives a `GeoError`, with a code and a path. A function does not give `NaN` or a silent value.
-- The orientation and segment tests use the exact predicates of [`@mark1russell7/predicates`](https://www.npmjs.com/package/@mark1russell7/predicates). So a point on an edge is on the edge, also for coordinates with many digits.
+- The orientation and segment tests use the exact predicates of [`@mark1russell7/predicates`](https://www.npmjs.com/package/@mark1russell7/predicates). So a point on an edge is on the edge, also for coordinates with many digits. A move by 360 degrees across the antimeridian can round in some cases. The section [Exact results](#exact-results) gives the limits.
 
 ## Install
 
@@ -18,7 +18,7 @@ The package is an ES module with types. It has two dependencies, [`@mark1russell
 ## Example
 
 ```ts
-import { distanceKm, geohash, parseGeometry, pointInPolygon } from "@mark1russell7/geo";
+import { distanceKm, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
 
 // An area as a GeoJSON Polygon. The positions are [longitude, latitude].
 const area = parseGeometry({
@@ -30,7 +30,7 @@ if (area.tag === "err") throw area.error; // a GeoError with a code and a path
 const paris = { lat: 48.8566, lon: 2.3522 }; // the center of Paris
 const london = { lat: 51.5074, lon: -0.1278 }; // the center of London
 
-if (area.value.type === "Polygon") pointInPolygon(paris, area.value); // true
+if (area.value.type === "Polygon") locatePoint(paris, area.value); // "inside"
 distanceKm(paris, london); // 343.556...
 geohash(paris, 7); // "u09tvw0"
 ```
@@ -58,7 +58,7 @@ geohash(paris, 7); // "u09tvw0"
 | `initialBearing(from, to)` | The bearing at the start of the great circle, from 0 to 360 (360 not included), clockwise from north. |
 | `destinationKm(from, bearing, distance, radiusKm?)`, `destinationMeters(...)` | The point at a distance from a point, on an initial bearing. |
 
-The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.5 % of the distance.
+The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance.
 
 ### Bounding boxes
 
@@ -74,8 +74,7 @@ The distance and the destination use a sphere, not the ellipsoid of WGS84. Again
 
 | Name | What it does |
 | --- | --- |
-| `locatePoint(point, polygon)` | Gives `"inside"`, `"boundary"` or `"outside"` for a Polygon or a MultiPolygon. |
-| `pointInPolygon(point, polygon)` | Gives `true` when the point is inside or on the boundary. |
+| `locatePoint(point, polygon)` | Gives `"inside"`, `"boundary"` or `"outside"` for a Polygon or a MultiPolygon. The polygon contains the point when the result is not `"outside"`. |
 | `polygonsIntersect(a, b)` | Gives `true` when two polygons have a common point. |
 | `polygonIntersectsBBox(polygon, box)` | Gives `true` when a polygon and a box have a common point. |
 | `ringWinding(ring)` | Gives `"counterclockwise"`, `"clockwise"` or `"degenerate"`, from the exact sign of the area. |
@@ -103,12 +102,27 @@ The distance and the destination use a sphere, not the ellipsoid of WGS84. Again
 
 ### Edges
 
-RFC 7946 (section 3.1) says that an edge is a straight line in longitude and latitude. The package uses this rule. So the polygon tests are exact on the plane of longitude and latitude, and an edge is not a great circle.
+RFC 7946 (section 3.1) says that an edge is a straight line in longitude and latitude. The package uses this rule. So the polygon tests use the plane of longitude and latitude, and an edge is not a great circle.
 
-- A polygon is a closed set. A point on an edge or on a vertex is on the boundary, and `pointInPolygon` gives `true` for it.
+- A polygon is a closed set. A point on an edge or on a vertex is on the boundary, and `locatePoint` gives `boundary` for it. The section [The boundary](#the-boundary) tells which edges are on the boundary.
 - The even-odd rule gives the inside of a ring. The first ring is the exterior, and the other rings are holes.
 - A point in a hole is outside. A point on the edge of a hole is on the boundary.
 - The winding of a ring does not change a result. RFC 7946 tells a parser to accept a ring that does not follow the right-hand rule, and the package accepts it.
+
+### The boundary
+
+- The boundary is the boundary of the written polygon. So it includes an edge that two parts of a MultiPolygon share. It also includes an edge on the cut at 180 or -180, and an edge at a pole.
+- So one area can give `boundary` in one written form and `inside` in a different form. For example, a polygon cut at the antimeridian gives `boundary` on the cut, and the same polygon with longitudes past 180 gives `inside` there.
+- To test if a polygon contains a point, use `locatePoint(point, polygon) !== "outside"`. This test gives the same result for each written form of an area.
+
+### Exact results
+
+The orientation and segment tests are exact. A test across the antimeridian also moves the point or a polygon by a multiple of 360 degrees, and a move in floating point can round.
+
+- A move of a longitude `x` by 360 against the sign of `x` has no rounding when `|x|` is 128 or more. For example, `200 - 360` and `-200 + 360` are exact.
+- `locatePoint` moves the point when that move is exact. Otherwise, it moves the polygon when the move of each vertex is exact. So `locatePoint` is exact for each polygon with longitudes from -232 to 232.
+- `polygonsIntersect` and `polygonIntersectsBBox` move one polygon. The result is exact when the move of each vertex of one of the two polygons is exact. The result does not change when the two polygons change places.
+- When no exact move exists, the move can round. Then an incorrect result is possible only for a point or an edge nearer than 1e-12 degrees to an edge of the other polygon. This limit is for longitudes from -540 to 540.
 
 ### Rings
 
@@ -118,7 +132,7 @@ RFC 7946 (section 3.1) says that an edge is a straight line in longitude and lat
 
 ### The antimeridian
 
-- The longitude -180 is the longitude 180.
+- The longitudes -180 and 180 are the same meridian for the polygon tests and the box tests. A geohash keeps the written value (refer to [Geohashes](#geohashes)).
 - A box with `west` more than `east` crosses the antimeridian. The box of RFC 7946 (section 5.2) for the Fiji islands is `[177, -20, -178, -16]`.
 - An edge from 170 to -170 goes through 0, because an edge is straight in longitude. To cross the antimeridian, cut the geometry there (RFC 7946, section 3.1.9), or use longitudes past 180, for example from 170 to 190.
 - `bboxOfPoints` and `bboxOfGeoJson` take the narrower box. When the two boxes have the same width, they take the box that does not cross.
@@ -133,8 +147,10 @@ RFC 7946 (section 3.1) says that an edge is a straight line in longitude and lat
 ### Geohashes
 
 - A point on an edge between two cells goes to the cell on the north or on the east.
-- The longitude 180 goes to the last cell on the east. A longitude out of -180 to 180 is normalized first.
-- `geohashesInBBox` gives each cell that has a point of the box. It refuses a cover of more than `maxCells` cells (10,000 is the default) with the error `too-many-cells`.
+- A longitude from -180 to 180 does not change. The longitude 180 goes to the last cell on the east, and -180 goes to the first cell on the west. A longitude out of that range is normalized first, so 540 goes to the cell of -180.
+- `geohashesInBBox` uses the same rule for the edges of a box. So the box from 170 to 180 gives the last column only, and the box from 170 to -180 also gives the first column.
+- `geohashesInBBox` gives each cell that has a point of the box, one time. A cell that touches the box only on the south edge or the west edge of the box is not in the list.
+- `geohashesInBBox` refuses a cover of more than `maxCells` cells (10,000 is the default) with the error `too-many-cells`. A `maxCells` that is `NaN` or less than 0 gives the error `max-cells`.
 
 ## The errors
 
@@ -148,9 +164,11 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `geojson-type`, `geojson-member` | A GeoJSON object has an unknown type, or a member is missing or incorrect. |
 | `position`, `too-few-positions`, `ring-not-closed` | A position, a line or a ring is incorrect. |
 | `too-deep` | The collections are nested more than `MAX_GEOJSON_DEPTH` levels. |
-| `bbox` | The south of a box is more than its north, or a GeoJSON `bbox` does not have 4 or 6 numbers. |
+| `bbox` | The south of a box is more than its north, a GeoJSON `bbox` does not have 4 or 6 numbers, or its low altitude is more than its high altitude. |
 | `geohash-precision`, `geohash-length`, `geohash-character` | A precision, the length of a geohash or a character of a geohash is incorrect. |
 | `too-many-cells` | A cover of a box has more cells than `maxCells`. |
+| `max-cells` | The value of `maxCells` is `NaN` or less than 0. |
+| `radius` | The radius of the sphere is not more than 0. |
 
 ## The differences from @procedures/geo
 

@@ -61,7 +61,6 @@ normalizeLon: dist/index.d.ts#normalizeLon
 parseGeoJson: dist/index.d.ts#parseGeoJson
 parseGeometry: dist/index.d.ts#parseGeometry
 parseLatLon: dist/index.d.ts#parseLatLon
-pointInPolygon: dist/index.d.ts#pointInPolygon
 polygonIntersectsBBox: dist/index.d.ts#polygonIntersectsBBox
 polygonsIntersect: dist/index.d.ts#polygonsIntersect
 rewind: dist/index.d.ts#rewind
@@ -116,7 +115,7 @@ export declare class GeoError extends RangeError {
 }
 
 ### dist/index.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells";
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius";
 
 ### dist/index.d.ts#GeoJson
 type GeoJson = Geometry | Feature | FeatureCollection;
@@ -286,9 +285,6 @@ export declare function parseGeometry(value: unknown): Result<Geometry, GeoError
 
 ### dist/index.d.ts#parseLatLon
 export declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
-
-### dist/index.d.ts#pointInPolygon
-export declare function pointInPolygon(point: LatLon, polygon: Polygon | MultiPolygon): boolean;
 
 ### dist/index.d.ts#polygonIntersectsBBox
 export declare function polygonIntersectsBBox(polygon: Polygon | MultiPolygon, box: BBox): boolean;

@@ -3,7 +3,6 @@ import {
   GeoError,
   followsRightHandRule,
   locatePoint,
-  pointInPolygon,
   polygonIntersectsBBox,
   polygonsIntersect,
   rewind,
@@ -46,6 +45,13 @@ const CUT: MultiPolygon = {
 
 // The same area, not cut: its longitudes go past 180.
 const PAST_180: Polygon = square(170, 40, 190, 50);
+
+// A triangle written past 180. Its inside is 350 < x < 350 + y, from y = 0 to y = 20.
+const FAR_TRIANGLE: Polygon = { type: "Polygon", coordinates: [[[350, 0], [370, 20], [350, 20], [350, 0]]] };
+
+// A latitude with fine bits. The point (EDGE_LAT - 10, EDGE_LAT) moved by 360 is exactly on the edge x = 350 + y of
+// FAR_TRIANGLE, but the floating-point sum EDGE_LAT - 10 + 360 rounds to the east of the edge.
+const EDGE_LAT = 5 + 3 * 2 ** -46;
 
 // A polar cap in the form of RFC 7946, section 5.3: the full range of longitudes up to the pole.
 const CAP: Polygon = {
@@ -92,7 +98,7 @@ describe("locatePoint", () => {
     // The cut is an edge of each part.
     expect(locatePoint({ lat: 45, lon: 180 }, CUT)).toBe("boundary");
     expect(locatePoint({ lat: 45, lon: -180 }, CUT)).toBe("boundary");
-    expect(pointInPolygon({ lat: 45, lon: 180 }, CUT)).toBe(true);
+    expect(locatePoint({ lat: 45, lon: 180 }, CUT)).not.toBe("outside");
   });
 
   it("works on a polygon with longitudes past 180", () => {
@@ -110,7 +116,7 @@ describe("locatePoint", () => {
     expect(locatePoint({ lat: 90, lon: 123 }, CAP)).toBe("boundary");
     expect(locatePoint({ lat: 85, lon: 123 }, CAP)).toBe("inside");
     expect(locatePoint({ lat: 75, lon: 123 }, CAP)).toBe("outside");
-    expect(pointInPolygon({ lat: 90, lon: -45 }, CAP)).toBe(true);
+    expect(locatePoint({ lat: 90, lon: -45 }, CAP)).not.toBe("outside");
     // A triangle with one vertex at the pole has the pole for each longitude.
     const spike: Polygon = { type: "Polygon", coordinates: [[[0, 80], [20, 80], [10, 90], [0, 80]]] };
     expect(locatePoint({ lat: 90, lon: -100 }, spike)).toBe("boundary");
@@ -123,6 +129,46 @@ describe("locatePoint", () => {
     expect(locatePoint({ lat: 90, lon: 45 }, ring)).toBe("outside");
     const south: Polygon = { type: "Polygon", coordinates: [[[-180, -90], [180, -90], [180, -60], [-180, -60], [-180, -90]]] };
     expect(locatePoint({ lat: -90, lon: 77 }, south)).toBe("boundary");
+  });
+
+  it("gives the boundary of the written form at a seam, and the same containment for each form", () => {
+    // Two parts that share an edge, and the same area as one part.
+    const halves: MultiPolygon = {
+      type: "MultiPolygon",
+      coordinates: [square(0, 0, 1, 1).coordinates, square(1, 0, 2, 1).coordinates],
+    };
+    expect(locatePoint({ lat: 0.5, lon: 1 }, halves)).toBe("boundary");
+    expect(locatePoint({ lat: 0.5, lon: 1 }, square(0, 0, 2, 1))).toBe("inside");
+    // The cut at the antimeridian, and the same area written past 180.
+    expect(locatePoint({ lat: 45, lon: 180 }, CUT)).toBe("boundary");
+    expect(locatePoint({ lat: 45, lon: 180 }, PAST_180)).toBe("inside");
+    for (const point of [{ lat: 0.5, lon: 1 }, { lat: 0.5, lon: 3 }]) {
+      expect(locatePoint(point, halves) !== "outside").toBe(locatePoint(point, square(0, 0, 2, 1)) !== "outside");
+    }
+  });
+
+  it("is exact for a point that is not near the polygon before the move by 360", () => {
+    // The exact sum -9.9 + 360 is west of the edge x = 350 + 0.1. The floating-point sum is on the edge.
+    expect(-9.9 + 360).toBe(350 + 0.1);
+    expect(locatePoint({ lat: 0.1, lon: -9.9 }, FAR_TRIANGLE)).toBe("inside");
+    // The point is exactly on the edge after the move: the edge is at 355 + 3 * 2^-46 for this latitude. The
+    // floating-point sum is 355 + 2^-44, east of the edge.
+    expect(EDGE_LAT - 5).toBe(3 * 2 ** -46);
+    expect(EDGE_LAT - 10 + 360).toBe(355 + 2 ** -44);
+    expect(locatePoint({ lat: EDGE_LAT, lon: EDGE_LAT - 10 }, FAR_TRIANGLE)).toBe("boundary");
+    // The same areas written near 0 give the same results.
+    const near: Polygon = { type: "Polygon", coordinates: [[[-10, 0], [10, 20], [-10, 20], [-10, 0]]] };
+    expect(locatePoint({ lat: 0.1, lon: -9.9 }, near)).toBe("inside");
+    expect(locatePoint({ lat: EDGE_LAT, lon: EDGE_LAT - 10 }, near)).toBe("boundary");
+  });
+
+  it("is exact for a point written past 180 with fine bits", () => {
+    // 400 + 2^-44 - 360 has no rounding. Each vertex is on the boundary.
+    const x = 400 + 2 ** -44;
+    const fine: Polygon = { type: "Polygon", coordinates: [[[x, 1], [x + 1, 1], [x, 2], [x, 1]]] };
+    expect(locatePoint({ lat: 1, lon: x }, fine)).toBe("boundary");
+    expect(locatePoint({ lat: 2, lon: x }, fine)).toBe("boundary");
+    expect(locatePoint({ lat: 1.5, lon: x - 2 ** -44 }, fine)).toBe("outside");
   });
 
   it("is inside when a point is on the boundary of one part and inside another part", () => {
@@ -252,6 +298,37 @@ describe("polygonsIntersect", () => {
     expect(polygonsIntersect(square(-175, 44, -172, 46), PAST_180)).toBe(true);
     expect(polygonsIntersect(PAST_180, square(-160, 44, -150, 46))).toBe(false);
     expect(polygonsIntersect(PAST_180, square(0, 44, 10, 46))).toBe(false);
+  });
+
+  it("finds two polygons that touch at one point after the move by 360, in the two orders", () => {
+    // The vertex P of the small triangle is exactly on the edge x = 350 + y of FAR_TRIANGLE after the move. Its other
+    // vertices are east of that edge. So the two closed polygons have only the point P in common.
+    const px = EDGE_LAT - 10;
+    const touching: Polygon = {
+      type: "Polygon",
+      coordinates: [[[px, EDGE_LAT], [px + 2, EDGE_LAT], [px + 2, EDGE_LAT + 1], [px, EDGE_LAT]]],
+    };
+    expect(polygonsIntersect(FAR_TRIANGLE, touching)).toBe(true);
+    expect(polygonsIntersect(touching, FAR_TRIANGLE)).toBe(true);
+    // A move of the small triangle by 2^-44 to the east removes the common point.
+    const apart: Polygon = {
+      type: "Polygon",
+      coordinates: [[[px + 2 ** -44, EDGE_LAT], [px + 2, EDGE_LAT], [px + 2, EDGE_LAT + 1], [px + 2 ** -44, EDGE_LAT]]],
+    };
+    expect(polygonsIntersect(FAR_TRIANGLE, apart)).toBe(false);
+    expect(polygonsIntersect(apart, FAR_TRIANGLE)).toBe(false);
+  });
+
+  it("gives the same result in the two orders when no move is exact", () => {
+    // The polygon a has longitudes on the two sides of 0, and b has the longitude 100. A move by 360 is exact for a
+    // longitude of 128 or more against its sign, so no rule proves an exact move of a or of b.
+    const a: Polygon = { type: "Polygon", coordinates: [[[-1, 0], [1, 0], [0, 1], [-1, 0]]] };
+    const b: Polygon = { type: "Polygon", coordinates: [[[100, 0.5], [361, 0.5], [360, 2], [100, 0.5]]] };
+    const c: Polygon = { type: "Polygon", coordinates: [[[100, 5], [361, 5], [360, 6], [100, 5]]] };
+    expect(polygonsIntersect(a, b)).toBe(true);
+    expect(polygonsIntersect(b, a)).toBe(true);
+    expect(polygonsIntersect(a, c)).toBe(false);
+    expect(polygonsIntersect(c, a)).toBe(false);
   });
 
   it("finds two polygons that meet at a pole", () => {

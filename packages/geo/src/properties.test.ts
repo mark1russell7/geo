@@ -1,3 +1,4 @@
+import { orient2dSign } from "@mark1russell7/predicates";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
@@ -151,6 +152,25 @@ describe("the geohash", () => {
     );
   });
 
+  it("gives each cell one time, also for a box that crosses the antimeridian", () => {
+    const box = fc.record({
+      west: lon,
+      // Wide boxes that cross the antimeridian often have the east column at or past the west column.
+      width: fc.oneof(fc.double({ min: 0, max: 360, noNaN: true }), fc.double({ min: 300, max: 360, noNaN: true })),
+      south: fc.double({ min: -90, max: 80, noNaN: true }),
+      height: fc.double({ min: 0, max: 10, noNaN: true }),
+      precision: fc.integer({ min: 1, max: 2 }),
+    });
+    fc.assert(
+      fc.property(box, ({ west, width, south, height, precision: k }) => {
+        const end = west + width;
+        const bbox = { west, south, east: end > 180 ? normalizeLon(end) : end, north: Math.min(90, south + height) };
+        const cells = geohashesInBBox(bbox, k);
+        return new Set(cells).size === cells.length;
+      }),
+    );
+  });
+
   it("covers each point of a box", () => {
     const box = fc.record({
       west: lon,
@@ -178,6 +198,62 @@ describe("the geohash", () => {
 const ring: fc.Arbitrary<Position[]> = fc
   .array(fc.tuple(fc.integer({ min: -5, max: 5 }), fc.integer({ min: -5, max: 5 })), { minLength: 3, maxLength: 8 })
   .map((positions) => [...positions, positions[0] as [number, number]]);
+
+/** A coordinate on a grid of 1/8 steps from -8 to 8. A move of it by 360 has no rounding. */
+const eighth = fc.integer({ min: -64, max: 64 }).map((n) => n / 8);
+
+/** A ring on the grid of 1/8 steps. */
+const coarseRing: fc.Arbitrary<Position[]> = fc
+  .array(fc.tuple(eighth, eighth), { minLength: 3, maxLength: 6 })
+  .map((positions) => [...positions, positions[0] as [number, number]]);
+
+/** A ring of doubles with fine bits, with longitudes from `min` to `max`. */
+const fineRing = (min: number, max: number): fc.Arbitrary<Position[]> =>
+  fc
+    .array(fc.tuple(fc.double({ min, max, noNaN: true }), fc.double({ min: -10, max: 10, noNaN: true })), {
+      minLength: 3,
+      maxLength: 6,
+    })
+    .map((positions) => [...positions, positions[0] as [number, number]]);
+
+/** A ring past 180 or past -180. A move of each of its vertices by 360 toward 0 has no rounding. */
+const farRing: fc.Arbitrary<Position[]> = fc
+  .tuple(fineRing(300, 420), fc.boolean())
+  .map(([positions, west]) => (west ? positions.map(([x, y]): Position => [0 - x, y]) : positions));
+
+const farShift = fc.constantFrom(360, -360);
+
+/** A point with fine bits near 0. */
+const finePoint: fc.Arbitrary<LatLon> = fc.record({
+  lat: fc.double({ min: -9, max: 9, noNaN: true }),
+  lon: fc.double({ min: -9, max: 9, noNaN: true }),
+});
+
+const moved = (positions: readonly Position[], dx: number): Position[] => positions.map(([x, y]): Position => [x + dx, y]);
+
+/** The numerator k of the fraction k / 2^45 along an edge, from 0 to less than 2^45. */
+const edgeFraction = fc
+  .tuple(fc.integer({ min: 0, max: 2 ** 22 - 1 }), fc.integer({ min: 0, max: 2 ** 23 - 1 }))
+  .map(([high, low]) => high * 2 ** 23 + low);
+
+/**
+ * A point exactly on an edge of a ring on the grid of 1/8 steps: A + (B - A) t, with t = k / 2^45 cut to `bits`
+ * fraction bits. The product has up to 52 bits. For 45 bits, the point is a multiple of 2^-48 from -8 to 8. For 42 bits,
+ * it is a multiple of 2^-45 from 128 to 256. So each step has no rounding. The point has fine bits, and its sum with
+ * 360 near 0 rounds.
+ */
+const onEdge = (
+  positions: readonly Position[],
+  edge: number,
+  k: number,
+  bits = 45,
+): { point: LatLon; a: Position; b: Position } => {
+  const index = edge % (positions.length - 1);
+  const a = positions[index] as Position;
+  const b = positions[index + 1] as Position;
+  const t = Math.floor(k / 2 ** (45 - bits)) / 2 ** bits;
+  return { point: { lat: a[1] + (b[1] - a[1]) * t, lon: a[0] + (b[0] - a[0]) * t }, a, b };
+};
 
 /** A point on the grid of half steps, so that it is often on an edge or a vertex. */
 const gridPoint: fc.Arbitrary<LatLon> = fc.record({
@@ -219,11 +295,51 @@ describe("the point in polygon", () => {
     );
   });
 
-  it("gives the same result for a point and for the point 360 degrees away", () => {
+  it("gives the same result for a point and for the point moved by 360 against the sign of its longitude", () => {
+    // The ring is near 150, so each point of it has a longitude of 128 or more, and lon - 360 has no rounding.
     fc.assert(
-      fc.property(ring, gridPoint, (positions, p) => {
+      fc.property(coarseRing, fc.nat(), edgeFraction, finePoint, (near, edge, k, offset) => {
+        const positions = moved(near, 150);
         const polygon = polygonOf(positions);
-        return locatePoint(p, polygon) === locatePoint({ lat: p.lat, lon: p.lon + 360 }, polygon);
+        const { point, a, b } = onEdge(positions, edge, k, 42);
+        expect(orient2dSign(a[0], a[1], b[0], b[1], point.lon, point.lat)).toBe(0);
+        expect(locatePoint(point, polygon)).toBe("boundary");
+        expect(locatePoint({ lat: point.lat, lon: point.lon - 360 }, polygon)).toBe("boundary");
+        const other = { lat: offset.lat, lon: offset.lon + 150 };
+        expect(locatePoint({ lat: other.lat, lon: other.lon - 360 }, polygon)).toBe(locatePoint(other, polygon));
+      }),
+    );
+  });
+});
+
+describe("a polygon moved by 360 degrees", () => {
+  it("has each point of an edge on its boundary, for a point given near 0", () => {
+    fc.assert(
+      fc.property(coarseRing, farShift, fc.nat(), edgeFraction, (near, shift, edge, k) => {
+        const { point, a, b } = onEdge(near, edge, k);
+        // The point is exactly on the edge: the exact orientation is 0.
+        expect(orient2dSign(a[0], a[1], b[0], b[1], point.lon, point.lat)).toBe(0);
+        expect(locatePoint(point, polygonOf(near))).toBe("boundary");
+        expect(locatePoint(point, polygonOf(moved(near, shift)))).toBe("boundary");
+      }),
+    );
+  });
+
+  it("has each vertex on its boundary, for vertices with fine bits", () => {
+    fc.assert(
+      fc.property(farRing, (positions) => {
+        const polygon = polygonOf(positions);
+        for (const [x, y] of positions) expect(locatePoint({ lat: y, lon: x }, polygon)).toBe("boundary");
+      }),
+    );
+  });
+
+  it("gives the same result as the polygon before the move", () => {
+    fc.assert(
+      fc.property(coarseRing, farShift, finePoint, gridPoint, fc.nat(), edgeFraction, (near, shift, fine, grid, edge, k) => {
+        for (const point of [fine, grid, onEdge(near, edge, k).point]) {
+          expect(locatePoint(point, polygonOf(moved(near, shift)))).toBe(locatePoint(point, polygonOf(near)));
+        }
       }),
     );
   });
@@ -243,9 +359,30 @@ describe("the winding", () => {
 });
 
 describe("the overlap", () => {
-  it("is the same in the two orders", () => {
+  /**
+   * A polygon moved by 360, and a triangle near 0 with a vertex P on an edge of the polygon before the move. So the two
+   * closed polygons have the point P in common.
+   */
+  const touchingPair: fc.Arbitrary<readonly [Polygon, Polygon]> = fc
+    .tuple(coarseRing, farShift, fc.nat(), edgeFraction, fc.array(fc.double({ min: -1, max: 1, noNaN: true }), { minLength: 4, maxLength: 4 }))
+    .map(([near, shift, edge, k, [a = 0, b = 0, c = 0, d = 0]]) => {
+      const { point } = onEdge(near, edge, k);
+      const p: Position = [point.lon, point.lat];
+      return [polygonOf(moved(near, shift)), polygonOf([p, [p[0] + a, p[1] + b], [p[0] + c, p[1] + d], p])] as const;
+    });
+
+  it("is the same in the two orders, for polygons on the two sides of the antimeridian", () => {
+    // The polygon b is past 180 or past -180, or it is wide and no move of it is exact. Or the two polygons touch.
+    const randomPair = fc.tuple(fineRing(-60, 60).map(polygonOf), fc.oneof(farRing, fineRing(100, 420)).map(polygonOf));
+    fc.assert(fc.property(fc.oneof(randomPair, touchingPair), ([a, b]) => polygonsIntersect(a, b) === polygonsIntersect(b, a)));
+  });
+
+  it("finds a polygon that touches a polygon moved by 360 at one point, in the two orders", () => {
     fc.assert(
-      fc.property(ring, ring, (a, b) => polygonsIntersect(polygonOf(a), polygonOf(b)) === polygonsIntersect(polygonOf(b), polygonOf(a))),
+      fc.property(touchingPair, ([far, touching]) => {
+        expect(polygonsIntersect(far, touching)).toBe(true);
+        expect(polygonsIntersect(touching, far)).toBe(true);
+      }),
     );
   });
 
@@ -261,6 +398,26 @@ describe("the overlap", () => {
 
   it("includes each polygon with itself", () => {
     fc.assert(fc.property(ring, (a) => polygonsIntersect(polygonOf(a), polygonOf(a))));
+  });
+});
+
+describe("normalizeLon", () => {
+  it("does not change a longitude from -180 to less than 180, other than -0", () => {
+    fc.assert(fc.property(fc.double({ min: -180, max: 180, maxExcluded: true, noNaN: true }), (x) => Object.is(normalizeLon(x), x + 0)));
+  });
+
+  it("is x - 360 from 180 to less than 540, and x + 360 from -540 to less than -180, with no rounding", () => {
+    fc.assert(fc.property(fc.double({ min: 180, max: 540, maxExcluded: true, noNaN: true }), (x) => normalizeLon(x) === x - 360));
+    fc.assert(fc.property(fc.double({ min: -540, max: -180, maxExcluded: true, noNaN: true }), (x) => normalizeLon(x) === x + 360));
+  });
+
+  it("gives a longitude from -180 to less than 180 for each finite value", () => {
+    fc.assert(
+      fc.property(fc.double({ noNaN: true, noDefaultInfinity: true }), (x) => {
+        const result = normalizeLon(x);
+        return result >= -180 && result < 180 && !Object.is(result, -0);
+      }),
+    );
   });
 });
 

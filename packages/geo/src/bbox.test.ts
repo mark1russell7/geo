@@ -196,4 +196,20 @@ describe("GeoJSON bounding boxes", () => {
     expect(() => fromGeoJsonBBox([1, 5, 3, 2])).toThrow(GeoError);
     expect(() => fromGeoJsonBBox([-190, 0, 3, 2])).toThrow(GeoError);
   });
+
+  it("uses the rules of parseGeoJson, with the altitudes", () => {
+    const codeOf = (bbox: readonly number[]): string | undefined => {
+      try {
+        fromGeoJsonBBox(bbox);
+      } catch (error) {
+        if (error instanceof GeoError) return error.code;
+        throw error;
+      }
+      return undefined;
+    };
+    expect(codeOf([200, 0, 210, 1])).toBe("longitude-range");
+    expect(codeOf([0, 0, 10, 1, 1, 5])).toBe("bbox");
+    expect(codeOf([0, 0, Number.POSITIVE_INFINITY, 1, 1, 5])).toBe("not-finite");
+    expect(codeOf([0, 0, 1, 1, 1, 5])).toBeUndefined();
+  });
 });

@@ -29,6 +29,20 @@ describe("normalizeLon", () => {
     expect(normalizeLon(725)).toBe(5);
   });
 
+  it("has no rounding, and gives 0 for -0 and -360", () => {
+    // The difference x - 360 has no rounding here. A sum through x + 180 rounds, because that sum needs one more bit.
+    expect(normalizeLon(400 + 2 ** -44)).toBe(40 + 2 ** -44);
+    expect(normalizeLon(200 + 2 ** -45)).toBe(-160 + 2 ** -45);
+    expect(normalizeLon(-(400 + 2 ** -44))).toBe(-(40 + 2 ** -44));
+    const fine = 150 + 2 ** -40;
+    expect(normalizeLon(fine - 360)).toBe(fine);
+    expect(normalizeLon(fine + 720)).toBe(fine);
+    expect(Object.is(normalizeLon(-0), 0)).toBe(true);
+    expect(Object.is(normalizeLon(-360), 0)).toBe(true);
+    expect(normalizeLon(179.99999999999997)).toBe(179.99999999999997);
+    expect(normalizeLon(-180.00000000000003)).toBe(179.99999999999997);
+  });
+
   it("refuses NaN and infinite values", () => {
     expect(codeOf(() => normalizeLon(Number.NaN))).toBe("not-finite");
     expect(codeOf(() => normalizeLon(Number.POSITIVE_INFINITY))).toBe("not-finite");

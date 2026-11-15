@@ -37,7 +37,6 @@ describe("the entry", () => {
         "parseGeoJson",
         "parseGeometry",
         "parseLatLon",
-        "pointInPolygon",
         "polygonIntersectsBBox",
         "polygonsIntersect",
         "rewind",

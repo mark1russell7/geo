@@ -9,8 +9,19 @@ import {
   distanceKm,
   distanceMeters,
   initialBearing,
+  type GeoErrorCode,
   type LatLon,
 } from "./index.ts";
+
+const codeOf = (run: () => unknown): GeoErrorCode | undefined => {
+  try {
+    run();
+  } catch (error) {
+    if (error instanceof GeoError) return error.code;
+    throw error;
+  }
+  return undefined;
+};
 
 /** Degrees, minutes and seconds to degrees. */
 const dms = (degrees: number, minutes: number, seconds: number): number => degrees + minutes / 60 + seconds / 3600;
@@ -26,6 +37,24 @@ describe("the radius", () => {
   it("is the IUGG mean radius R1", () => {
     expect(EARTH_MEAN_RADIUS_KM).toBe(6371.0088);
     expect(EARTH_MEAN_RADIUS_METERS).toBe(6_371_008.8);
+  });
+
+  it("must be more than 0", () => {
+    for (const radius of [0, -0, -1, -EARTH_MEAN_RADIUS_KM, Number.NEGATIVE_INFINITY]) {
+      const expected = Number.isFinite(radius) ? "radius" : "not-finite";
+      expect(codeOf(() => distanceKm(EIFFEL, BRANDENBURG, radius))).toBe(expected);
+      expect(codeOf(() => distanceMeters(EIFFEL, BRANDENBURG, radius))).toBe(expected);
+      expect(codeOf(() => destinationKm(EIFFEL, 0, 10, radius))).toBe(expected);
+      expect(codeOf(() => destinationMeters(EIFFEL, 0, 10, radius))).toBe(expected);
+    }
+    expect(codeOf(() => distanceKm(EIFFEL, BRANDENBURG, Number.MIN_VALUE))).toBeUndefined();
+  });
+
+  it("gives an error of approximately 0.6 % against the ellipsoid for 1 degree of latitude at the equator", () => {
+    // On the WGS84 ellipsoid, 1 degree of latitude at the equator is 110.574 km.
+    const error = Math.abs(distanceKm({ lat: 0, lon: 0 }, { lat: 1, lon: 0 }) / 110.574 - 1);
+    expect(error).toBeGreaterThan(0.005);
+    expect(error).toBeLessThan(0.006);
   });
 });
 
@@ -113,6 +142,20 @@ describe("initialBearing", () => {
 
   it("is 0 for two equal points", () => {
     expect(initialBearing(EIFFEL, EIFFEL)).toBe(0);
+  });
+
+  it("is 0 for longitudes that are different by a multiple of 360", () => {
+    expect(initialBearing({ lat: 10, lon: -180 }, { lat: 10, lon: 180 })).toBe(0);
+    expect(initialBearing({ lat: 10, lon: 0 }, { lat: 10, lon: 360 })).toBe(0);
+    expect(initialBearing({ lat: 10, lon: 2.5 }, { lat: 10, lon: -357.5 })).toBe(0);
+    expect(initialBearing({ lat: 10, lon: 2.5 }, { lat: 10, lon: 722.5 })).toBe(0);
+  });
+
+  it("is 0 for two longitudes of the same pole", () => {
+    expect(initialBearing({ lat: 90, lon: 0 }, { lat: 90, lon: 50 })).toBe(0);
+    expect(initialBearing({ lat: -90, lon: 10 }, { lat: -90, lon: -170 })).toBe(0);
+    // From one pole to the other pole is not one point.
+    expect(initialBearing({ lat: 90, lon: 0 }, { lat: -90, lon: 0 })).toBe(180);
   });
 
   it("is from 0 to less than 360", () => {

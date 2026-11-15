@@ -5,7 +5,15 @@
  */
 
 import { GeoError } from "./errors.ts";
-import { checkPosition, MAX_GEOJSON_DEPTH, type GeoJson, type GeoJsonBBox, type Geometry } from "./geojson.ts";
+import {
+  checkBBox,
+  checkGeoJsonBBox,
+  checkPosition,
+  MAX_GEOJSON_DEPTH,
+  type GeoJson,
+  type GeoJsonBBox,
+  type Geometry,
+} from "./geojson.ts";
 import { checkPoint, normalizeLon, type LatLon } from "./point.ts";
 
 /**
@@ -17,24 +25,6 @@ export interface BBox {
   readonly south: number;
   readonly east: number;
   readonly north: number;
-}
-
-/**
- * This function examines a box. It refuses a value that is not finite, a value out of its range, and a south that is
- * more than the north.
- *
- * @internal
- */
-export function checkBBox(box: BBox, path: string = ""): void {
-  for (const name of ["west", "south", "east", "north"] as const) {
-    const value = box[name];
-    if (!Number.isFinite(value)) throw new GeoError("not-finite", `The ${name} ${value} of the box is not a finite number`, path);
-  }
-  if (box.west < -180 || box.west > 180 || box.east < -180 || box.east > 180) {
-    throw new GeoError("longitude-range", "A longitude of the box is not from -180 to 180", path);
-  }
-  if (box.south < -90 || box.north > 90) throw new GeoError("latitude-range", "A latitude of the box is not from -90 to 90", path);
-  if (box.south > box.north) throw new GeoError("bbox", "The south of the box must not be more than its north", path);
 }
 
 /** The longitude intervals and the latitude range that a bounding box collects. */
@@ -227,12 +217,13 @@ export function toGeoJsonBBox(box: BBox): GeoJsonBBox {
 }
 
 /**
- * This function reads a GeoJSON bounding box of 4 or 6 numbers. It ignores the altitudes.
+ * This function reads a GeoJSON bounding box of 4 or 6 numbers, with the rules of `parseGeoJson`. It examines the
+ * altitudes, and then it ignores them.
  *
  * @throws GeoError - The code is `bbox`, `not-finite`, `longitude-range` or `latitude-range`.
  */
 export function fromGeoJsonBBox(bbox: readonly number[]): BBox {
-  if (bbox.length !== 4 && bbox.length !== 6) throw new GeoError("bbox", "A bounding box is an array of 4 or 6 numbers");
+  checkGeoJsonBBox(bbox, "");
   const half = bbox.length / 2;
   const box: BBox = {
     west: bbox[0] as number,
@@ -240,6 +231,5 @@ export function fromGeoJsonBBox(bbox: readonly number[]): BBox {
     east: bbox[half] as number,
     north: bbox[half + 1] as number,
   };
-  checkBBox(box);
   return box;
 }

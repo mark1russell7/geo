@@ -65,6 +65,13 @@ describe("geohash", () => {
     expect(geohash({ lat: 0, lon: -190 })).toBe(geohash({ lat: 0, lon: 170 }));
   });
 
+  it("keeps 180 in the last cell on the east, and puts 540 in the cell of -180", () => {
+    expect(geohash({ lat: 0, lon: 180 }, 3)).toBe("xbp");
+    expect(geohash({ lat: 0, lon: -180 }, 3)).toBe("800");
+    expect(geohash({ lat: 0, lon: 540 }, 3)).toBe("800");
+    expect(geohash({ lat: 0, lon: -540 }, 3)).toBe("800");
+  });
+
   it("refuses an incorrect point or precision", () => {
     expect(codeOf(() => geohash({ lat: 91, lon: 0 }))).toBe("latitude-range");
     expect(codeOf(() => geohash({ lat: Number.NaN, lon: 0 }))).toBe("not-finite");
@@ -96,6 +103,15 @@ describe("decodeGeohash", () => {
 
   it("accepts upper case letters", () => {
     expect(decodeGeohash("U09TUNQ")).toEqual(decodeGeohash("u09tunq"));
+  });
+
+  it("refuses a letter that is not ASCII, also when its lower case is a character of a geohash", () => {
+    // The KELVIN SIGN (U+212A) becomes "k" in lower case.
+    expect("\u212A".toLowerCase()).toBe("k");
+    expect(codeOf(() => decodeGeohash("\u212A"))).toBe("geohash-character");
+    expect(codeOf(() => decodeGeohash("u09\u212A"))).toBe("geohash-character");
+    expect(() => decodeGeohash("u09\u212A")).toThrow(/"\u212A"/);
+    expect(codeOf(() => geohashNeighbor("\u212A", "n"))).toBe("geohash-character");
   });
 
   it("refuses a character that is not in the alphabet, as a RangeError", () => {
@@ -166,15 +182,39 @@ describe("geohashesInBBox", () => {
     expect(geohashesInBBox({ west: 170, south: -10, east: -170, north: 10 }, 1)).toEqual(["r", "2", "x", "8"]);
   });
 
+  it("gives each cell one time when a crossing box has its east column at or past its west column", () => {
+    // The box goes from 10 to 180 and from -180 to 5. The columns of 10 and 5 are the same column.
+    const cells = geohashesInBBox({ west: 10, south: 0, east: 5, north: 10 }, 1);
+    expect(cells).toHaveLength(8);
+    expect(new Set(cells).size).toBe(8);
+    expect([...cells].sort()).toEqual(["8", "9", "d", "e", "s", "t", "w", "x"]);
+    // The maximum of 8 cells is enough, because no cell is in the list two times.
+    expect(geohashesInBBox({ west: 10, south: 0, east: 5, north: 10 }, 1, 8)).toHaveLength(8);
+    const fine = geohashesInBBox({ west: 1, south: 0, east: 0.5, north: 1 }, 2);
+    expect(new Set(fine).size).toBe(fine.length);
+  });
+
+  it("uses the geohash rule for the east edge 180 and -180 of a box", () => {
+    expect(geohashesInBBox({ west: 170, south: 0, east: 180, north: 1 }, 1)).toEqual(["x"]);
+    expect(geohashesInBBox({ west: 170, south: 0, east: -180, north: 1 }, 1)).toEqual(["x", "8"]);
+    expect(geohashesInBBox({ west: -180, south: 0, east: -170, north: 1 }, 1)).toEqual(["8"]);
+  });
+
   it("covers the full Earth", () => {
     expect(geohashesInBBox({ west: -180, south: -90, east: 180, north: 90 }, 1)).toHaveLength(32);
   });
 
   it("refuses a cover with too many cells", () => {
     expect(codeOf(() => geohashesInBBox({ west: -180, south: -90, east: 180, north: 90 }, 2, 100))).toBe("too-many-cells");
-    expect(codeOf(() => geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, Number.NaN))).toBe("too-many-cells");
-    expect(codeOf(() => geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, -1))).toBe("too-many-cells");
+    expect(geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, 1)).toEqual(["s"]);
+    expect(codeOf(() => geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, 0))).toBe("too-many-cells");
     expect(geohashesInBBox({ west: -180, south: -90, east: 180, north: 90 }, 2, 1024)).toHaveLength(1024);
+  });
+
+  it("refuses a maximum of cells that is NaN or less than 0", () => {
+    expect(codeOf(() => geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, Number.NaN))).toBe("max-cells");
+    expect(codeOf(() => geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, -1))).toBe("max-cells");
+    expect(codeOf(() => geohashesInBBox({ west: 0, south: 0, east: 1, north: 1 }, 1, Number.NEGATIVE_INFINITY))).toBe("max-cells");
   });
 
   it("refuses an incorrect box or precision", () => {

@@ -156,19 +156,60 @@ export function checkPolygonCoordinates(value: unknown, path: string): void {
   checkArray(value, path).forEach((ring, index) => checkRing(ring, `${path}[${index}]`));
 }
 
-function checkBBox(value: unknown, path: string): void {
+/** The edges of a box in degrees. The type `BBox` has this form. */
+interface BoxEdges {
+  readonly west: number;
+  readonly south: number;
+  readonly east: number;
+  readonly north: number;
+}
+
+/**
+ * This function examines a box. It refuses a value that is not finite, and a longitude that is not from -180 to 180.
+ * It also refuses a latitude that is not from -90 to 90, and a south that is more than the north. The functions of
+ * boxes and the GeoJSON parser use this one function.
+ *
+ * @internal
+ */
+export function checkBBox(box: BoxEdges, path: string = ""): void {
+  for (const name of ["west", "south", "east", "north"] as const) {
+    const value = box[name];
+    if (!Number.isFinite(value)) throw new GeoError("not-finite", `The ${name} ${value} of the box is not a finite number`, path);
+  }
+  if (box.west < -180 || box.west > 180 || box.east < -180 || box.east > 180) {
+    throw new GeoError("longitude-range", "A longitude of the box is not from -180 to 180", path);
+  }
+  if (box.south < -90 || box.north > 90) throw new GeoError("latitude-range", "A latitude of the box is not from -90 to 90", path);
+  if (box.south > box.north) throw new GeoError("bbox", "The south of the box must not be more than its north", path);
+}
+
+/**
+ * This function examines a GeoJSON bounding box: an array of 4 or 6 numbers. The box must obey `checkBBox`. With 6
+ * numbers, the low altitude must not be more than the high altitude.
+ *
+ * @internal
+ */
+export function checkGeoJsonBBox(value: unknown, path: string): void {
   if (!Array.isArray(value) || (value.length !== 4 && value.length !== 6)) {
     throw new GeoError("bbox", "A bounding box is an array of 4 or 6 numbers", path);
   }
   for (const item of value as readonly unknown[]) {
     if (typeof item !== "number") throw new GeoError("bbox", "A bounding box is an array of 4 or 6 numbers", path);
-    if (!Number.isFinite(item)) throw new GeoError("not-finite", `The value ${item} is not a finite number`, path);
   }
-  const half = value.length / 2;
-  const south = value[1] as number;
-  const north = value[half + 1] as number;
-  if (south < -90 || north > 90) throw new GeoError("latitude-range", "A latitude of the box is not from -90 to 90", path);
-  if (south > north) throw new GeoError("bbox", "The south of a bounding box must not be more than its north", path);
+  const numbers = value as readonly number[];
+  const half = numbers.length / 2;
+  checkBBox(
+    { west: numbers[0] as number, south: numbers[1] as number, east: numbers[half] as number, north: numbers[half + 1] as number },
+    path,
+  );
+  if (half === 3) {
+    const low = numbers[2] as number;
+    const high = numbers[5] as number;
+    if (!Number.isFinite(low) || !Number.isFinite(high)) {
+      throw new GeoError("not-finite", `The altitudes ${low} and ${high} of the box must be finite numbers`, path);
+    }
+    if (low > high) throw new GeoError("bbox", "The low altitude of the box must not be more than its high altitude", path);
+  }
 }
 
 function checkGeometry(value: unknown, path: string, depth: number): void {
@@ -206,7 +247,7 @@ function checkGeometry(value: unknown, path: string, depth: number): void {
     default:
       throw new GeoError("geojson-type", `The type ${JSON.stringify(value["type"])} is not a GeoJSON geometry`, path);
   }
-  if ("bbox" in value) checkBBox(value["bbox"], memberPath(path, "bbox"));
+  if ("bbox" in value) checkGeoJsonBBox(value["bbox"], memberPath(path, "bbox"));
 }
 
 function checkFeature(value: Json, path: string, depth: number): void {
@@ -221,7 +262,7 @@ function checkFeature(value: Json, path: string, depth: number): void {
   if ("id" in value && typeof value["id"] !== "string" && typeof value["id"] !== "number") {
     throw new GeoError("geojson-member", "The id of a Feature must be a string or a number", memberPath(path, "id"));
   }
-  if ("bbox" in value) checkBBox(value["bbox"], memberPath(path, "bbox"));
+  if ("bbox" in value) checkGeoJsonBBox(value["bbox"], memberPath(path, "bbox"));
 }
 
 function checkGeoJson(value: unknown, path: string): void {
@@ -237,7 +278,7 @@ function checkGeoJson(value: unknown, path: string): void {
       }
       checkFeature(feature, featurePath, 0);
     });
-    if ("bbox" in value) checkBBox(value["bbox"], memberPath(path, "bbox"));
+    if ("bbox" in value) checkGeoJsonBBox(value["bbox"], memberPath(path, "bbox"));
   } else {
     checkGeometry(value, path, 0);
   }
@@ -264,7 +305,8 @@ function attempt<T>(value: unknown, check: (value: unknown) => void): Result<T, 
  * - A linear ring has four or more positions, and its last position is equal to its first position. The function
  *   refuses a ring that is not closed. It does not examine the winding of a ring (RFC 7946, section 3.1.6).
  * - A Feature has the members `geometry` (a geometry or `null`) and `properties` (an object or `null`).
- * - A bounding box has 4 or 6 numbers, and its south is not more than its north.
+ * - A bounding box has 4 or 6 finite numbers. Its longitudes are from -180 to 180, its latitudes are from -90 to 90,
+ *   and its south is not more than its north. With 6 numbers, its low altitude is not more than its high altitude.
  *
  * @returns The typed object, or the `GeoError` with the reason and the path of the first incorrect value.
  */

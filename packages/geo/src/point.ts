@@ -19,15 +19,19 @@ export interface LatLon {
 export type Position = readonly [lon: number, lat: number, ...rest: number[]];
 
 /**
- * This function gives the longitude in the range from -180 to less than 180. A longitude of 180 becomes -180. The
- * function does not change a longitude that is already in the range.
+ * This function gives the longitude in the range from -180 to less than 180. A longitude of 180 becomes -180, and -0
+ * becomes 0. The result has no rounding: it is the longitude plus a multiple of 360. So the function does not change a
+ * longitude that is already in the range, other than -0.
  *
  * @throws GeoError - The code is `not-finite` for `NaN` or an infinite value.
  */
 export function normalizeLon(lon: number): number {
   if (!Number.isFinite(lon)) throw new GeoError("not-finite", `The longitude ${lon} is not a finite number`);
-  if (lon >= -180 && lon < 180) return lon;
-  return ((((lon + 180) % 360) + 360) % 360) - 180;
+  // The remainder has no rounding. The one step of 360 that follows has no rounding too (the lemma of Sterbenz).
+  let result = lon % 360;
+  if (result >= 180) result -= 360;
+  else if (result < -180) result += 360;
+  return result + 0;
 }
 
 /**

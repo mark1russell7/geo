@@ -1,7 +1,7 @@
 /**
  * This package has functions for places on the Earth: points on WGS84, great-circle distances and bearings, and
- * bounding boxes that can cross the antimeridian. It also has exact point-in-polygon and overlap tests for GeoJSON,
- * geohashes, and the types of GeoJSON (RFC 7946).
+ * bounding boxes that can cross the antimeridian. It also has point-in-polygon and overlap tests for GeoJSON on exact
+ * predicates, geohashes, and the types of GeoJSON (RFC 7946). The README gives the limits of the exact results.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * @packageDocumentation
@@ -39,7 +39,6 @@ export {
 export {
   followsRightHandRule,
   locatePoint,
-  pointInPolygon,
   polygonIntersectsBBox,
   polygonsIntersect,
   rewind,

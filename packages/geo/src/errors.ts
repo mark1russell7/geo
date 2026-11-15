@@ -22,6 +22,8 @@
  * - `geohash-length`: a geohash has no character or more than 12 characters.
  * - `geohash-character`: a geohash has a character that is not in its alphabet.
  * - `too-many-cells`: a cover of a box needs more cells than the limit.
+ * - `max-cells`: the limit of the cells of a cover is `NaN` or less than 0.
+ * - `radius`: the radius of a sphere is not more than 0.
  */
 export type GeoErrorCode =
   | "not-finite"
@@ -38,7 +40,9 @@ export type GeoErrorCode =
   | "geohash-precision"
   | "geohash-length"
   | "geohash-character"
-  | "too-many-cells";
+  | "too-many-cells"
+  | "max-cells"
+  | "radius";
 
 /**
  * The error that each function of this package throws for an incorrect input. It is a `RangeError`, so code that
