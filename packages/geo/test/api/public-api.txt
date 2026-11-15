@@ -1,0 +1,309 @@
+# The public API of @mark1russell7/geo
+#
+# The names of each entry of the exports field, and the declaration of each name, without comments
+# and private members. The command `api-report check` compares this file with the built .d.ts files.
+# To accept a change of the API, start the build, then `api-report update`, and review the diff.
+
+## . (dist/index.d.ts): names
+
+type BBox: dist/index.d.ts#BBox
+DEFAULT_GEOHASH_PRECISION: dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
+DEFAULT_MAX_GEOHASH_CELLS: dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
+EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
+EARTH_MEAN_RADIUS_METERS: dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
+type Feature: dist/index.d.ts#Feature
+type FeatureCollection: dist/index.d.ts#FeatureCollection
+GEOHASH_ALPHABET: dist/index.d.ts#GEOHASH_ALPHABET
+GeoError: dist/index.d.ts#GeoError
+type GeoErrorCode: dist/index.d.ts#GeoErrorCode
+type GeoJson: dist/index.d.ts#GeoJson
+type GeoJsonBBox: dist/index.d.ts#GeoJsonBBox
+type GeoJsonObject: dist/index.d.ts#GeoJsonObject
+type GeoJsonProperties: dist/index.d.ts#GeoJsonProperties
+type GeohashCell: dist/index.d.ts#GeohashCell
+type GeohashDirection: dist/index.d.ts#GeohashDirection
+type GeohashNeighbors: dist/index.d.ts#GeohashNeighbors
+type Geometry: dist/index.d.ts#Geometry
+type GeometryCollection: dist/index.d.ts#GeometryCollection
+type LatLon: dist/index.d.ts#LatLon
+type LineString: dist/index.d.ts#LineString
+MAX_GEOHASH_PRECISION: dist/index.d.ts#MAX_GEOHASH_PRECISION
+MAX_GEOJSON_DEPTH: dist/index.d.ts#MAX_GEOJSON_DEPTH
+type MultiLineString: dist/index.d.ts#MultiLineString
+type MultiPoint: dist/index.d.ts#MultiPoint
+type MultiPolygon: dist/index.d.ts#MultiPolygon
+type Point: dist/index.d.ts#Point
+type PointLocation: dist/index.d.ts#PointLocation
+type Polygon: dist/index.d.ts#Polygon
+type Position: dist/index.d.ts#Position
+type RingWinding: dist/index.d.ts#RingWinding
+bboxContains: dist/index.d.ts#bboxContains
+bboxIntersects: dist/index.d.ts#bboxIntersects
+bboxOfGeoJson: dist/index.d.ts#bboxOfGeoJson
+bboxOfPoints: dist/index.d.ts#bboxOfPoints
+centralAngleRadians: dist/index.d.ts#centralAngleRadians
+decodeGeohash: dist/index.d.ts#decodeGeohash
+destinationKm: dist/index.d.ts#destinationKm
+destinationMeters: dist/index.d.ts#destinationMeters
+distanceKm: dist/index.d.ts#distanceKm
+distanceMeters: dist/index.d.ts#distanceMeters
+followsRightHandRule: dist/index.d.ts#followsRightHandRule
+fromGeoJsonBBox: dist/index.d.ts#fromGeoJsonBBox
+fromPosition: dist/index.d.ts#fromPosition
+geohash: dist/index.d.ts#geohash
+geohashNeighbor: dist/index.d.ts#geohashNeighbor
+geohashNeighbors: dist/index.d.ts#geohashNeighbors
+geohashesInBBox: dist/index.d.ts#geohashesInBBox
+initialBearing: dist/index.d.ts#initialBearing
+latLon: dist/index.d.ts#latLon
+locatePoint: dist/index.d.ts#locatePoint
+normalizeLon: dist/index.d.ts#normalizeLon
+parseGeoJson: dist/index.d.ts#parseGeoJson
+parseGeometry: dist/index.d.ts#parseGeometry
+parseLatLon: dist/index.d.ts#parseLatLon
+pointInPolygon: dist/index.d.ts#pointInPolygon
+polygonIntersectsBBox: dist/index.d.ts#polygonIntersectsBBox
+polygonsIntersect: dist/index.d.ts#polygonsIntersect
+rewind: dist/index.d.ts#rewind
+ringWinding: dist/index.d.ts#ringWinding
+toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
+toPosition: dist/index.d.ts#toPosition
+
+## Declarations
+
+### dist/index.d.ts#BBox
+interface BBox {
+  readonly west: number;
+  readonly south: number;
+  readonly east: number;
+  readonly north: number;
+}
+
+### dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
+export declare const DEFAULT_GEOHASH_PRECISION = 7;
+
+### dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
+export declare const DEFAULT_MAX_GEOHASH_CELLS = 1e4;
+
+### dist/index.d.ts#EARTH_MEAN_RADIUS_KM
+export declare const EARTH_MEAN_RADIUS_KM = 6371.0088;
+
+### dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
+export declare const EARTH_MEAN_RADIUS_METERS = 6371008.8;
+
+### dist/index.d.ts#Feature
+interface Feature<G extends Geometry | null = Geometry | null, P extends GeoJsonProperties = GeoJsonProperties> extends GeoJsonObject {
+  readonly type: "Feature";
+  readonly geometry: G;
+  readonly properties: P;
+  readonly id?: string | number;
+}
+
+### dist/index.d.ts#FeatureCollection
+interface FeatureCollection<F extends Feature = Feature> extends GeoJsonObject {
+  readonly type: "FeatureCollection";
+  readonly features: readonly F[];
+}
+
+### dist/index.d.ts#GEOHASH_ALPHABET
+export declare const GEOHASH_ALPHABET = "0123456789bcdefghjkmnpqrstuvwxyz";
+
+### dist/index.d.ts#GeoError
+export declare class GeoError extends RangeError {
+  readonly code: GeoErrorCode;
+  readonly path: string;
+  constructor(code: GeoErrorCode, message: string, path?: string);
+}
+
+### dist/index.d.ts#GeoErrorCode
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells";
+
+### dist/index.d.ts#GeoJson
+type GeoJson = Geometry | Feature | FeatureCollection;
+
+### dist/index.d.ts#GeoJsonBBox
+type GeoJsonBBox = readonly [west: number, south: number, east: number, north: number] | readonly [west: number, south: number, low: number, east: number, north: number, high: number];
+
+### dist/index.d.ts#GeoJsonObject
+interface GeoJsonObject {
+  readonly bbox?: GeoJsonBBox;
+}
+
+### dist/index.d.ts#GeoJsonProperties
+type GeoJsonProperties = {
+  readonly [name: string]: unknown;
+} | null;
+
+### dist/index.d.ts#GeohashCell
+interface GeohashCell {
+  readonly south: number;
+  readonly west: number;
+  readonly north: number;
+  readonly east: number;
+  readonly center: LatLon;
+}
+
+### dist/index.d.ts#GeohashDirection
+type GeohashDirection = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
+
+### dist/index.d.ts#GeohashNeighbors
+type GeohashNeighbors = { readonly [direction in GeohashDirection]: string | undefined; };
+
+### dist/index.d.ts#Geometry
+type Geometry = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon | GeometryCollection;
+
+### dist/index.d.ts#GeometryCollection
+interface GeometryCollection extends GeoJsonObject {
+  readonly type: "GeometryCollection";
+  readonly geometries: readonly Geometry[];
+}
+
+### dist/index.d.ts#LatLon
+interface LatLon {
+  readonly lat: number;
+  readonly lon: number;
+}
+
+### dist/index.d.ts#LineString
+interface LineString extends GeoJsonObject {
+  readonly type: "LineString";
+  readonly coordinates: readonly Position[];
+}
+
+### dist/index.d.ts#MAX_GEOHASH_PRECISION
+export declare const MAX_GEOHASH_PRECISION = 12;
+
+### dist/index.d.ts#MAX_GEOJSON_DEPTH
+export declare const MAX_GEOJSON_DEPTH = 32;
+
+### dist/index.d.ts#MultiLineString
+interface MultiLineString extends GeoJsonObject {
+  readonly type: "MultiLineString";
+  readonly coordinates: readonly (readonly Position[])[];
+}
+
+### dist/index.d.ts#MultiPoint
+interface MultiPoint extends GeoJsonObject {
+  readonly type: "MultiPoint";
+  readonly coordinates: readonly Position[];
+}
+
+### dist/index.d.ts#MultiPolygon
+interface MultiPolygon extends GeoJsonObject {
+  readonly type: "MultiPolygon";
+  readonly coordinates: readonly (readonly (readonly Position[])[])[];
+}
+
+### dist/index.d.ts#Point
+interface Point extends GeoJsonObject {
+  readonly type: "Point";
+  readonly coordinates: Position;
+}
+
+### dist/index.d.ts#PointLocation
+type PointLocation = "inside" | "boundary" | "outside";
+
+### dist/index.d.ts#Polygon
+interface Polygon extends GeoJsonObject {
+  readonly type: "Polygon";
+  readonly coordinates: readonly (readonly Position[])[];
+}
+
+### dist/index.d.ts#Position
+type Position = readonly [lon: number, lat: number, ...rest: number[]];
+
+### dist/index.d.ts#RingWinding
+type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
+
+### dist/index.d.ts#bboxContains
+export declare function bboxContains(box: BBox, point: LatLon): boolean;
+
+### dist/index.d.ts#bboxIntersects
+export declare function bboxIntersects(a: BBox, b: BBox): boolean;
+
+### dist/index.d.ts#bboxOfGeoJson
+export declare function bboxOfGeoJson(geojson: GeoJson): BBox | undefined;
+
+### dist/index.d.ts#bboxOfPoints
+export declare function bboxOfPoints(points: readonly LatLon[]): BBox | undefined;
+
+### dist/index.d.ts#centralAngleRadians
+export declare function centralAngleRadians(a: LatLon, b: LatLon): number;
+
+### dist/index.d.ts#decodeGeohash
+export declare function decodeGeohash(hash: string): GeohashCell;
+
+### dist/index.d.ts#destinationKm
+export declare function destinationKm(from: LatLon, bearingDegrees: number, distance: number, radiusKm?: number): LatLon;
+
+### dist/index.d.ts#destinationMeters
+export declare function destinationMeters(from: LatLon, bearingDegrees: number, distance: number, radiusMeters?: number): LatLon;
+
+### dist/index.d.ts#distanceKm
+export declare function distanceKm(a: LatLon, b: LatLon, radiusKm?: number): number;
+
+### dist/index.d.ts#distanceMeters
+export declare function distanceMeters(a: LatLon, b: LatLon, radiusMeters?: number): number;
+
+### dist/index.d.ts#followsRightHandRule
+export declare function followsRightHandRule(polygon: Polygon | MultiPolygon): boolean;
+
+### dist/index.d.ts#fromGeoJsonBBox
+export declare function fromGeoJsonBBox(bbox: readonly number[]): BBox;
+
+### dist/index.d.ts#fromPosition
+export declare function fromPosition(position: readonly number[]): LatLon;
+
+### dist/index.d.ts#geohash
+export declare function geohash(point: LatLon, precision?: number): string;
+
+### dist/index.d.ts#geohashNeighbor
+export declare function geohashNeighbor(hash: string, direction: GeohashDirection): string | undefined;
+
+### dist/index.d.ts#geohashNeighbors
+export declare function geohashNeighbors(hash: string): GeohashNeighbors;
+
+### dist/index.d.ts#geohashesInBBox
+export declare function geohashesInBBox(box: BBox, precision: number, maxCells?: number): readonly string[];
+
+### dist/index.d.ts#initialBearing
+export declare function initialBearing(from: LatLon, to: LatLon): number;
+
+### dist/index.d.ts#latLon
+export declare function latLon(lat: number, lon: number): LatLon;
+
+### dist/index.d.ts#locatePoint
+export declare function locatePoint(point: LatLon, polygon: Polygon | MultiPolygon): PointLocation;
+
+### dist/index.d.ts#normalizeLon
+export declare function normalizeLon(lon: number): number;
+
+### dist/index.d.ts#parseGeoJson
+export declare function parseGeoJson(value: unknown): Result<GeoJson, GeoError>;
+
+### dist/index.d.ts#parseGeometry
+export declare function parseGeometry(value: unknown): Result<Geometry, GeoError>;
+
+### dist/index.d.ts#parseLatLon
+export declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
+
+### dist/index.d.ts#pointInPolygon
+export declare function pointInPolygon(point: LatLon, polygon: Polygon | MultiPolygon): boolean;
+
+### dist/index.d.ts#polygonIntersectsBBox
+export declare function polygonIntersectsBBox(polygon: Polygon | MultiPolygon, box: BBox): boolean;
+
+### dist/index.d.ts#polygonsIntersect
+export declare function polygonsIntersect(a: Polygon | MultiPolygon, b: Polygon | MultiPolygon): boolean;
+
+### dist/index.d.ts#rewind
+export declare function rewind<T extends Polygon | MultiPolygon>(polygon: T): T;
+
+### dist/index.d.ts#ringWinding
+export declare function ringWinding(ring: readonly Position[]): RingWinding;
+
+### dist/index.d.ts#toGeoJsonBBox
+export declare function toGeoJsonBBox(box: BBox): GeoJsonBBox;
+
+### dist/index.d.ts#toPosition
+export declare function toPosition(point: LatLon): Position;
