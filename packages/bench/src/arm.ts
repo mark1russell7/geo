@@ -1,8 +1,11 @@
 /**
- * One arm of the bench in its own process: `node src/arm.ts --geo <base | head> --case <id>`. It makes the map of the
- * case and times one use of `simplifyRegions`. Then it prints one JSON line with the time `ms` and the hash of the result.
- * The time does not include the map or the hash.
+ * One arm of the bench in its own process: `node src/arm.ts --suite <simplify | locate> --geo <base | head> --case <id>`.
+ * It makes the input of the case and times one use of the function of the suite. Then it prints one JSON line with the
+ * time `ms` and the hash of the result. The time does not include the input or the hash.
  *
+ * - The suite `simplify` times one use of `simplifyRegions` on the map of the case.
+ * - The suite `locate` times the location of each place of the case against the polygon of the case. The head uses
+ *   `pointLocator`, and the time includes its index. geo 0.3.1 has no locator, so the base uses `locatePoint`.
  * - The arm `base` is `@mark1russell7/geo` 0.3.1 from npm (the package `geo-base`).
  * - The arm `head` is the source of `packages/geo` in this commit.
  *
@@ -12,13 +15,17 @@
  * @packageDocumentation
  */
 
-import type { Region } from "@mark1russell7/geo";
 import fs from "node:fs";
 import { canonicalHash } from "@mark1russell7/rigor-generators";
 import { caseOf, mapOf, TOLERANCE_KM } from "./map.ts";
+import { locateCaseOf, placesOf, polygonOf } from "./shapes.ts";
+import { suiteOf } from "./suites.ts";
 
-type Simplify = (regions: readonly Region[], toleranceKm: number) => Region[];
+type Geo = typeof import("@mark1russell7/geo");
+/** The part of the API of geo that the arms use. The API of geo 0.3.1 has it too, but it has no `pointLocator`. */
+type Used = Pick<Geo, "simplifyRegions" | "locatePoint"> & Partial<Pick<Geo, "pointLocator">>;
 
+const USAGE = "Usage: node src/arm.ts --suite <simplify | locate> --geo <base | head> --case <id>";
 const args = process.argv.slice(2);
 const option = (key: string): string | undefined => {
   const index = args.indexOf(key);
@@ -26,15 +33,34 @@ const option = (key: string): string | undefined => {
 };
 const which = option("--geo");
 const id = option("--case");
+const suiteId = option("--suite") ?? "simplify";
 if ((which !== "base" && which !== "head") || id === undefined) {
-  console.error("Usage: node src/arm.ts --geo <base | head> --case <id>");
+  console.error(USAGE);
   process.exit(2);
 }
-const simplify: Simplify =
-  which === "base" ? (await import("geo-base")).simplifyRegions : (await import("@mark1russell7/geo")).simplifyRegions;
-const regions = mapOf(caseOf(id));
+const suite = suiteOf(suiteId);
+const geo: Used = which === "base" ? await import("geo-base") : await import("@mark1russell7/geo");
+
+/** This function makes the input of the case, and gives the timed work on it. */
+function workOf(): () => unknown {
+  if (suite.id === "simplify") {
+    const regions = mapOf(caseOf(id as string));
+    return () => geo.simplifyRegions(regions, TOLERANCE_KM);
+  }
+  const spec = locateCaseOf(id as string);
+  const polygon = polygonOf(spec);
+  const places = placesOf(spec, polygon);
+  const { pointLocator } = geo;
+  if (pointLocator === undefined) return () => places.map((place) => geo.locatePoint(place, polygon));
+  return () => {
+    const locate = pointLocator(polygon);
+    return places.map((place) => locate(place));
+  };
+}
+
+const work = workOf();
 const start = performance.now();
-const result = simplify(regions, TOLERANCE_KM);
+const result = work();
 const ms = performance.now() - start;
 const hash = canonicalHash(result);
 const file = process.env["BENCH_HASHES"];

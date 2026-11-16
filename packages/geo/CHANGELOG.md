@@ -8,6 +8,12 @@
 - The error code `radius` also refuses an ellipsoid with an equatorial radius or a polar radius that is not more than 0.
 - PATCH: new exports before 1.0.0. This change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
 
+## 0.4.1
+
+- `pointLocator(polygon)` examines a polygon one time, and gives a function that locates each point. For each point, it gives the result of `locatePoint`.
+- The locator puts the edges of each part in bands of latitude. A point examines only the edges of its band, with the exact test `rayEdge` of `@mark1russell7/predicates` 0.1.5.
+- This change adds an export, and it does not change the old API. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.4.0
 
 - `circleKm` and `circleMeters` give a circle on the Earth as a GeoJSON Polygon or MultiPolygon, for a map. A circle across the antimeridian is cut there. A circle around a pole has an edge along the pole. The README gives the rules.

@@ -55,7 +55,7 @@
   },
   "dependencies": {
     "@mark1russell7/optional": "^1.2.0",
-    "@mark1russell7/predicates": "^0.1.4"
+    "@mark1russell7/predicates": "^0.1.5"
   },
   "devDependencies": {
     "@mark1russell7/cue": "^2.0.0",

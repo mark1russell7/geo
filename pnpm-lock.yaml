@@ -246,8 +246,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       '@mark1russell7/predicates':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.5
+        version: 0.1.5
     devDependencies:
       '@mark1russell7/cue':
         specifier: ^2.0.0
@@ -557,6 +557,10 @@ packages:
 
   '@mark1russell7/predicates@0.1.4':
     resolution: {integrity: sha512-1lh7XAAejuygPdes/Ze4XV+p+CqxzLGRW9aUwavnSk5hhnc5YkhZN2rjz1ps7oEC9eImd2yfmbt6QKZktT4XPQ==}
+    engines: {node: '>=22'}
+
+  '@mark1russell7/predicates@0.1.5':
+    resolution: {integrity: sha512-WXgTOliDm5650i3adkTjAj85Uzp22LD7KQFqwhETlQWG4CK3pDnd4I4ef9YrOAfzik1uTdChVk8RZaqdeP+YxA==}
     engines: {node: '>=22'}
 
   '@mark1russell7/rigor-bench@0.2.47':
@@ -1924,6 +1928,8 @@ snapshots:
   '@mark1russell7/optional@1.2.0': {}
 
   '@mark1russell7/predicates@0.1.4': {}
+
+  '@mark1russell7/predicates@0.1.5': {}
 
   '@mark1russell7/rigor-bench@0.2.47(esbuild@0.28.2)':
     dependencies:

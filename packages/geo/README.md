@@ -99,6 +99,7 @@ The section [Geodesics](#geodesics) gives the method and the accuracy.
 | Name | What it does |
 | --- | --- |
 | `locatePoint(point, polygon)` | Gives `"inside"`, `"boundary"` or `"outside"` for a Polygon or a MultiPolygon. The polygon contains the point when the result is not `"outside"`. |
+| `pointLocator(polygon)` | Examines a polygon one time, and gives a function that locates each point with the result of `locatePoint`. Use it for many points. |
 | `polygonsIntersect(a, b)` | Gives `true` when two polygons have a common point. |
 | `polygonIntersectsBBox(polygon, box)` | Gives `true` when a polygon and a box have a common point. |
 | `ringWinding(ring)` | Gives `"counterclockwise"`, `"clockwise"` or `"degenerate"`, from the exact sign of the area. |
@@ -210,8 +211,18 @@ The orientation and segment tests are exact. A test across the antimeridian also
 
 - The float sum of a longitude and 360 can round. For example, `-70.1 + 360` rounds.
 - The tests do not use that sum. The shifted predicates of `@mark1russell7/predicates` take the longitude and the move as two inputs, and give the sign of the exact moved point.
-- So `locatePoint`, `polygonsIntersect` and `polygonIntersectsBBox` are exact for each longitude. The result of `polygonsIntersect` does not change when the two polygons change places.
+- So `locatePoint`, `pointLocator`, `polygonsIntersect` and `polygonIntersectsBBox` are exact for each longitude. The result of `polygonsIntersect` does not change when the two polygons change places.
 - The polygon tests refuse a position with a longitude out of -540 to 540 (`MAX_GEOMETRY_LONGITUDE`) with the error `longitude-range`. Each area of the Earth has a written form in that range, and the limit keeps the time of a test small.
+
+### Many points against one polygon
+
+`locatePoint` examines each edge of the polygon for each point. `pointLocator` makes an index of the edges one time.
+
+- The index puts the edges of each part in bands of latitude. A point examines only the edges of its band.
+- The test of each edge is `rayEdge` of `@mark1russell7/predicates`, the exact test of `locatePoint`. So the two functions give the same result for each point.
+- The locator copies the positions. A later change of the polygon does not change the locator.
+- The index needs approximately 40 bytes for each edge.
+- A ring with many long edges in latitude, for example a star, puts many edges in each band. Then each point examines many edges.
 
 ### Rings
 

@@ -41,6 +41,7 @@ type MultiPoint: dist/index.d.ts#MultiPoint
 type MultiPolygon: dist/index.d.ts#MultiPolygon
 type Point: dist/index.d.ts#Point
 type PointLocation: dist/index.d.ts#PointLocation
+type PointLocator: dist/index.d.ts#PointLocator
 type Polygon: dist/index.d.ts#Polygon
 type Position: dist/index.d.ts#Position
 type Region: dist/index.d.ts#Region
@@ -76,6 +77,7 @@ normalizeLon: dist/index.d.ts#normalizeLon
 parseGeoJson: dist/index.d.ts#parseGeoJson
 parseGeometry: dist/index.d.ts#parseGeometry
 parseLatLon: dist/index.d.ts#parseLatLon
+pointLocator: dist/index.d.ts#pointLocator
 polygonIntersectsBBox: dist/index.d.ts#polygonIntersectsBBox
 polygonsIntersect: dist/index.d.ts#polygonsIntersect
 regionSimplifier: dist/index.d.ts#regionSimplifier
@@ -252,6 +254,9 @@ interface Point extends GeoJsonObject {
 ### dist/index.d.ts#PointLocation
 type PointLocation = "inside" | "boundary" | "outside";
 
+### dist/index.d.ts#PointLocator
+type PointLocator = (point: LatLon) => PointLocation;
+
 ### dist/index.d.ts#Polygon
 interface Polygon extends GeoJsonObject {
   readonly type: "Polygon";
@@ -359,6 +364,9 @@ export declare function parseGeometry(value: unknown): Result<Geometry, GeoError
 
 ### dist/index.d.ts#parseLatLon
 export declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
+
+### dist/index.d.ts#pointLocator
+export declare function pointLocator(polygon: Polygon | MultiPolygon): PointLocator;
 
 ### dist/index.d.ts#polygonIntersectsBBox
 export declare function polygonIntersectsBBox(polygon: Polygon | MultiPolygon, box: BBox): boolean;
