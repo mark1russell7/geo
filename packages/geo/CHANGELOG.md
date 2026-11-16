@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2
+
+- `geodesicInverse` gives the length of the shortest geodesic between two points on an ellipsoid, and its bearings at the two points. `geodesicDirect` gives the point at a distance along a geodesic on an initial bearing.
+- `WGS84` is the ellipsoid of WGS84, and the default of the two functions. The new types are `Ellipsoid`, `GeodesicInverse` and `GeodesicDirect`.
+- The functions use the method of Karney (2013). The code is a port of GeographicLib 2.2.0 for JavaScript, with the MIT license. On WGS84, the tests hold a limit of 1e-6 m for a distance and 1e-9 degrees for a bearing or a position.
+- The error code `radius` also refuses an ellipsoid with an equatorial radius or a polar radius that is not more than 0.
+- PATCH: new exports before 1.0.0. This change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.4.1
 
 - `pointLocator(polygon)` examines a polygon one time, and gives a function that locates each point. For each point, it gives the result of `locatePoint`.
