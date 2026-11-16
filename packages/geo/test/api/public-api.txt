@@ -7,9 +7,11 @@
 ## . (dist/index.d.ts): names
 
 type BBox: dist/index.d.ts#BBox
+type BufferOptions: dist/index.d.ts#BufferOptions
 type CircleOptions: dist/index.d.ts#CircleOptions
 DEFAULT_CIRCLE_VERTICES: dist/index.d.ts#DEFAULT_CIRCLE_VERTICES
 DEFAULT_GEOHASH_PRECISION: dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
+DEFAULT_MAX_BUFFER_CELLS: dist/index.d.ts#DEFAULT_MAX_BUFFER_CELLS
 DEFAULT_MAX_GEOHASH_CELLS: dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
 EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
 EARTH_MEAN_RADIUS_METERS: dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
@@ -51,6 +53,8 @@ bboxContains: dist/index.d.ts#bboxContains
 bboxIntersects: dist/index.d.ts#bboxIntersects
 bboxOfGeoJson: dist/index.d.ts#bboxOfGeoJson
 bboxOfPoints: dist/index.d.ts#bboxOfPoints
+bufferKm: dist/index.d.ts#bufferKm
+bufferMeters: dist/index.d.ts#bufferMeters
 centralAngleRadians: dist/index.d.ts#centralAngleRadians
 circleKm: dist/index.d.ts#circleKm
 circleMeters: dist/index.d.ts#circleMeters
@@ -99,6 +103,12 @@ interface BBox {
   readonly north: number;
 }
 
+### dist/index.d.ts#BufferOptions
+interface BufferOptions {
+  readonly tolerance?: number;
+  readonly maxCells?: number;
+}
+
 ### dist/index.d.ts#CircleOptions
 interface CircleOptions {
   readonly vertices?: number;
@@ -109,6 +119,9 @@ export declare const DEFAULT_CIRCLE_VERTICES = 64;
 
 ### dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
 export declare const DEFAULT_GEOHASH_PRECISION = 7;
+
+### dist/index.d.ts#DEFAULT_MAX_BUFFER_CELLS
+export declare const DEFAULT_MAX_BUFFER_CELLS = 1e6;
 
 ### dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
 export declare const DEFAULT_MAX_GEOHASH_CELLS = 1e4;
@@ -288,6 +301,12 @@ export declare function bboxOfGeoJson(geojson: GeoJson): BBox | undefined;
 
 ### dist/index.d.ts#bboxOfPoints
 export declare function bboxOfPoints(points: readonly LatLon[]): BBox | undefined;
+
+### dist/index.d.ts#bufferKm
+export declare function bufferKm(geometry: Geometry, distance: number, options?: BufferOptions, radiusKm?: number): Polygon | MultiPolygon;
+
+### dist/index.d.ts#bufferMeters
+export declare function bufferMeters(geometry: Geometry, distance: number, options?: BufferOptions, radiusMeters?: number): Polygon | MultiPolygon;
 
 ### dist/index.d.ts#centralAngleRadians
 export declare function centralAngleRadians(a: LatLon, b: LatLon): number;

@@ -2,8 +2,9 @@
  * This package has functions for places on the Earth: points on WGS84, great-circle distances and bearings,
  * and bounding boxes that can cross the antimeridian. It gives geodesics on an ellipsoid as WGS84. It also has
  * point-in-polygon and overlap tests for GeoJSON on exact predicates, and a locator for many points in one polygon.
+ *
  * It has geohashes and the types of GeoJSON (RFC 7946). It simplifies regions that share borders, and it gives
- * a circle as a polygon, for maps. The README gives the limits of the exact results.
+ * a circle and the buffer of a geometry as polygons, for maps. The README gives the limits of the exact results.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * @packageDocumentation
@@ -57,6 +58,7 @@ export {
   type PointLocation,
   type RingWinding,
 } from "./polygon.ts";
+export { bufferKm, bufferMeters, DEFAULT_MAX_BUFFER_CELLS, type BufferOptions } from "./buffer.ts";
 export { pointLocator, type PointLocator } from "./locator.ts";
 export {
   circleKm,

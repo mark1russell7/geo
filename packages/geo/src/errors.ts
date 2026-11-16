@@ -22,11 +22,11 @@
  * - `geohash-precision`: a precision is not an integer from 1 to 12.
  * - `geohash-length`: a geohash has no character or more than 12 characters.
  * - `geohash-character`: a geohash has a character that is not in its alphabet.
- * - `too-many-cells`: a cover of a box needs more cells than the limit.
- * - `max-cells`: the limit of the cells of a cover is `NaN` or less than 0.
- * - `radius`: the radius of a sphere or of a circle is not more than 0. Or the equatorial radius of an ellipsoid is
+ * - `too-many-cells`: a cover of a box or a buffer needs more cells than the limit.
+ * - `max-cells`: the limit of the cells of a cover is `NaN` or less than 0. Or the limit of a buffer is less than 1.
+ * - `radius`: the radius of a sphere or of a circle, or the distance of a buffer, is not more than 0. Or the equatorial radius of an ellipsoid is
  *   not more than 0, or its polar radius is not a finite number more than 0.
- * - `tolerance`: a tolerance is less than 0.
+ * - `tolerance`: a tolerance is less than 0. Or the tolerance of a buffer is not more than 0 or not less than its distance.
  * - `vertices`: the number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`.
  */
 export type GeoErrorCode =

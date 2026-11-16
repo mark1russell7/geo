@@ -69,8 +69,12 @@ const PIECE_DEGREES = 1;
 /** The count of rounds of split points near the root of the slope, before the halving of a bracket. */
 const SPLIT_ROUNDS = 4;
 
-/** The parts of a geometry, by kind. */
-interface Shapes {
+/**
+ * The parts of a geometry, by kind.
+ *
+ * @internal
+ */
+export interface Shapes {
   readonly points: Position[];
   readonly lines: Part[];
   readonly polygons: Part[];
@@ -376,8 +380,12 @@ function angleToShapes(point: LatLon, shapes: Shapes): number {
   return angleApart(shapesMinimum(viewerAt([point.lon, point.lat]), shapes, Number.POSITIVE_INFINITY));
 }
 
-/** This function examines a geometry and gives its shapes. The path of an error starts with `path`. */
-function shapesOf(geometry: Geometry, path: string): Shapes {
+/**
+ * This function examines a geometry and gives its shapes. The path of an error starts with `path`.
+ *
+ * @internal
+ */
+export function shapesOf(geometry: Geometry, path: string): Shapes {
   checkGeometry(geometry, path);
   const shapes: Shapes = { points: [], lines: [], polygons: [] };
   collect(geometry, path, shapes);

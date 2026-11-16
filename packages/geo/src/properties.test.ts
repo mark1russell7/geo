@@ -1,4 +1,4 @@
-import { dyadic, orient2dSign } from "@mark1russell7/predicates";
+import { classifySegments, dyadic, orient2dSign } from "@mark1russell7/predicates";
 import fc from "fast-check";
 import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
@@ -7,11 +7,13 @@ import {
   bboxContains,
   bboxOfGeoJson,
   bboxOfPoints,
+  bufferKm,
   decodeGeohash,
   destinationKm,
   distanceBetweenGeometriesKm,
   distanceKm,
   distanceToGeometryKm,
+  followsRightHandRule,
   fromGeoJsonBBox,
   geohash,
   geohashNeighbor,
@@ -20,12 +22,14 @@ import {
   locatePoint,
   normalizeLon,
   parseGeoJson,
+  parseGeometry,
   polygonsIntersect,
   ringWinding,
   toGeoJsonBBox,
   type GeohashDirection,
   type Geometry,
   type LatLon,
+  type MultiPolygon,
   type Polygon,
   type Position,
 } from "./index.ts";
@@ -646,4 +650,110 @@ describe("the GeoJSON parser", () => {
       }),
     );
   });
+});
+
+/** A geometry near a center: a point, a line or a polygon that is a star around the center, with a span in degrees. */
+const bufferGeometry: fc.Arbitrary<Geometry> = fc
+  .record({
+    center: fc.record({ lat: uniformDouble({ min: -85, max: 85 }), lon }),
+    span: fc.constantFrom(0.2, 2, 10),
+    kind: fc.constantFrom("Point", "LineString", "Polygon"),
+    offsets: fc.array(fc.tuple(uniformDouble({ min: -1, max: 1 }), uniformDouble({ min: -1, max: 1 })), { minLength: 2, maxLength: 7 }),
+  })
+  .map(({ center, span, kind, offsets }): Geometry => {
+    const near = ([x, y]: readonly [number, number]): Position => [
+      center.lon + span * x,
+      Math.max(-89.9, Math.min(89.9, center.lat + span * y)),
+    ];
+    if (kind === "Point") return { type: "Point", coordinates: near(offsets[0] as [number, number]) };
+    if (kind === "LineString") return { type: "LineString", coordinates: offsets.map(near) };
+    // The vertices go counterclockwise around the center, so the ring is simple.
+    const count = Math.max(3, offsets.length);
+    const ring: Position[] = [];
+    for (let k = 0; k < count; k += 1) {
+      const angle = (2 * Math.PI * k) / count;
+      const radius = 0.3 + 0.7 * Math.abs((offsets[k % offsets.length] as [number, number])[0]);
+      ring.push(near([radius * Math.cos(angle), radius * Math.sin(angle)]));
+    }
+    return { type: "Polygon", coordinates: [[...ring, ring[0] as Position]] };
+  });
+
+/** The distance of a buffer in kilometres, from 5 to 800. */
+const bufferDistance = uniformDouble({ min: 5, max: 800 });
+
+/** The probes of a buffer: each is a position of the geometry, a bearing, and a part of the distance plus 2 tolerances. */
+const probes = fc.array(fc.tuple(fc.nat(), uniformDouble({ min: 0, max: 360 }), uniformDouble({ min: 0, max: 1 })), {
+  minLength: 40,
+  maxLength: 40,
+});
+
+/** This function gives the positions of a geometry of `bufferGeometry`. */
+function positionsOfGeometry(geometry: Geometry): readonly Position[] {
+  if (geometry.type === "Point") return [geometry.coordinates];
+  if (geometry.type === "LineString") return geometry.coordinates;
+  if (geometry.type === "Polygon") return geometry.coordinates.flat();
+  throw new Error("an unexpected geometry");
+}
+
+/** This function gives the pairs of edges of a result that cross, overlap, or touch at a point that is not a common end. */
+function crossingEdges(shape: Polygon | MultiPolygon): string[] {
+  const polygons = shape.type === "Polygon" ? [shape.coordinates] : shape.coordinates;
+  const keyOf = (position: Position): string => `${position[0]},${position[1]}`;
+  const edges: (readonly [Position, Position])[] = [];
+  for (const ring of polygons.flat()) {
+    for (let t = 0; t + 1 < ring.length; t += 1) edges.push([ring[t] as Position, ring[t + 1] as Position]);
+  }
+  // A sweep by the west end of each edge: two edges can meet only when their longitudes and latitudes overlap.
+  edges.sort((e, f) => Math.min(e[0][0], e[1][0]) - Math.min(f[0][0], f[1][0]));
+  const found: string[] = [];
+  for (let s = 0; s < edges.length; s += 1) {
+    const [a, b] = edges[s] as readonly [Position, Position];
+    const east = Math.max(a[0], b[0]);
+    for (let t = s + 1; t < edges.length; t += 1) {
+      const [c, d] = edges[t] as readonly [Position, Position];
+      if (Math.min(c[0], d[0]) > east) break;
+      if (Math.min(c[1], d[1]) > Math.max(a[1], b[1]) || Math.max(c[1], d[1]) < Math.min(a[1], b[1])) continue;
+      const { relation } = classifySegments(a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]);
+      const shared = [a, b].some((p) => [c, d].some((q) => keyOf(p) === keyOf(q)));
+      if (relation === "cross" || relation === "overlap" || (relation === "touch" && !shared)) {
+        found.push(`${keyOf(a)} ${keyOf(b)} and ${keyOf(c)} ${keyOf(d)}: ${relation}`);
+      }
+    }
+  }
+  return found;
+}
+
+describe("the buffer", () => {
+  // Each test makes 40 buffers. The limit of 30 s keeps a test on a busy runner from a false failure.
+  it("includes each point within the distance less the tolerance, and no point past the distance plus the tolerance", () => {
+    fc.assert(
+      fc.property(bufferGeometry, bufferDistance, probes, (geometry, distance, samples) => {
+        const tolerance = distance / 10;
+        const shape = bufferKm(geometry, distance, { tolerance });
+        const positions = positionsOfGeometry(geometry);
+        for (const [index, bearing, part] of samples) {
+          const [x, y] = positions[index % positions.length] as Position;
+          const probe = destinationKm({ lat: y, lon: normalizeLon(x) }, bearing, part * (distance + 2 * tolerance));
+          const d = distanceToGeometryKm(probe, geometry);
+          if (Math.abs(d - distance) < tolerance) continue;
+          expect({ probe, d, inside: locatePoint(probe, shape) !== "outside" }).toEqual({ probe, d, inside: d < distance });
+        }
+      }),
+      { numRuns: 40 },
+    );
+  }, 30_000);
+
+  it("is a valid polygon with the right-hand rule and no crossing edges", () => {
+    fc.assert(
+      fc.property(bufferGeometry, bufferDistance, (geometry, distance) => {
+        const shape = bufferKm(geometry, distance, { tolerance: distance / 10 });
+        expect(parseGeometry(shape).tag).toBe("ok");
+        expect(followsRightHandRule(shape)).toBe(true);
+        const polygons = shape.type === "Polygon" ? [shape.coordinates] : shape.coordinates;
+        for (const [lonOf] of polygons.flat(2)) expect(Math.abs(lonOf as number)).toBeLessThanOrEqual(180);
+        expect(crossingEdges(shape)).toEqual([]);
+      }),
+      { numRuns: 40 },
+    );
+  }, 30_000);
 });

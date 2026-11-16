@@ -7,6 +7,7 @@ describe("the entry", () => {
       [
         "DEFAULT_CIRCLE_VERTICES",
         "DEFAULT_GEOHASH_PRECISION",
+        "DEFAULT_MAX_BUFFER_CELLS",
         "DEFAULT_MAX_GEOHASH_CELLS",
         "EARTH_MEAN_RADIUS_KM",
         "EARTH_MEAN_RADIUS_METERS",
@@ -21,6 +22,8 @@ describe("the entry", () => {
         "bboxIntersects",
         "bboxOfGeoJson",
         "bboxOfPoints",
+        "bufferKm",
+        "bufferMeters",
         "centralAngleRadians",
         "circleKm",
         "circleMeters",
