@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GeoError,
+  bboxCenter,
   bboxContains,
   bboxIntersects,
   bboxOfGeoJson,
@@ -201,6 +202,39 @@ describe("bboxIntersects", () => {
   it("finds the common pole of two boxes", () => {
     expect(bboxIntersects(box(0, 80, 10, 90), box(100, 85, 110, 90))).toBe(true);
     expect(bboxIntersects(box(0, -90, 10, -80), box(100, -90, 110, -85))).toBe(true);
+  });
+});
+
+describe("bboxCenter", () => {
+  it("is the middle of a box", () => {
+    expect(bboxCenter(box(0, 0, 10, 20))).toEqual({ lat: 10, lon: 5 });
+    expect(bboxCenter(box(-98.5, 37.25, -96.5, 38.25))).toEqual({ lat: 37.75, lon: -97.5 });
+    expect(bboxCenter(box(2.5, 48.5, 2.5, 48.5))).toEqual({ lat: 48.5, lon: 2.5 });
+  });
+
+  it("is on the arc across the antimeridian for a box that crosses it", () => {
+    expect(bboxCenter(box(177, -20, -178, -16))).toEqual({ lat: -18, lon: 179.5 });
+    expect(bboxCenter(box(170, 0, -160, 10))).toEqual({ lat: 5, lon: -175 });
+    expect(bboxCenter(box(170, 0, -170, 10))).toEqual({ lat: 5, lon: -180 });
+    expect(bboxCenter(box(10, 0, -10, 10))).toEqual({ lat: 5, lon: -180 });
+  });
+
+  it("gives the longitude 0 for the full circle, and the middle latitude for a box of the two poles", () => {
+    expect(bboxCenter(box(-180, -90, 180, 90))).toEqual({ lat: 0, lon: 0 });
+    expect(bboxCenter(box(-180, 60, 180, 90))).toEqual({ lat: 75, lon: 0 });
+  });
+
+  it("stays in a box of one rounding step across the antimeridian", () => {
+    const thin = box(179.99999999999997, 0, -179.99999999999997, 0);
+    expect(bboxContains(thin, bboxCenter(thin))).toBe(true);
+    const edge = box(180, 0, -180, 0);
+    expect(bboxContains(edge, bboxCenter(edge))).toBe(true);
+  });
+
+  it("refuses an incorrect box", () => {
+    expect(() => bboxCenter(box(0, 10, 10, 0))).toThrow(GeoError);
+    expect(() => bboxCenter(box(0, 0, 190, 10))).toThrow(GeoError);
+    expect(() => bboxCenter(box(Number.NaN, 0, 10, 10))).toThrow(GeoError);
   });
 });
 

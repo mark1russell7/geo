@@ -44,6 +44,7 @@ export {
   type GeodesicInverse,
 } from "./geodesic.ts";
 export {
+  bboxCenter,
   bboxContains,
   bboxIntersects,
   bboxOfGeoJson,
