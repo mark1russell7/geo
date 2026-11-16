@@ -596,6 +596,7 @@ const nearEdge = ([a, b]: readonly [Position, Position]): fc.Arbitrary<readonly 
     });
 
 describe("the distance between two edges, against a dense reference", () => {
+  // The test makes 150 pairs with a dense reference each. Under coverage on a busy runner, it takes more than 5 s.
   it("is not more than the reference, and not less than the sample by more than half the steps", () => {
     fc.assert(
       fc.property(
@@ -609,5 +610,5 @@ describe("the distance between two edges, against a dense reference", () => {
       ),
       { numRuns: 150 },
     );
-  });
+  }, 30_000);
 });
