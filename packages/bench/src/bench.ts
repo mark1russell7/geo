@@ -1,13 +1,14 @@
 /**
- * The bench: `node src/bench.ts --suite <simplify | locate> --out <folder> [--rounds 7] [--cases <id,id>] [--timeout-ms 180000]`.
+ * The bench: `node src/bench.ts --suite <simplify | locate | buffer> --out <folder> [--rounds 7] [--cases <id,id>] [--timeout-ms 180000]`.
  *
  * It starts each arm of each pair, case and round in a fresh process with `freshRun` of `@mark1russell7/rigor-bench`.
- * The pairs are (base, head), (base, head-copy) and the A/A pair (base, base). The arm `base` is geo 0.3.1 from npm, and
- * the arms `head` and `head-copy` are the source of this commit. The suites are in `suites.ts`.
+ * The pairs are (base, head), (base, head-copy) and the A/A pair (base, base). The arm `base` is the version of geo from
+ * npm that the suite names. The arms `head` and `head-copy` are the source of this commit. The suites are in
+ * `suites.ts`.
  *
  * It writes the records of each pair to `records-<pair>.jsonl` and the skips to `skipped.json`. It writes the hashes of
  * the results to `hashes.jsonl` and the facts of the computer to `env.json`. The report goes to `report.json` and
- * `report.md`. The workflows `bench-simplify.yml` and `bench-locate.yml` start it in CI. Do not start a full run on a
+ * `report.md`. The workflows `bench-simplify.yml`, `bench-locate.yml` and `bench-buffer.yml` start it in CI. Do not start a full run on a
  * shared computer.
  *
  * The exit code is 1 when a case has no read, or when `head` and `base` give different results on a case. In an
@@ -25,7 +26,7 @@ import { freshRun } from "@mark1russell7/rigor-bench/fresh";
 import { type HashLine, markdown, report, speedFaults } from "./report.ts";
 import { suiteOf } from "./suites.ts";
 
-const USAGE = "Usage: node src/bench.ts --suite <simplify | locate> --out <folder> [--rounds 7] [--cases <id,id>] [--timeout-ms 180000]";
+const USAGE = "Usage: node src/bench.ts --suite <simplify | locate | buffer> --out <folder> [--rounds 7] [--cases <id,id>] [--timeout-ms 180000]";
 const args = process.argv.slice(2);
 const option = (key: string, fallback?: string): string | undefined => {
   const index = args.indexOf(key);
@@ -85,7 +86,7 @@ console.log(text);
 // A case with no hash (a skip or a fault) is no read, and no read is not a pass.
 const unsure = names.filter((id) => result.cases.find((row) => row.case === id)?.sameResult !== true);
 if (unsure.length > 0) {
-  console.error(`The result of head is not the same as the result of geo 0.3.1, or has no read, on: ${unsure.join(", ")}`);
+  console.error(`The result of head is not the same as the result of geo ${suite.base.version}, or has no read, on: ${unsure.join(", ")}`);
   process.exitCode = 1;
 }
 

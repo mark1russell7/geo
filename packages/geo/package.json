@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "@mark1russell7/geo",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, and geohashes.",
   "keywords": [
     "geo",

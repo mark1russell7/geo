@@ -1,21 +1,25 @@
 /**
- * This module tells the two suites of the bench as data: the cases of each suite and the claims of its report.
+ * This module tells the three suites of the bench as data: the base of each suite, its cases and the claims of its
+ * report.
  *
  * - The suite `simplify` (roadmap item R14) times `simplifyRegions` on the maps of `map.ts`. Its speed gate holds a
  *   budget and a growth.
  * - The suite `locate` (roadmap item R10) times the location of each place of a case of `shapes.ts`. The head uses
  *   `pointLocator`, and the base uses `locatePoint`. Its speed gate holds a budget and a growth.
+ * - The suite `buffer` (roadmap item R16) times `bufferKm` on the cases of `buffers.ts`. At this time, its report only
+ *   reads the claims.
  *
  * In each suite, a case with a different result in `head` and `base`, or with no result, fails the run.
  *
  * @packageDocumentation
  */
 
+import { BUFFER_CASES } from "./buffers.ts";
 import { CASES } from "./map.ts";
 import { LOCATE_CASES } from "./shapes.ts";
 
 /** The id of a suite. */
-export type SuiteId = "simplify" | "locate";
+export type SuiteId = "simplify" | "locate" | "buffer";
 
 /** A claim of a budget: the median of the arm `head` on one case is at most the limit. */
 export interface BudgetClaim {
@@ -35,11 +39,18 @@ export interface GrowthClaim {
   readonly describe: string;
 }
 
+/** The arm `base` of a suite: a version of `@mark1russell7/geo` from npm, by its alias in `package.json`. */
+export interface SuiteBase {
+  readonly module: "geo-base" | "geo-buffer-base";
+  readonly version: string;
+}
+
 /** A suite of the bench. */
 export interface Suite {
   readonly id: SuiteId;
   /** The title of the report. */
   readonly title: string;
+  readonly base: SuiteBase;
   readonly cases: readonly string[];
   readonly budget?: BudgetClaim;
   readonly growth: GrowthClaim;
@@ -59,6 +70,7 @@ export interface Suite {
 export const SIMPLIFY: Suite = {
   id: "simplify",
   title: "The bench of simplifyRegions (R14)",
+  base: { module: "geo-base", version: "0.3.1" },
   cases: CASES.map((spec) => spec.id),
   budget: { case: "tx-552-325k", limitMs: 360, maxDifferenceMs: 12 },
   growth: {
@@ -85,6 +97,7 @@ export const SIMPLIFY: Suite = {
 export const LOCATE: Suite = {
   id: "locate",
   title: "The bench of pointLocator (R10)",
+  base: { module: "geo-base", version: "0.3.1" },
   cases: LOCATE_CASES.map((spec) => spec.id),
   budget: { case: "coast-1e5-1e4", limitMs: 86, maxDifferenceMs: 3 },
   growth: {
@@ -99,11 +112,33 @@ export const LOCATE: Suite = {
   profileCase: "coast-1e5-1e4",
 };
 
+/**
+ * The suite of R16. Its base is geo 0.4.4, the last version before the faster buffer. It has no budget at this time:
+ * the limits of its gate come from 5 CI runs, as in the other suites. The growth reads the 3 tolerances of one coast.
+ * A cost in proportion to the count of the cells gives 10.
+ */
+export const BUFFER: Suite = {
+  id: "buffer",
+  title: "The bench of bufferKm (R16)",
+  base: { module: "geo-buffer-base", version: "0.4.4" },
+  cases: BUFFER_CASES.map((spec) => spec.id),
+  growth: {
+    sizeOf: (id) => {
+      const spec = BUFFER_CASES.find((entry) => entry.id === id);
+      return spec !== undefined && spec.shape === "coast" && spec.vertices === 1_000 ? 1 / spec.toleranceKm : undefined;
+    },
+    maxGrowth: 10,
+    describe: "one coast over 3 tolerances, as the length of the boundary over the tolerance",
+  },
+  enforced: false,
+  profileCase: "coast-1e3-t0.3",
+};
+
 /** The suites, by id. */
-export const SUITES: Readonly<Record<SuiteId, Suite>> = { simplify: SIMPLIFY, locate: LOCATE };
+export const SUITES: Readonly<Record<SuiteId, Suite>> = { simplify: SIMPLIFY, locate: LOCATE, buffer: BUFFER };
 
 /** This function gives the suite with the id, or a `RangeError`. */
 export function suiteOf(id: string): Suite {
-  if (id === "simplify" || id === "locate") return SUITES[id];
+  if (id === "simplify" || id === "locate" || id === "buffer") return SUITES[id];
   throw new RangeError(`There is no suite ${id}. The suites: ${Object.keys(SUITES).join(", ")}`);
 }

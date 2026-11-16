@@ -12,19 +12,20 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json"
   },
   "devDependencies": {
-    "@mark1russell7/predicates": "^0.1.4",
     "@mark1russell7/cue": "^2.0.0",
+    "@mark1russell7/predicates": "^0.1.4",
     "@types/node": "^26.6.5",
     "@vitest/coverage-v8": "^5.0.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },
-  "description": "The bench of @mark1russell7/geo: simplifyRegions (R14) and pointLocator (R10) on seeded inputs, in fresh processes, with the verdicts of rigor-bench.",
+  "description": "The bench of @mark1russell7/geo: simplifyRegions (R14), pointLocator (R10) and bufferKm (R16) on seeded inputs, in fresh processes, with the verdicts of rigor-bench.",
   "dependencies": {
     "@mark1russell7/geo": "workspace:*",
     "@mark1russell7/rigor-bench": "^0.2.46",
     "@mark1russell7/rigor-generators": "^0.1.16",
     "@mark1russell7/rigor-statistics": "^0.2.4",
-    "geo-base": "npm:@mark1russell7/geo@0.3.1"
+    "geo-base": "npm:@mark1russell7/geo@0.3.1",
+    "geo-buffer-base": "npm:@mark1russell7/geo@0.4.4"
   }
 }

@@ -220,6 +220,9 @@ importers:
       geo-base:
         specifier: npm:@mark1russell7/geo@0.3.1
         version: '@mark1russell7/geo@0.3.1'
+      geo-buffer-base:
+        specifier: npm:@mark1russell7/geo@0.4.4
+        version: '@mark1russell7/geo@0.4.4'
     devDependencies:
       '@mark1russell7/cue':
         specifier: ^2.0.0
@@ -549,6 +552,10 @@ packages:
 
   '@mark1russell7/geo@0.3.1':
     resolution: {integrity: sha512-mpYSjKse66WZDS//8hBqsf7oLzZ9uI6XpG9bUibdtO4VOE4zprhFi+XlXc+CXowADo+efbRi3LqDFNog4MPB+g==}
+    engines: {node: '>=22.12'}
+
+  '@mark1russell7/geo@0.4.4':
+    resolution: {integrity: sha512-XgpfdqmygGWfwSUi2d0gDm6E23TbgijEBd6Uxg3odPfROopLv4nq7Y/qGSVboUVLXsl8egdvjsmkdbYSaVFbUg==}
     engines: {node: '>=22.12'}
 
   '@mark1russell7/optional@1.2.0':
@@ -1924,6 +1931,11 @@ snapshots:
     dependencies:
       '@mark1russell7/optional': 1.2.0
       '@mark1russell7/predicates': 0.1.4
+
+  '@mark1russell7/geo@0.4.4':
+    dependencies:
+      '@mark1russell7/optional': 1.2.0
+      '@mark1russell7/predicates': 0.1.5
 
   '@mark1russell7/optional@1.2.0': {}
 

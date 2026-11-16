@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1
+
+- `bufferKm` and `bufferMeters` are faster, with the same guarantee. Each point at a distance of `distance - tolerance` or less is in the result. Each point at `distance + tolerance` or more is not.
+- The cells are larger. The diameter of a cell is 5/8 of the tolerance or less, from the haversine formula. Before, the side of a cell was 1/4 of the tolerance.
+- The search of the nearest point of an edge stops when its result is within 1/16 of the tolerance. The center of a block of cells gives its value to a corner of the grid.
+- A buffer uses approximately 9 cells for each tolerance of the length of its boundary. Before, it used approximately 16. On the cases of the bench, the trigonometric operations decrease 2.1 to 2.9 times.
+- The positions of a result can change. The guarantee does not change.
+- PATCH: faster functions, with no change of the API. Thus the version is a PATCH change.
+
 ## 0.5.0
 
 - `toUnitVector` gives a point as a vector with the length 1, on the axes of ECEF. `fromUnitVector` gives the point in the direction of a vector. The new type is `UnitVector`.
