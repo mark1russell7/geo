@@ -314,17 +314,23 @@ function rightOf(arc: Arc, node: number): number {
 }
 
 /** This function makes the topology of valid regions: the shared arcs and the rings of each region. */
-function topologyOf(regions: readonly Region[]): Topology {
+/**
+ * This function gives the topology of the regions. Each position for which `fixed` gives `true` is a junction, so the
+ * simplification keeps it.
+ */
+function topologyOf(regions: readonly Region[], fixed?: (position: Position) => boolean): Topology {
   const opened = regions.map((region) => polygonsOf(region).map((rings) => rings.map(openRing)));
   // Each different position gets an id. Most positions have a longitude of their own, so the map by longitude finds
   // them with no key. The map by key holds the other positions. A map finds 0 for -0, as `===` does.
   const byLon = new Map<number, number>();
   const byKey = new Map<string, number>();
   const lats: number[] = [];
+  const fixedIds: number[] = [];
   const idOf = (position: Position): number => {
     const first = byLon.get(position[0]);
     if (first === undefined) {
       byLon.set(position[0], lats.length);
+      if (fixed?.(position) === true) fixedIds.push(lats.length);
       lats.push(position[1]);
       return lats.length - 1;
     }
@@ -334,6 +340,7 @@ function topologyOf(regions: readonly Region[]): Topology {
     if (id === undefined) {
       id = lats.length;
       byKey.set(key, id);
+      if (fixed?.(position) === true) fixedIds.push(id);
       lats.push(position[1]);
     }
     return id;
@@ -345,6 +352,7 @@ function topologyOf(regions: readonly Region[]): Topology {
     if (hasThreeDifferent(ringIds)) keyed.set(ring, ringIds);
   }
   const junctions = findJunctions([...keyed.values()], lats.length);
+  for (const id of fixedIds) junctions[id] = 1;
   const arcs: Arc[] = [];
   // The ids of each arc, and the arcs by the id of their first position. Two arcs are the same when their ids are equal.
   const arcIds: Int32Array[] = [];
@@ -707,6 +715,21 @@ function simplifyTopology(topology: Topology, toleranceKm: number, radiusKm: num
       ? { type: "Polygon", coordinates: polygons[0] ?? [] }
       : { type: "MultiPolygon", coordinates: polygons };
   });
+}
+
+/**
+ * This function simplifies valid regions with the rules of `simplifyRegions`, and it keeps each position for which
+ * `fixed` gives `true`. It does not examine the regions.
+ *
+ * @internal
+ */
+export function simplifyKeeping(
+  regions: readonly Region[],
+  toleranceKm: number,
+  radiusKm: number,
+  fixed: (position: Position) => boolean,
+): Region[] {
+  return simplifyTopology(topologyOf(regions, fixed), toleranceKm, radiusKm);
 }
 
 /**

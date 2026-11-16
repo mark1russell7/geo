@@ -1,6 +1,6 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry, and a circle around a point as a GeoJSON polygon. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It gives a circle around a point and the buffer of a geometry as GeoJSON polygons. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
@@ -84,6 +84,14 @@ The section [Geodesics](#geodesics) gives the method and the accuracy.
 | `circleKm(center, distance, options?, radiusKm?)`, `circleMeters(...)` | The circle around a point as a GeoJSON Polygon or MultiPolygon, for a map. The section [The shape of a circle](#the-shape-of-a-circle) gives the rules. |
 | `CircleOptions` | `{ vertices? }`: the number of the vertices, an integer from 3 to `MAX_CIRCLE_VERTICES` (65,536). |
 | `DEFAULT_CIRCLE_VERTICES` | The default number of the vertices: 64. |
+
+### Buffers
+
+| Name | What it does |
+| --- | --- |
+| `bufferKm(geometry, distance, options?, radiusKm?)`, `bufferMeters(...)` | The area within a distance of a geometry as a GeoJSON Polygon or MultiPolygon, for a map. The section [The buffer of a geometry](#the-buffer-of-a-geometry) gives the rules. |
+| `BufferOptions` | `{ tolerance?, maxCells? }`: the tolerance of the boundary, and the limit of the cells near the boundary. |
+| `DEFAULT_MAX_BUFFER_CELLS` | The default limit of the cells: 1,000,000. |
 
 ### Bounding boxes
 
@@ -192,6 +200,21 @@ The time is in proportion to the product of the numbers of positions. A latitude
 
 For a small circle away from the poles, an edge goes into the circle by at most `1 - cos(180° / vertices)` of the radius. For 64 vertices, that is 0.12 %.
 
+### The buffer of a geometry
+
+`bufferKm` and `bufferMeters` give the area within a distance of a geometry as a polygon. An example is the area of an alert along a storm track. The distance is the distance of `distanceToGeometryKm`. Thus the buffer of a polygon includes the polygon.
+
+- Each point at a distance of `distance - tolerance` or less is in the result. Each point at a distance of `distance + tolerance` or more is not in the result.
+- The default tolerance is the distance over 100. A tolerance is more than 0 and less than the distance.
+- The result follows RFC 7946, as a circle does. Each longitude is from -180 to 180, and no edge crosses a different edge.
+- A buffer across the antimeridian is cut at 180 and at -180. A buffer around a pole has an edge along the pole.
+- A geometry with no position gives an empty `MultiPolygon`. A distance of half the circumference of the sphere or more gives the whole Earth.
+- The buffer of a point is a circle within the tolerance. `circleKm` gives a circle with a fixed number of vertices.
+
+A grid of cells in longitude and latitude covers the buffer. A tree of blocks finds the cells near the boundary, and the method of marching squares gives the rings. Then the method of `simplifyRegions` removes the positions that the tolerance does not need. In each CI run, a property test examines the two limits at sampled points.
+
+The time is in proportion to the number of cells near the boundary. That number is approximately 12 times the length of the boundary over the tolerance. A buffer of 10 km with the tolerance 0.1 km around a rough coast of 5,000 km uses approximately 600,000 cells and 2 to 4 seconds. Near a pole, the cells are narrower, so the number of cells increases. A buffer that needs more than `maxCells` cells gives the error `too-many-cells`. Then use a larger tolerance.
+
 ### Simplification of regions
 
 `simplifyRegions` simplifies regions that share borders, for example the counties of a state, with the method of Douglas and Peucker. The result has one region for each input region, with the same type.
@@ -287,11 +310,11 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `too-deep` | The collections are nested more than `MAX_GEOJSON_DEPTH` levels. |
 | `bbox` | The south of a box is more than its north, a GeoJSON `bbox` does not have 4 or 6 numbers, or its low altitude is more than its high altitude. |
 | `geohash-precision`, `geohash-length`, `geohash-character` | A precision, the length of a geohash or a character of a geohash is incorrect. |
-| `too-many-cells` | A cover of a box has more cells than `maxCells`. |
-| `max-cells` | The value of `maxCells` is `NaN` or less than 0. |
-| `radius` | The radius of the sphere or of a circle is not more than 0. Or the equatorial radius of an ellipsoid is not more than 0, or its polar radius is not a finite number more than 0. |
+| `too-many-cells` | A cover of a box or a buffer needs more cells than `maxCells`. |
+| `max-cells` | The value of `maxCells` is `NaN` or less than 0, or less than 1 for a buffer. |
+| `radius` | The radius of the sphere or of a circle, or the distance of a buffer, is not more than 0. Or the equatorial radius of an ellipsoid is not more than 0, or its polar radius is not a finite number more than 0. |
 | `vertices` | The number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`. |
-| `tolerance` | The tolerance of a simplification is less than 0. |
+| `tolerance` | The tolerance of a simplification is less than 0. Or the tolerance of a buffer is 0 or less, or it is equal to the distance or more. |
 
 ## The differences from @procedures/geo
 

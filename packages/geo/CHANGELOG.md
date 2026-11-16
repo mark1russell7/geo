@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.4
+
+- `bufferKm` and `bufferMeters` give the buffer of a GeoJSON geometry. The buffer is the area within a distance of the geometry, as a GeoJSON Polygon or MultiPolygon. Each point at a distance of `distance - tolerance` or less is in the result, and each point at `distance + tolerance` or more is not. The README gives the rules.
+- `BufferOptions` has the options `tolerance` and `maxCells`. `DEFAULT_MAX_BUFFER_CELLS` is the default limit of the cells (1,000,000).
+- The error codes `tolerance`, `max-cells`, `too-many-cells` and `radius` also refuse incorrect options of a buffer.
+- PATCH: new exports before 1.0.0. This change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.4.3
 
 - `distanceBetweenGeometriesKm` and `distanceBetweenGeometriesMeters` give the great-circle distance between the nearest points of two GeoJSON geometries. The distance is 0 when the geometries have a common point. The README gives the rules.
