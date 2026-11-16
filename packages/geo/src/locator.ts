@@ -49,7 +49,7 @@ interface BandedPart extends PartBox {
 
 /**
  * This function gives the band of the latitude `y` of the part. The result is a monotone function of `y`, also with
- * rounding: a float subtraction, a float division by a positive number and `Math.floor` do not change the order.
+ * rounding. A float subtraction, a float division by a positive number and `Math.floor` do not change the order.
  */
 function bandOf(part: Pick<BandedPart, "minY" | "bands" | "height">, y: number): number {
   if (part.bands === 1) return 0;
@@ -126,7 +126,7 @@ function bandedPart(part: Part): BandedPart {
 
 /**
  * This function is the plane test of a banded part, with the rule of holes of `locatePoint`. The edges of the band are
- * in the order of the rings, so each run of edges of one ring gives the parity of that ring. A ring with no edge in
+ * in the order of the rings. So each run of edges of one ring gives the parity of that ring. A ring with no edge in
  * the band does not contain the point.
  */
 function inBands(part: BandedPart, x: number, y: number, dx: number): PointLocation {
