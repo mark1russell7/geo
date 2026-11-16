@@ -84,5 +84,6 @@ describe("the locate cases", () => {
     const head = places.map((place) => locatePoint(place, polygon));
     expect(canonicalHash(head)).toBe(canonicalHash(places.map((place) => locateBase(place, polygon))));
     expect(new Set(head)).toEqual(new Set(["inside", "boundary", "outside"]));
-  });
+    // The case parts examines 20,000 vertices for each of 1,000 places, two times. With coverage, CI took 6.6 s.
+  }, 30_000);
 });
