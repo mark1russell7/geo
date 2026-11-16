@@ -24,7 +24,8 @@
  * - `geohash-character`: a geohash has a character that is not in its alphabet.
  * - `too-many-cells`: a cover of a box needs more cells than the limit.
  * - `max-cells`: the limit of the cells of a cover is `NaN` or less than 0.
- * - `radius`: the radius of a sphere or of a circle is not more than 0.
+ * - `radius`: the radius of a sphere or of a circle is not more than 0. Or the equatorial radius of an ellipsoid is
+ *   not more than 0, or its polar radius is not a finite number more than 0.
  * - `tolerance`: a tolerance is less than 0.
  * - `vertices`: the number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`.
  */
