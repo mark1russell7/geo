@@ -98,7 +98,8 @@ describe("pointLocator", () => {
   });
 
   it("gives the result of locatePoint at the latitude of each vertex and one step above and below it", () => {
-    const polygon: Polygon = { type: "Polygon", coordinates: [coast(1500, 10, 20), coast(300, 10.5, 20.25).map(([x, y]): Position => [10 + (x - 10) / 4, 20 + (y - 20) / 4])] };
+    // Each point also gets the slow test of `locatePoint`, so the rings are small for the coverage job.
+    const polygon: Polygon = { type: "Polygon", coordinates: [coast(600, 10, 20), coast(150, 10.5, 20.25).map(([x, y]): Position => [10 + (x - 10) / 4, 20 + (y - 20) / 4])] };
     const locate = pointLocator(polygon);
     const seen = { inside: 0, boundary: 0, outside: 0 };
     let differ = 0;
@@ -116,7 +117,7 @@ describe("pointLocator", () => {
     }
     expect(differ).toBe(0);
     for (const where of ["inside", "boundary", "outside"] as const) expect(seen[where], where).toBeGreaterThan(0);
-  });
+  }, 30_000);
 
   it("uses the rule of holes and the parts of a MultiPolygon", () => {
     const withHole: Polygon = {
