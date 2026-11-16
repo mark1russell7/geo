@@ -117,6 +117,19 @@ describe("bufferKm", () => {
     expect(polygonsOf(shape)).toHaveLength(2);
   });
 
+  it("gives a valid polygon for two circles with a narrow neck, where cells have four crossings", () => {
+    // The circles overlap by 4 m. With this tolerance, a cell at the neck has four crossings and its center is inside,
+    // and other cells have four crossings and an outside center. Thus the test examines each choice of marching squares.
+    const a = at(0.003, 0.004);
+    const b = destinationKm(a, 45, 2 - 0.004);
+    const geometry: Geometry = { type: "MultiPoint", coordinates: [[a.lon, a.lat], [b.lon, b.lat]] };
+    const shape = bufferKm(geometry, 1, { tolerance: 0.6 });
+    expect(shape.type).toBe("Polygon");
+    expect(parseGeometry(shape).tag).toBe("ok");
+    expect(followsRightHandRule(shape)).toBe(true);
+    expect(bandFailures(geometry, shape, [a, b], 1, 0.6)).toEqual([]);
+  });
+
   it("cuts a buffer across the antimeridian at 180 and at -180", () => {
     const geometry: Geometry = { type: "Point", coordinates: [179.9, -16] };
     const shape = bufferKm(geometry, 50, { tolerance: 0.5 });

@@ -311,8 +311,8 @@ function contourRings(elements: Elements, grid: Grid, angle: number, maxCells: n
   for (let k = 0; k < all.length; k += 1) all[k] = k;
   const stack: Block[] = [{ i0: 0, i1: columns, j0: 0, j1: rows, list: all, inside: inPolygon === undefined ? 0 : -1 }];
   while (stack.length > 0) {
+    // A block in the stack is not wholly in a polygon: the division does not push such a block.
     const block = stack.pop() as Block;
-    if (block.inside === 1) continue;
     const width = block.i1 - block.i0;
     const height = block.j1 - block.j0;
     if (width === 1 && height === 1) {
