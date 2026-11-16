@@ -4,8 +4,7 @@
  * - The suite `simplify` (roadmap item R14) times `simplifyRegions` on the maps of `map.ts`. Its speed gate holds a
  *   budget and a growth.
  * - The suite `locate` (roadmap item R10) times the location of each place of a case of `shapes.ts`. The head uses
- *   `pointLocator`, and the base uses `locatePoint`. At this time its report only reads the claims, and its budget is a
- *   temporary value. The limits of its gate come from 5 benches of the index of R10 in CI.
+ *   `pointLocator`, and the base uses `locatePoint`. Its speed gate holds a budget and a growth.
  *
  * In each suite, a case with a different result in `head` and `base`, or with no result, fails the run.
  *
@@ -75,24 +74,28 @@ export const SIMPLIFY: Suite = {
 };
 
 /**
- * The suite of R10. The growth reads the coasts with 10,000 places for each 10 times more vertices. The value 12 is the
- * growth of a cost as n log n. At this time the budget is a temporary value, and the suite is not enforced. The limits
- * of its gate come from 5 CI benches of this budget.
+ * The suite of R10. The limits are the worst high ends of 5 CI runs plus their spread. The runs are 43830188869,
+ * 43843439775, 43849286887, 43862267058 and 43877513514, on the same code of `pointLocator`:
+ *
+ * - The budget: 58.7 ms plus 26.8 ms gives 86 ms. `locatePoint` of geo 0.3.1 takes 30 s to 60 s on this case.
+ * - The difference of the two arms of `head`: 1.55 ms plus 1.07 ms, rounded up to 3 ms.
+ * - The growth for each 10 times more vertices of the coasts with 10,000 places: 2.38 plus 0.71 gives 3.1. A cost that
+ *   grows as the vertices gives 10.
  */
 export const LOCATE: Suite = {
   id: "locate",
   title: "The bench of pointLocator (R10)",
   cases: LOCATE_CASES.map((spec) => spec.id),
-  budget: { case: "coast-1e5-1e4", limitMs: 10_000, maxDifferenceMs: 1_000 },
+  budget: { case: "coast-1e5-1e4", limitMs: 86, maxDifferenceMs: 3 },
   growth: {
     sizeOf: (id) => {
       const spec = LOCATE_CASES.find((entry) => entry.id === id);
       return spec !== undefined && spec.shape === "coast" && spec.places === 10_000 ? spec.vertices : undefined;
     },
-    maxGrowth: 12,
+    maxGrowth: 3.1,
     describe: "the vertices of the coasts with 10,000 places",
   },
-  enforced: false,
+  enforced: true,
   profileCase: "coast-1e5-1e4",
 };
 
