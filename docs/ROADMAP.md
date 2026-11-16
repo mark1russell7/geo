@@ -14,7 +14,8 @@ This file is the plan of geo. The Status page of the site reads it, and the trac
 | R13 | Uniform values in the property tests | done | `fc.double` with a range gives values near 0 in 93 % of the draws. Each ranged property now uses `uniformDouble` of `@mark1russell7/rigor-testkit`. |
 | R6 | The live demo site | done 2026-11-15 | An interactive globe and flat map: pick or draw an area, move a place, and see the location, the distance, a buffer, the box and the geohash cells. The site check uses the demo at 360, 390 and 1280 pixels (#15). |
 | R5 | `@procedures/geo` uses this package | later | `greatCircleKm` and the geohash of `@procedures/geo` become calls of this package. |
-| R7 | Circles and buffers as polygons | later | A circle on the Earth as a polygon, also across the antimeridian and around a pole. |
+| R7 | Circles as polygons | in progress | `circleKm` and `circleMeters` give a circle on the Earth as a GeoJSON polygon for a map, for example the circle of a CAP alert or the buffer of a place. A circle across the antimeridian is cut there. A circle around a pole has an edge along the pole. A buffer of a line or a polygon is R15. |
 | R10 | Large polygons and many places | later | An index of the edges, and a bench in CI for each power of ten. |
 | R8 | The distance between two areas | later | The great-circle distance between two geometries. |
 | R9 | Geodesics on the WGS84 ellipsoid | later | The distance, the bearing and the destination on the ellipsoid, with the method of Karney. |
+| R15 | Buffers of lines and polygons | later | The area within a distance of a line or a polygon, as a GeoJSON polygon for a map. `distanceToGeometryKm` already tests a place against such a buffer. |
