@@ -11,6 +11,7 @@ import {
   type BBox,
   bboxOfGeoJson,
   decodeGeohash,
+  densify as densifyEdges,
   destinationKm,
   distanceToGeometryKm,
   geohash,
@@ -129,18 +130,13 @@ export function closeDraft(draft: readonly Position[]): Position[] | undefined {
   return [...draft, first];
 }
 
-/** This function adds a position to each edge at each `step` degrees or less, so a drawing keeps the straight edges of GeoJSON. */
+/**
+ * This function adds positions to each edge with `densify` of geo, so a drawing keeps the straight edges of GeoJSON.
+ * No part of an edge is longer than `step` degrees. The result is a new array, which the caller can change.
+ */
 export function densify(ring: readonly Position[], step = 1): [number, number][] {
-  const out: [number, number][] = [];
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const [x0, y0] = ring[index] as Position;
-    const [x1, y1] = ring[index + 1] as Position;
-    const parts = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) / step));
-    for (let part = 0; part < parts; part += 1) out.push([x0 + ((x1 - x0) * part) / parts, y0 + ((y1 - y0) * part) / parts]);
-  }
-  const end = ring[ring.length - 1];
-  if (end !== undefined) out.push([end[0], end[1]]);
-  return out;
+  const line = densifyEdges({ type: "LineString", coordinates: ring }, step);
+  return line.coordinates.map(([lon, lat]): [number, number] => [lon, lat]);
 }
 
 /**

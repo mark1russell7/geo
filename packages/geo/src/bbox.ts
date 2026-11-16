@@ -49,16 +49,18 @@ class Extent {
   private span(start: number, end: number, lat1: number, lat2: number): void {
     this.south = Math.min(this.south, lat1, lat2);
     this.north = Math.max(this.north, lat1, lat2);
-    if (end - start >= 360) {
-      this.intervals.push([-180, 180]);
-      return;
-    }
-    const west = normalizeLon(start);
-    const east = west + (end - start);
-    if (east <= 180) {
+    // The two ends of the arc have no rounding. So two edges with a common position give two arcs that touch.
+    const arc = boxLongitudes(start, end);
+    // The sum with 0 makes -0 into 0, as `normalizeLon` does.
+    const west = arc[0] + 0;
+    const east = arc[1] + 0;
+    if (west === 180) {
+      // The arc is only the antimeridian. The longitude 180 is the longitude -180.
+      this.intervals.push([-180, -180]);
+    } else if (west <= east) {
       this.intervals.push([west, east]);
     } else {
-      this.intervals.push([west, 180], [-180, east - 360]);
+      this.intervals.push([west, 180], [-180, east]);
     }
   }
 

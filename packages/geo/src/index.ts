@@ -5,6 +5,7 @@
  *
  * It has geohashes and the types of GeoJSON (RFC 7946). It simplifies regions that share borders, and it gives
  * a circle and the buffer of a geometry as polygons, for maps. The README gives the limits of the exact results.
+ * For a globe, it gives a point as a unit vector, the points along a great circle, and a geometry with short edges.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * @packageDocumentation
@@ -28,7 +29,11 @@ export {
   distanceMeters,
   EARTH_MEAN_RADIUS_KM,
   EARTH_MEAN_RADIUS_METERS,
+  fromUnitVector,
   initialBearing,
+  intermediatePoint,
+  toUnitVector,
+  type UnitVector,
 } from "./sphere.ts";
 export {
   geodesicDirect,
@@ -59,6 +64,7 @@ export {
   type RingWinding,
 } from "./polygon.ts";
 export { bufferKm, bufferMeters, DEFAULT_MAX_BUFFER_CELLS, type BufferOptions } from "./buffer.ts";
+export { densify, MAX_DENSIFY_POSITIONS } from "./densify.ts";
 export { pointLocator, type PointLocator } from "./locator.ts";
 export {
   circleKm,

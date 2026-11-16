@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+- `toUnitVector` gives a point as a vector with the length 1, on the axes of ECEF. `fromUnitVector` gives the point in the direction of a vector. The new type is `UnitVector`.
+- `intermediatePoint` gives the point at a part of the way along the great circle between two points.
+- `densify` gives a copy of a geometry with more positions on its edges. No part of an edge is longer than a step in degrees. Each new position is on the straight line in longitude and latitude of its edge.
+- `MAX_DENSIFY_POSITIONS` is the limit of the new positions of one call of `densify` (1,000,000).
+- These functions are for a drawing on a globe: `densify` makes the edges short, and `toUnitVector` puts each position on the sphere. The README gives the rules.
+- The new error code `vector` refuses a vector with the length 0. The new error code `step` refuses a step of `densify` that is not more than 0, or that adds too many positions.
+- Fix: `bboxOfGeoJson` gives the ends of each edge with no rounding. Before, the east of an edge was `west + (east - west)` in floating point. So the box of the line from 1.1 to 6.8 had the east 6.799999999999999, and it did not contain the end of the line.
+- Fix: two edges with a common position give two arcs that touch. Before, a gap of one rounding step was possible between them. So the line through the longitudes -180, 0.1 and 180 got a box from 0.1 to 0.09999999999999432, not from -180 to 180.
+- `GeoErrorCode` has two new values. A caller with a full `switch` on the codes must add them. Thus the version is a MINOR change (before 1.0.0, a breaking change is a MINOR change).
+
 ## 0.4.4
 
 - `bufferKm` and `bufferMeters` give the buffer of a GeoJSON geometry. The buffer is the area within a distance of the geometry, as a GeoJSON Polygon or MultiPolygon. Each point at a distance of `distance - tolerance` or less is in the result, and each point at `distance + tolerance` or more is not. The README gives the rules.
