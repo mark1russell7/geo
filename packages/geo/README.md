@@ -119,6 +119,7 @@ The section [Geodesics](#geodesics) gives the method and the accuracy.
 | `bboxOfPoints(points)` | The smallest box of the points, or `undefined` for no point. |
 | `bboxOfGeoJson(geojson)` | The smallest box of a GeoJSON object, from its coordinates. |
 | `bboxContains(box, point)`, `bboxIntersects(a, b)` | Tests on the closed area of a box. |
+| `bboxCenter(box)` | The middle of a box, also across the antimeridian. The closed box has it. It is a place for a label. |
 | `toGeoJsonBBox(box)`, `fromGeoJsonBBox(numbers)` | Change a box to the member `bbox` of GeoJSON, and back. `fromGeoJsonBBox` gives longitudes from -180 to 180. |
 
 ### Polygons

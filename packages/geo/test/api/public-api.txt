@@ -51,6 +51,7 @@ type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
 type UnitVector: dist/index.d.ts#UnitVector
 WGS84: dist/index.d.ts#WGS84
+bboxCenter: dist/index.d.ts#bboxCenter
 bboxContains: dist/index.d.ts#bboxContains
 bboxIntersects: dist/index.d.ts#bboxIntersects
 bboxOfGeoJson: dist/index.d.ts#bboxOfGeoJson
@@ -305,6 +306,9 @@ interface UnitVector {
 
 ### dist/index.d.ts#WGS84
 export declare const WGS84: Ellipsoid;
+
+### dist/index.d.ts#bboxCenter
+export declare function bboxCenter(box: BBox): LatLon;
 
 ### dist/index.d.ts#bboxContains
 export declare function bboxContains(box: BBox, point: LatLon): boolean;

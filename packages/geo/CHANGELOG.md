@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.2
+
+- `bboxCenter` gives the middle of a box: the middle of its latitudes, and the middle of its arc of longitudes. For a box that crosses the antimeridian, the middle is on the arc across the antimeridian.
+- The closed box has the result, also when the width of the box is one rounding step.
+- The middle is a place for a label of a region, or for the first view of a map. It is not the centroid of a shape.
+- PATCH: a new export before 1.0.0. This change adds one function, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.5.1
 
 - `bufferKm` and `bufferMeters` are faster, with the same guarantee. Each point at a distance of `distance - tolerance` or less is in the result. Each point at `distance + tolerance` or more is not.
