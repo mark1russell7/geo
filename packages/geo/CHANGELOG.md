@@ -3,7 +3,7 @@
 ## 0.5.2
 
 - Fix: `simplifyRegions` and `regionSimplifier` give the same output as the search of each position, also near a pole. Since 0.3.2, the search of a span skips each position whose bound is less than the best angle.
-- Before, the bound of a position near a pole was able to be 1 rounding step less than its angle. So the search was able to skip a position with an angle that was larger than the best angle by a few rounding steps.
+- Before, the bound of a position very near a pole was able to be less than its angle. So the search was able to skip a position with an angle that was larger than the best angle.
 - The fix: the bound is the larger of the box bound and the probe value of the edge. The measure of the angle uses these two values. So the bound is not less than the angle, also in floating point.
 - A property test of CI found this fault with a viewer at the south pole. A new test keeps that case.
 - PATCH: a bug fix with no change of the public API. Thus the version is a PATCH change.
