@@ -131,6 +131,21 @@ describe("pointLocator", () => {
     expect(locate({ lat: 0.5, lon: 100.5 })).toBe("outside");
     expect(locate({ lat: 0.5, lon: 100.8 })).toBe("boundary");
     expect(locate({ lat: 0.5, lon: 100.5 - 360 })).toBe("outside");
+    // A hole that crosses the exterior: the even-odd rule over all rings, as in locatePoint.
+    const crossing: Polygon = {
+      type: "Polygon",
+      coordinates: [
+        [[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]],
+        [[2, 1], [6, 1], [6, 3], [2, 3], [2, 1]],
+      ],
+    };
+    const inCrossing = pointLocator(crossing);
+    const expected = { "1,2": "inside", "3,2": "outside", "5,2": "inside", "5,1": "boundary", "3,1": "boundary", "3,3.5": "inside" };
+    for (const [key, where] of Object.entries(expected)) {
+      const [lon, lat] = key.split(",").map(Number) as [number, number];
+      expect(locatePoint({ lat, lon }, crossing), key).toBe(where);
+      expect(inCrossing({ lat, lon }), key).toBe(where);
+    }
     // The polygon from 170 E to 170 W, cut at the antimeridian into two parts (RFC 7946, section 3.1.9).
     const cut: MultiPolygon = {
       type: "MultiPolygon",
