@@ -99,7 +99,7 @@ export function initialBearing(from: LatLon, to: LatLon): number {
  *
  * @internal
  */
-function destinationByAngle(from: LatLon, bearingDegrees: number, angle: number): LatLon {
+export function destinationByAngle(from: LatLon, bearingDegrees: number, angle: number): LatLon {
   checkPoint(from);
   checkFinite(bearingDegrees, "bearing");
   checkFinite(angle, "distance");

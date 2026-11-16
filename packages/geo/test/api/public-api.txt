@@ -7,6 +7,8 @@
 ## . (dist/index.d.ts): names
 
 type BBox: dist/index.d.ts#BBox
+type CircleOptions: dist/index.d.ts#CircleOptions
+DEFAULT_CIRCLE_VERTICES: dist/index.d.ts#DEFAULT_CIRCLE_VERTICES
 DEFAULT_GEOHASH_PRECISION: dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
 DEFAULT_MAX_GEOHASH_CELLS: dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
 EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
@@ -27,6 +29,7 @@ type Geometry: dist/index.d.ts#Geometry
 type GeometryCollection: dist/index.d.ts#GeometryCollection
 type LatLon: dist/index.d.ts#LatLon
 type LineString: dist/index.d.ts#LineString
+MAX_CIRCLE_VERTICES: dist/index.d.ts#MAX_CIRCLE_VERTICES
 MAX_GEOHASH_PRECISION: dist/index.d.ts#MAX_GEOHASH_PRECISION
 MAX_GEOJSON_DEPTH: dist/index.d.ts#MAX_GEOJSON_DEPTH
 MAX_GEOMETRY_LONGITUDE: dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
@@ -44,6 +47,8 @@ bboxIntersects: dist/index.d.ts#bboxIntersects
 bboxOfGeoJson: dist/index.d.ts#bboxOfGeoJson
 bboxOfPoints: dist/index.d.ts#bboxOfPoints
 centralAngleRadians: dist/index.d.ts#centralAngleRadians
+circleKm: dist/index.d.ts#circleKm
+circleMeters: dist/index.d.ts#circleMeters
 decodeGeohash: dist/index.d.ts#decodeGeohash
 destinationKm: dist/index.d.ts#destinationKm
 destinationMeters: dist/index.d.ts#destinationMeters
@@ -84,6 +89,14 @@ interface BBox {
   readonly north: number;
 }
 
+### dist/index.d.ts#CircleOptions
+interface CircleOptions {
+  readonly vertices?: number;
+}
+
+### dist/index.d.ts#DEFAULT_CIRCLE_VERTICES
+export declare const DEFAULT_CIRCLE_VERTICES = 64;
+
 ### dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
 export declare const DEFAULT_GEOHASH_PRECISION = 7;
 
@@ -121,7 +134,7 @@ export declare class GeoError extends RangeError {
 }
 
 ### dist/index.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance";
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices";
 
 ### dist/index.d.ts#GeoJson
 type GeoJson = Geometry | Feature | FeatureCollection;
@@ -174,6 +187,9 @@ interface LineString extends GeoJsonObject {
   readonly type: "LineString";
   readonly coordinates: readonly Position[];
 }
+
+### dist/index.d.ts#MAX_CIRCLE_VERTICES
+export declare const MAX_CIRCLE_VERTICES = 65536;
 
 ### dist/index.d.ts#MAX_GEOHASH_PRECISION
 export declare const MAX_GEOHASH_PRECISION = 12;
@@ -240,6 +256,12 @@ export declare function bboxOfPoints(points: readonly LatLon[]): BBox | undefine
 
 ### dist/index.d.ts#centralAngleRadians
 export declare function centralAngleRadians(a: LatLon, b: LatLon): number;
+
+### dist/index.d.ts#circleKm
+export declare function circleKm(center: LatLon, distance: number, options?: CircleOptions, radiusKm?: number): Polygon | MultiPolygon;
+
+### dist/index.d.ts#circleMeters
+export declare function circleMeters(center: LatLon, distance: number, options?: CircleOptions, radiusMeters?: number): Polygon | MultiPolygon;
 
 ### dist/index.d.ts#decodeGeohash
 export declare function decodeGeohash(hash: string): GeohashCell;

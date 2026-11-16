@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0
+
+- `circleKm` and `circleMeters` give a circle on the Earth as a GeoJSON Polygon or MultiPolygon, for a map. A circle across the antimeridian is cut there. A circle around a pole has an edge along the pole. The README gives the rules.
+- The option `vertices` sets the number of the vertices. The default is `DEFAULT_CIRCLE_VERTICES` (64), and the limit is `MAX_CIRCLE_VERTICES` (65,536).
+- The new error code `vertices` refuses a number of vertices that is not an integer from 3 to `MAX_CIRCLE_VERTICES`.
+- `GeoErrorCode` has a new value. A caller with a full `switch` on the codes must add it. Thus the version is a MINOR change (before 1.0.0, a breaking change is a MINOR change).
+
+## 0.3.2
+
+- `simplifyRegions` and `regionSimplifier` give the same output as 0.3.1, approximately 17 times faster. In CI, 552 regions with 325,000 positions take 205 to 275 ms. Version 0.3.1 takes 3.7 to 4.6 s.
+- This change is a speed fix, and it does not change the public API. Thus the version is a PATCH change.
+
+## 0.3.1
+
+- The point-in-polygon and overlap tests move a point across the antimeridian with no rounding. They use the exact predicates of `@mark1russell7/predicates` 0.1.4. The limit of 1e-12 degrees on the exact results at the antimeridian goes.
+- This change is a fix, and it does not change the public API. Thus the version is a PATCH change.
+
 ## 0.3.0
 
 - `simplifyRegions` and `regionSimplifier` simplify Polygons and MultiPolygons that share borders, for a map. A shared border stays shared, so no gap and no overlap opens. The README gives the rules.

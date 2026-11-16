@@ -1,6 +1,6 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry, and a circle around a point as a GeoJSON polygon. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
@@ -18,7 +18,7 @@ The package is an ES module with types. It has two dependencies, [`@mark1russell
 ## Example
 
 ```ts
-import { distanceKm, distanceToGeometryKm, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
+import { circleKm, distanceKm, distanceToGeometryKm, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
 
 // An area as a GeoJSON Polygon. The positions are [longitude, latitude].
 const area = parseGeometry({
@@ -35,6 +35,7 @@ distanceKm(paris, london); // 343.556...
 distanceToGeometryKm(paris, area.value); // 0, because the area contains the point
 distanceToGeometryKm(london, area.value) <= 400; // true: London is in a buffer of 400 km around the area
 geohash(paris, 7); // "u09tvw0"
+circleKm(paris, 50); // a Polygon of 64 vertices: the area of 50 km around Paris, for a map
 ```
 
 `parseGeometry` and `parseGeoJson` give a `Result` of [`@mark1russell7/optional`](https://www.npmjs.com/package/@mark1russell7/optional). The other functions give the value, or they throw a `GeoError`. A `GeoError` is a `RangeError`.
@@ -62,6 +63,14 @@ geohash(paris, 7); // "u09tvw0"
 | `distanceToGeometryKm(point, geometry, radiusKm?)`, `distanceToGeometryMeters(...)` | The great-circle distance from a point to the nearest point of a GeoJSON geometry. It is 0 in a polygon. The section [The distance to a geometry](#the-distance-to-a-geometry) gives the rules. |
 
 The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance.
+
+### Circles
+
+| Name | What it does |
+| --- | --- |
+| `circleKm(center, distance, options?, radiusKm?)`, `circleMeters(...)` | The circle around a point as a GeoJSON Polygon or MultiPolygon, for a map. The section [The shape of a circle](#the-shape-of-a-circle) gives the rules. |
+| `CircleOptions` | `{ vertices? }`: the number of the vertices, an integer from 3 to `MAX_CIRCLE_VERTICES` (65,536). |
+| `DEFAULT_CIRCLE_VERTICES` | The default number of the vertices: 64. |
 
 ### Bounding boxes
 
@@ -139,6 +148,21 @@ RFC 7946 (section 3.1) says that an edge is a straight line in longitude and lat
 
 The function divides each edge into pieces of 1 degree or less. In each piece, it finds the nearest point with a bisection on the slope of the haversine function. The property tests compare each result with a dense sample of the edge, refined by a golden-section search. No result is more than the reference by 1e-7 km or more.
 
+### The shape of a circle
+
+`circleKm` and `circleMeters` give a circle as a polygon, for example the area of an alert around a place. A point is in the circle when its great-circle distance to the center is equal to the radius or less.
+
+- The ring has a vertex at each of `vertices` bearings from the center, at equal steps. The first vertex is to the north of the center.
+- Each edge is a straight line in longitude and latitude, as in the polygon tests. More vertices give a polygon nearer to the circle.
+- The result follows RFC 7946. Each longitude is from -180 to 180. The exterior ring goes counterclockwise, and a hole goes clockwise.
+- A circle across the antimeridian is a `MultiPolygon` of two parts. The cut is at 180 and at -180 (RFC 7946, section 3.1.9). So `locatePoint` gives `boundary` for a point on the cut.
+- A circle around one pole is a `Polygon` from -180 to 180, with an edge along the pole. So `locatePoint` gives `boundary` for that pole.
+- A circle around the two poles is the Earth less the opposite circle, as one `Polygon`. The opposite circle has its center at the antipode.
+- A radius of half the circumference of the sphere or more gives the whole Earth, from -180 to 180 and from -90 to 90.
+- A vertex at a pole becomes an edge along the pole. So a pole on the circle is on the boundary of the result.
+
+For a small circle away from the poles, an edge goes into the circle by at most `1 - cos(180° / vertices)` of the radius. For 64 vertices, that is 0.12 %.
+
 ### Simplification of regions
 
 `simplifyRegions` simplifies regions that share borders, for example the counties of a state, with the method of Douglas and Peucker. The result has one region for each input region, with the same type.
@@ -214,7 +238,8 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `geohash-precision`, `geohash-length`, `geohash-character` | A precision, the length of a geohash or a character of a geohash is incorrect. |
 | `too-many-cells` | A cover of a box has more cells than `maxCells`. |
 | `max-cells` | The value of `maxCells` is `NaN` or less than 0. |
-| `radius` | The radius of the sphere is not more than 0. |
+| `radius` | The radius of the sphere or of a circle is not more than 0. |
+| `vertices` | The number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`. |
 | `tolerance` | The tolerance of a simplification is less than 0. |
 
 ## The differences from @procedures/geo
