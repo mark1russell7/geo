@@ -3,7 +3,7 @@ import { classifySegments } from "@mark1russell7/predicates";
 import { canonicalHash } from "@mark1russell7/rigor-generators";
 import { simplifyRegions as simplifyBase } from "geo-base";
 import { describe, expect, it } from "vitest";
-import { caseOf, type HashLine, LOCATE, mapOf, markdown, type Pairs, positionCount, report, SIMPLIFY, speedFaults, suiteOf, TOLERANCE_KM } from "./index.ts";
+import { BUFFER, caseOf, type HashLine, LOCATE, mapOf, markdown, type Pairs, positionCount, report, SIMPLIFY, speedFaults, suiteOf, TOLERANCE_KM } from "./index.ts";
 
 const key = (position: Position): string => `${position[0]},${position[1]}`;
 
@@ -164,7 +164,29 @@ describe("the suites", () => {
   it("gives each suite by its id, and refuses an id that does not exist", () => {
     expect(suiteOf("simplify")).toBe(SIMPLIFY);
     expect(suiteOf("locate")).toBe(LOCATE);
+    expect(suiteOf("buffer")).toBe(BUFFER);
     expect(() => suiteOf("no-suite")).toThrow(RangeError);
+  });
+
+  it("reads the suite of R16 against geo 0.4.4, with the growth of one coast over 3 tolerances", () => {
+    expect(BUFFER.enforced).toBe(false);
+    expect(BUFFER.budget).toBeUndefined();
+    expect(BUFFER.base).toEqual({ module: "geo-buffer-base", version: "0.4.4" });
+    expect(SIMPLIFY.base).toEqual({ module: "geo-base", version: "0.3.1" });
+    expect(BUFFER.cases).toContain(BUFFER.profileCase);
+    expect(BUFFER.cases.filter((id) => BUFFER.growth.sizeOf(id) !== undefined)).toEqual(["coast-1e3-t3", "coast-1e3-t1", "coast-1e3-t0.3"]);
+    // A time in proportion to (1 / tolerance) ** 0.8 gives a growth of approximately 6.3 for each 10 times less tolerance.
+    const sizes: Record<string, number> = { "coast-1e3-t3": 1 / 3, "coast-1e3-t1": 1, "coast-1e3-t0.3": 1 / 0.3, "coast-1e5-t1": 5, "line-2e3-t1": 2, "points-100-t1": 0.5 };
+    const pairs = fakePairs(BUFFER.cases, 7, (arm, id, round) => 100 * (sizes[id] as number) ** 0.8 * (1 + ((round * 7) % 5) / 1000) * (arm === "base" ? 2 : 1));
+    const result = report(pairs, [], BUFFER);
+    expect(result.growth.steps).toHaveLength(2);
+    expect(result.growth.steps.map((step) => step.exponent)).toEqual([expect.closeTo(0.8, 1), expect.closeTo(0.8, 1)]);
+    expect(result.growth.outcome).toBe("within");
+    expect(result.time.outcome).toBe("faster");
+    expect(speedFaults(result, BUFFER.cases, BUFFER)).toEqual([]);
+    const text = markdown(result, BUFFER);
+    expect(text).toContain("| Case | Rounds | base (geo 0.4.4) ms | head ms |");
+    expect(text).toContain("The report only reads the speed claims. They do not fail the run.");
   });
 
   it("keeps the limits of the gate of R14", () => {

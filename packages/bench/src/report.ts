@@ -153,7 +153,7 @@ export function markdown(result: Report, suite: Suite): string {
   const lines = [
     `## ${suite.title}`,
     "",
-    "| Case | Rounds | base (geo 0.3.1) ms | head ms | head / base | Same result |",
+    `| Case | Rounds | base (geo ${suite.base.version}) ms | head ms | head / base | Same result |`,
     "| --- | ---: | ---: | ---: | ---: | --- |",
     ...result.cases.map(
       (row) =>

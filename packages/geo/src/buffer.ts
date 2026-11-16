@@ -19,18 +19,23 @@
  *
  * - The buffer is the area where the field `f(p) = (the distance from p to the geometry) - distance` is less than 0.
  *   A change of the point by a distance changes `f` by that distance or less.
- * - A grid of cells in longitude and latitude covers the buffer. A tree of blocks of cells finds the cells near the
- *   boundary of the buffer. A block whose `|f|` at its center is more than its radius is wholly in or out, so the tree
- *   does not divide it.
+ * - A grid of cells in longitude and latitude covers the buffer. The diameter of each cell is 5/8 of the tolerance or
+ *   less. A tree of blocks of cells finds the cells near the boundary of the buffer. A block is wholly in or out when
+ *   its `|f|` at its center is more than its radius plus the slack. The tree does not divide such a block.
  * - Each block keeps the edges that can be the nearest edge for a point in it. Thus a small block examines few edges.
+ * - The search of the nearest point of an edge stops early. Thus the value of `f` can be more than the true value by
+ *   the slack, 1/16 of the tolerance, or less.
  * - The method of marching squares on the cells near the boundary gives the rings. The value at the center of a cell
  *   decides a cell with two inside corners on a diagonal.
- * - The method of `simplifyRegions` removes positions within a part of the tolerance from the rings. It keeps each
+ * - The method of `simplifyRegions` removes positions within 1/4 of the tolerance from the rings. It keeps each
  *   position on the edge of the grid, for example on the antimeridian or on a pole.
+ * - Each point of a cell with a segment of the boundary has `|f|` of the diameter plus the slack or less. The
+ *   simplification moves the boundary by 1/4 of the tolerance or less. The sum is 15/16 of the tolerance, so the result
+ *   keeps the guarantee.
  *
- * The cost is in proportion to the count of the cells near the boundary: approximately 12 times the length of the
+ * The cost is in proportion to the count of the cells near the boundary: approximately 9 times the length of the
  * boundary over the tolerance. Each of these cells examines the edges near it. A buffer of 10 km with the tolerance 0.1 km
- * around a coast of 5,000 km uses approximately 600,000 cells.
+ * around a coast of 5,000 km uses approximately 450,000 cells.
  *
  * @packageDocumentation
  */
@@ -73,11 +78,31 @@ const WORLD: readonly Position[] = [
   [-180, -90],
 ];
 
-/** The cell radius over the tolerance. A cell near the boundary has `|f|` of 2 radii or less at each point. */
-const CELL_PART = 1 / 4;
+/**
+ * The largest diameter of a cell over the tolerance. A cell with a segment of the boundary has a point where `f` is 0.
+ * Thus `|f|` at each point of that cell is not more than the diameter. `cellSide` gives the side of such a cell.
+ */
+const DIAMETER_PART = 5 / 8;
+
+/**
+ * The slack of the field over the tolerance. The field can be more than the true field by the slack or less, so the
+ * search of each edge stops early. A cell with a segment then has `|f|` of its diameter plus the slack or less.
+ */
+const SLACK_PART = 1 / 16;
 
 /** The tolerance of the simplification over the tolerance of the buffer. */
 const SIMPLIFY_PART = 1 / 4;
+
+/**
+ * This function gives the side of a cell, in radians, for a largest diameter in radians. The latitude side of a cell
+ * is not more than the side. The longitude side, times the largest cosine of the latitudes of the grid, is not more
+ * than the side. For two points of the cell, the haversine formula then gives `sin²(d / 2) <= side² / 2`. Thus the
+ * angle `d` is not more than `2 asin(side / √2)`, which is the diameter. A small factor keeps the bound after the
+ * rounding of the grid.
+ */
+function cellSide(diameter: number): number {
+  return Math.SQRT2 * Math.sin(diameter / 2) * (1 - 2 ** -20);
+}
 
 /** The part of an edge of a cell at its two ends where no crossing goes. Thus no two crossings are equal. */
 const END_GAP = 2 ** -10;
@@ -205,7 +230,7 @@ function gridOf(elements: Elements, reach: number, cell: number, maxCells: numbe
 }
 
 /** This function gives the rings of the area where the field is less than 0, in the lon and lat plane. */
-function contourRings(elements: Elements, grid: Grid, angle: number, maxCells: number): Position[][] {
+function contourRings(elements: Elements, grid: Grid, angle: number, slack: number, maxCells: number): Position[][] {
   const { west, east, south, north, columns, rows } = grid;
   const lonAt = (i: number): number => (i === columns ? east : west + (east - west) * (i / columns));
   const latAt = (j: number): number => (j === rows ? north : south + (north - south) * (j / rows));
@@ -214,7 +239,7 @@ function contourRings(elements: Elements, grid: Grid, angle: number, maxCells: n
   /** The field at a point, from the elements of a list. */
   const fieldAt = (lon: number, lat: number, list: Int32Array, inside: number): number => {
     if (inside === 1 || (inside === -1 && inPolygon !== undefined && inPolygon(lon, lat))) return -angle;
-    return angleToEdges(viewerAt([lon, lat]), from, to, list) - angle;
+    return angleToEdges(viewerAt([lon, lat]), from, to, list, slack) - angle;
   };
 
   // The value of each corner of the grid. All the corners at a pole are one point, so they get one value.
@@ -326,19 +351,26 @@ function contourRings(elements: Elements, grid: Grid, angle: number, maxCells: n
     const lon1 = lonAt(block.i1);
     const lat0 = latAt(block.j0);
     const lat1 = latAt(block.j1);
-    const lon = (lon0 + lon1) / 2;
-    const lat = (lat0 + lat1) / 2;
+    // The center of a block with an even width and height is a corner of the grid. Its value is then the value of that
+    // corner, so the cells of the block do not examine it again.
+    const evenCenter = width % 2 === 0 && height % 2 === 0;
+    const lon = evenCenter ? lonAt((block.i0 + block.i1) / 2) : (lon0 + lon1) / 2;
+    const lat = evenCenter ? latAt((block.j0 + block.j1) / 2) : (lat0 + lat1) / 2;
     const cosMax = lat0 <= 0 && lat1 >= 0 ? 1 : Math.cos(Math.min(Math.abs(lat0), Math.abs(lat1)) * RADIANS);
     // A point of the block is within this angle of its center: along the meridian, then along the parallel.
     const radius = ((lat1 - lat0) / 2 + (cosMax * (lon1 - lon0)) / 2) * RADIANS;
     const limit = radius * (1 + 2 ** -20) + 2 ** -40;
+    // The value of a point can be more than its true value by the slack. Thus a block is wholly in or out only when the
+    // value at its center is farther than its radius plus the slack from 0. Then each corner of the block keeps its side.
+    const margin = limit + slack;
     const centerIn = block.inside === -1 && inPolygon !== undefined && inPolygon(lon, lat);
-    if (centerIn && angle > limit) continue;
+    if (centerIn && angle > margin) continue;
     const viewer = viewerAt([lon, lat]);
     const bounds = new Float64Array(block.list.length);
-    const best = scanEdges(viewer, from, to, block.list, bounds);
+    const best = scanEdges(viewer, from, to, block.list, bounds, slack);
     const center = centerIn ? -angle : best - angle;
-    if (Math.abs(center) > limit) continue;
+    if (Math.abs(center) > margin) continue;
+    if (evenCenter) corners.set(((block.j0 + block.j1) / 2) * (columns + 1) + (block.i0 + block.i1) / 2, center);
     // An element that is more than `best + 2 radius` from the center is not the nearest element for a point of the block.
     // The bound of an element is not more than its angle, so the list keeps each element that can be the nearest.
     const keep = best + 2 * limit;
@@ -473,9 +505,9 @@ function buffer(geometry: Geometry, distance: number, sphereRadius: number, opti
   // The test uses the distance and not the angle, so a distance of exactly half the circumference is the whole Earth.
   if (distance >= Math.PI * sphereRadius) return { type: "Polygon", coordinates: [[...WORLD]] };
   const angle = distance / sphereRadius;
-  const cell = (tolerance / sphereRadius) * CELL_PART;
+  const cell = cellSide((tolerance / sphereRadius) * DIAMETER_PART);
   const grid = gridOf(elements, angle + tolerance / sphereRadius, cell, maxCells);
-  const polygons = polygonsOf(contourRings(elements, grid, angle, maxCells));
+  const polygons = polygonsOf(contourRings(elements, grid, angle, (tolerance / sphereRadius) * SLACK_PART, maxCells));
   const onGridEdge = (position: Position): boolean =>
     position[0] === grid.west || position[0] === grid.east || position[1] === grid.south || position[1] === grid.north;
   const region: MultiPolygon = { type: "MultiPolygon", coordinates: polygons };

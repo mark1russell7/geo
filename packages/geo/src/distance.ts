@@ -174,8 +174,8 @@ const gapOf = (viewer: Viewer, a: Position, b: Position): number =>
 /**
  * This function gives a haversine value that is not more than the value at each point of the edge from `a` to `b`. The
  * position `a` does not come after `b`, so the longitude increases from `a` to `b`. For each point of the edge, the
- * latitude difference is not less than the latitude gap, and the longitude difference is not less than the longitude
- * gap. The cosine of its latitude is not less than the smaller cosine of the two ends.
+ * latitude difference is not less than the latitude gap. The longitude difference is also not less than the longitude
+ * gap. The cosine of the latitude of the point is not less than the smaller cosine of the two ends.
  */
 function boxBound(viewer: Viewer, a: Position, b: Position): number {
   const latGap = gapBound(gapOf(viewer, a, b));
@@ -210,9 +210,10 @@ function probeValue(viewer: Viewer, a: Position, b: Position): number {
  * smaller. A point of the edge is `(latA + u dLat, lonA + u dLon)`, with `u` from 0 to 1. The function measures each
  * edge from its first position by longitude and latitude. Thus the edge from `b` to `a` gives the same value.
  *
- * The result is not more than `edgeBound` of the edge, for each `best`.
+ * The result is not more than `edgeBound` of the edge, for each `best`. With a `slack` more than 0, the search stops
+ * when its bracket is short. Then the angle of the result is not more than the smallest angle plus the slack.
  */
-function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number): number {
+function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number, slack = 0): number {
   const swap = comesBefore(to, from);
   const a = swap ? to : from;
   const b = swap ? from : to;
@@ -234,6 +235,10 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
     const cosLat = viewer.cosLat;
     return dLat * (Math.sin(dPhi) - 2 * cosLat * Math.sin(phi) * s * s) + dLon * cosLat * Math.cos(phi) * Math.sin(dLambda);
   };
+  // A change of u moves the point of the edge by this angle or less for each unit of u. A bracket shorter than the
+  // slack over this angle has a point whose angle is not more than the smallest angle plus the slack.
+  const cosMax = latA <= 0 === b[1] <= 0 ? Math.cos(Math.min(Math.abs(latA), Math.abs(b[1])) * RADIANS) : 1;
+  const width = slack > 0 ? slack / ((Math.abs(dLat) + cosMax * Math.abs(dLon)) * RADIANS) : 0;
   // The probe makes the result not more than the bound. A small result also skips more pieces.
   let result = Math.min(best, probeValue(viewer, a, b));
   const pieces = Math.max(1, Math.ceil(Math.max(Math.abs(dLat), Math.abs(dLon)) / PIECE_DEGREES));
@@ -255,7 +260,7 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
         let slopeLow = slope0;
         let slopeHigh = slope1;
         // The split points near the root of the slope make the bracket small with few steps.
-        for (let round = 0; round < SPLIT_ROUNDS; round += 1) {
+        for (let round = 0; round < SPLIT_ROUNDS && high - low > width; round += 1) {
           const root = low + (high - low) * (slopeLow / (slopeLow - slopeHigh));
           if (!(root > low && root < high)) break;
           const slope = slopeAt(root);
@@ -280,7 +285,7 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
             slopeHigh = otherSlope;
           }
         }
-        for (;;) {
+        while (high - low > width) {
           const middle = low + (high - low) / 2;
           if (middle <= low || middle >= high) break;
           if (slopeAt(middle) < 0) low = middle;
@@ -344,17 +349,18 @@ export function angleToEdge(viewer: Viewer, a: Position, b: Position): number {
 
 /**
  * This function gives the smallest central angle in radians from the viewer to the edges `from[k]` to `to[k]` of the
- * list, as the smallest `angleToEdge` of the list. The scan gives its best value to each next edge, so an edge that
- * is farther than that value needs no search. An empty list gives `Infinity`.
+ * list. It is the smallest `angleToEdge` of the list. With a `slack` more than 0, the angle can be more than the
+ * smallest angle by the slack or less. The scan gives its best value to each next edge, so an edge that is farther than
+ * that value needs no search. An empty list gives `Infinity`.
  *
  * @internal
  */
-export function angleToEdges(viewer: Viewer, from: readonly Position[], to: readonly Position[], list: Int32Array): number {
+export function angleToEdges(viewer: Viewer, from: readonly Position[], to: readonly Position[], list: Int32Array, slack = 0): number {
   let best = Number.POSITIVE_INFINITY;
   for (const k of list) {
     const a = from[k] as Position;
     const b = to[k] as Position;
-    best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)));
+    best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)), slack);
   }
   return best === Number.POSITIVE_INFINITY ? best : angleOfHaversine(best);
 }
@@ -362,12 +368,19 @@ export function angleToEdges(viewer: Viewer, from: readonly Position[], to: read
 /**
  * This function gives the smallest central angle in radians from the viewer to the edges of the list, as
  * `angleToEdges`. It also writes a bound for each edge into `bounds`, at the index of the edge in the list. The bound is
- * an angle that is not more than the angle to the edge. Thus a caller can drop the edges whose bound is too large, and
- * this function finds the exact angle only of the edges that can be the nearest.
+ * an angle that is not more than the angle to the edge. Thus a caller can drop the edges whose bound is too large. This
+ * function searches only the edges that can be the nearest. The `slack` has the effect that it has in `angleToEdges`.
  *
  * @internal
  */
-export function scanEdges(viewer: Viewer, from: readonly Position[], to: readonly Position[], list: Int32Array, bounds: Float64Array): number {
+export function scanEdges(
+  viewer: Viewer,
+  from: readonly Position[],
+  to: readonly Position[],
+  list: Int32Array,
+  bounds: Float64Array,
+  slack = 0,
+): number {
   // The first pass gives the bound of each edge, and the smallest value of one point of each edge.
   let best = Number.POSITIVE_INFINITY;
   for (let index = 0; index < list.length; index += 1) {
@@ -384,7 +397,7 @@ export function scanEdges(viewer: Viewer, from: readonly Position[], to: readonl
     const k = list[index] as number;
     const a = from[k] as Position;
     const b = to[k] as Position;
-    best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)));
+    best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)), slack);
   }
   // The factor is more than the rounding of `Math.asin`, so the angle of a smaller haversine value is not larger.
   for (let index = 0; index < list.length; index += 1) bounds[index] = angleOfHaversine(bounds[index] as number) * (1 - 2 ** -40);

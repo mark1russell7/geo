@@ -1,7 +1,7 @@
-# The job of one suite of packages/bench: the source of packages/geo against geo 0.3.1 from npm.
-# The callers are bench-simplify.yml (R14) and bench-locate.yml (R10). Each caller has its triggers, its paths and its gate.
+# The job of one suite of packages/bench: the source of packages/geo against the base of the suite, a version of geo from npm.
+# The callers are bench-simplify.yml (R14), bench-locate.yml (R10) and bench-buffer.yml (R16). Each caller has its triggers, its paths and its gate.
 # The job keeps the raw PairedTime records, the hashes, the facts of the computer, the report and a CPU profile of the head.
-# The job fails when the result of the head is not the same as the result of geo 0.3.1 on a case, or has no read.
+# The job fails when the result of the head is not the same as the result of the base on a case, or has no read.
 # In an enforced suite, it also fails on a fault of the speed gate (packages/bench/src/suites.ts).
 name: Bench suite
 
@@ -9,7 +9,7 @@ on:
   workflow_call:
     inputs:
       suite:
-        description: The suite of packages/bench/src/suites.ts, simplify or locate
+        description: The suite of packages/bench/src/suites.ts, simplify, locate or buffer
         type: string
         required: true
       rounds:

@@ -231,7 +231,7 @@ For a small circle away from the poles, an edge goes into the circle by at most 
 
 A grid of cells in longitude and latitude covers the buffer. A tree of blocks finds the cells near the boundary, and the method of marching squares gives the rings. Then the method of `simplifyRegions` removes the positions that the tolerance does not need. In each CI run, a property test examines the two limits at sampled points.
 
-The time is in proportion to the number of cells near the boundary. That number is approximately 12 times the length of the boundary over the tolerance. A buffer of 10 km with the tolerance 0.1 km around a rough coast of 5,000 km uses approximately 600,000 cells and 2 to 4 seconds. Near a pole, the cells are narrower, so the number of cells increases. A buffer that needs more than `maxCells` cells gives the error `too-many-cells`. Then use a larger tolerance.
+The time is in proportion to the number of cells near the boundary. That number is approximately 9 times the length of the boundary over the tolerance. A buffer of 10 km with the tolerance 0.1 km around a rough coast of 5,000 km uses approximately 450,000 cells. Near a pole, the cells are narrower, so the number of cells increases. A buffer that needs more than `maxCells` cells gives the error `too-many-cells`. Then use a larger tolerance.
 
 ### Simplification of regions
 
