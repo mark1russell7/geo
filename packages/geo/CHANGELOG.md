@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.3
+
+- `distanceBetweenGeometriesKm` and `distanceBetweenGeometriesMeters` give the great-circle distance between the nearest points of two GeoJSON geometries. The distance is 0 when the geometries have a common point. The README gives the rules.
+- This change adds two functions, and it does not change the existing API. Before 1.0.0, a new function is a PATCH change. Thus the version is a PATCH change.
+
 ## 0.4.2
 
 - `geodesicInverse` gives the length of the shortest geodesic between two points on an ellipsoid, and its bearings at the two points. `geodesicDirect` gives the point at a distance along a geodesic on an initial bearing.

@@ -1,8 +1,8 @@
 /**
- * This module gives the great-circle distance from a point to a GeoJSON geometry: a point, a line, a polygon or a
- * collection of them.
+ * This module gives the great-circle distance from a point to a GeoJSON geometry, and between two GeoJSON geometries.
+ * A geometry is a point, a line, a polygon or a collection of them.
  *
- * The rules:
+ * The rules of the distance from a point:
  *
  * - An edge is a straight line in longitude and latitude (RFC 7946, section 3.1), as in the polygon tests. The
  *   distance to an edge is the distance on the sphere to the nearest point of that line.
@@ -21,11 +21,42 @@
  *   the two distances are almost equal, and the error is very small. The property tests compare the result with a
  *   dense sample of each edge.
  *
+ * The rules of the distance between two geometries:
+ *
+ * - The distance is 0 when the geometries share a point. Then two edges meet, or a position of one geometry is on the
+ *   other geometry or in its polygon. The test is exact.
+ * - Otherwise, the distance is the smallest distance from a position of one geometry to the other geometry, in the two
+ *   directions. Each distance from a position uses the method above.
+ * - The result does not change when the two geometries change places.
+ * - The distance to a geometry with no position is `Infinity`.
+ *
+ * Why the positions are sufficient:
+ *
+ * - Two edges that do not meet have a nearest pair of points with an end of one edge in it. Then the nearest pair of
+ *   two geometries that do not share a point has a position of one geometry in it.
+ * - This statement has no proof at this time. It is a result of a study of 1,600 random pairs of edges: no pair had
+ *   its nearest points inside the two edges. A property test compares the result with a dense sample of two edges in
+ *   each CI run.
+ *
+ * The cost: the function examines each position of one geometry against each part of the other geometry. A bound of
+ * the latitudes skips each part and each edge that is too far. So the time is in proportion to the product of the
+ * numbers of positions in the worst case. An index of the edges replaces this method when a consumer needs large
+ * inputs.
+ *
  * @packageDocumentation
  */
 
 import { checkGeometry, type Geometry } from "./geojson.ts";
-import { checkGeometryLongitudes, onLine, partOf, type Part, type Rings } from "./planar.ts";
+import {
+  checkGeometryLongitudes,
+  edgesMeet,
+  onLine,
+  overlappingShifts,
+  partOf,
+  type Part,
+  type Ring,
+  type Rings,
+} from "./planar.ts";
 import { inRings, locateInParts, type PlaneTest } from "./polygon.ts";
 import { checkPoint, normalizeLon, type LatLon, type Position } from "./point.ts";
 import { checkRadius, EARTH_MEAN_RADIUS_KM, EARTH_MEAN_RADIUS_METERS } from "./sphere.ts";
@@ -300,30 +331,113 @@ export function angleBoundToEdge(viewer: Viewer, a: Position, b: Position): numb
   return angleOfHaversine(edgeBound(viewer, a, b)) * (1 + 2 ** -40);
 }
 
+/** This function gives `true` when a valid point is on the shapes or in a polygon of the shapes. The test is exact. */
+function onShapes(point: LatLon, shapes: Shapes): boolean {
+  if (locateInParts(shapes.polygons, point, inRings) !== "outside") return true;
+  if (shapes.points.some((position) => samePoint(point, position))) return true;
+  return locateInParts(shapes.lines, point, onLines) !== "outside";
+}
+
+/** This function gives the latitude gap from the viewer to the extent of a part, in degrees, or 0. */
+const partGap = (viewer: Viewer, part: Part): number => Math.max(0, part.minY - viewer.lat, viewer.lat - part.maxY);
+
+/**
+ * This function gives the smallest haversine value from the viewer to a position or an edge of the shapes, or `best`
+ * when that is smaller. The bound of the latitudes skips each part that cannot give a smaller value.
+ */
+function shapesMinimum(viewer: Viewer, shapes: Shapes, best: number): number {
+  let result = best;
+  const parts = [...shapes.lines, ...shapes.polygons];
+  // The vertices first: they give a small bound, so the bound of the latitudes skips more parts and edges.
+  for (const position of shapes.points) result = Math.min(result, haversineOf(viewer, position));
+  for (const part of parts) {
+    if (gapBound(partGap(viewer, part)) >= result) continue;
+    for (const ring of part.rings) for (const position of ring) result = Math.min(result, haversineOf(viewer, position));
+  }
+  for (const part of parts) {
+    if (gapBound(partGap(viewer, part)) < result) result = ringsMinimum(viewer, part.rings, result);
+  }
+  return result;
+}
+
+/**
+ * This function gives the central angle in radians for the haversine value of shapes that do not share a point. The
+ * angle is more than 0, or `Infinity` when the shapes have no position.
+ */
+function angleApart(value: number): number {
+  if (value === Number.POSITIVE_INFINITY) return value;
+  // The shapes do not share a point, so the angle is more than 0. A rounding can give 0 for very near shapes.
+  return Math.max(Number.MIN_VALUE, angleOfHaversine(value));
+}
+
 /** This function gives the central angle from a valid point to the shapes, in radians. */
 function angleToShapes(point: LatLon, shapes: Shapes): number {
-  if (locateInParts(shapes.polygons, point, inRings) !== "outside") return 0;
-  if (shapes.points.some((position) => samePoint(point, position))) return 0;
-  if (locateInParts(shapes.lines, point, onLines) !== "outside") return 0;
-  const viewer: Viewer = { lat: point.lat, lon: normalizeLon(point.lon), cosLat: Math.cos(point.lat * RADIANS) };
-  let best = Number.POSITIVE_INFINITY;
-  // The vertices first: they give a small bound, so the bound of the latitudes skips more edges.
-  for (const position of shapes.points) best = Math.min(best, haversineOf(viewer, position));
-  for (const part of [...shapes.lines, ...shapes.polygons]) {
-    for (const ring of part.rings) for (const position of ring) best = Math.min(best, haversineOf(viewer, position));
-  }
-  for (const part of [...shapes.lines, ...shapes.polygons]) best = ringsMinimum(viewer, part.rings, best);
-  if (best === Number.POSITIVE_INFINITY) return best;
-  // The point is not on the geometry, so the angle is more than 0. A rounding can give 0 for a very near point.
-  return Math.max(Number.MIN_VALUE, angleOfHaversine(best));
+  if (onShapes(point, shapes)) return 0;
+  return angleApart(shapesMinimum(viewerAt([point.lon, point.lat]), shapes, Number.POSITIVE_INFINITY));
+}
+
+/** This function examines a geometry and gives its shapes. The path of an error starts with `path`. */
+function shapesOf(geometry: Geometry, path: string): Shapes {
+  checkGeometry(geometry, path);
+  const shapes: Shapes = { points: [], lines: [], polygons: [] };
+  collect(geometry, path, shapes);
+  return shapes;
 }
 
 function angleToGeometry(point: LatLon, geometry: Geometry): number {
   checkPoint(point);
-  checkGeometry(geometry);
-  const shapes: Shapes = { points: [], lines: [], polygons: [] };
-  collect(geometry, "", shapes);
-  return angleToShapes(point, shapes);
+  return angleToShapes(point, shapesOf(geometry, ""));
+}
+
+/**
+ * This function gives `true` when an edge of one part meets an edge of the other part, or when the two parts touch
+ * one pole. The part `b` moves by each multiple of 360 that makes the extents meet. The test is exact.
+ */
+function partEdgesMeet(a: Part, b: Part): boolean {
+  if (a.maxY < b.minY || b.maxY < a.minY) return false;
+  // All the longitudes of a pole are one point.
+  if ((a.maxY === 90 && b.maxY === 90) || (a.minY === -90 && b.minY === -90)) return true;
+  return overlappingShifts(a.minX, a.maxX, b.minX, b.maxX).some((shift) => edgesMeet(a, b, shift));
+}
+
+/**
+ * This function gives `true` when a position of `from` is on `to` or in a polygon of `to`. The positions are the
+ * points, and the first position of each part. The first position of a polygon is on its exterior, so it is a point of
+ * the polygon.
+ */
+function firstPositionsOn(from: Shapes, to: Shapes): boolean {
+  const on = (position: Position): boolean => onShapes({ lat: position[1], lon: position[0] }, to);
+  return from.points.some(on) || [...from.lines, ...from.polygons].some((part) => on((part.rings[0] as Ring)[0] as Position));
+}
+
+/**
+ * This function gives `true` when the shapes share a point. The test is exact.
+ *
+ * When no edge of `a` meets an edge of `b`, each line and each ring is fully inside or fully outside the other shapes.
+ * Then one position of each line and of each exterior decides.
+ */
+function sharePoint(a: Shapes, b: Shapes): boolean {
+  const partsB = [...b.lines, ...b.polygons];
+  if ([...a.lines, ...a.polygons].some((partA) => partsB.some((partB) => partEdgesMeet(partA, partB)))) return true;
+  return firstPositionsOn(a, b) || firstPositionsOn(b, a);
+}
+
+/** This function gives the smallest haversine value from a position of `from` to the shapes `to`. */
+function nearestFrom(from: Shapes, to: Shapes): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (const position of from.points) best = shapesMinimum(viewerAt(position), to, best);
+  for (const part of [...from.lines, ...from.polygons]) {
+    for (const ring of part.rings) for (const position of ring) best = shapesMinimum(viewerAt(position), to, best);
+  }
+  return best;
+}
+
+function angleBetweenGeometries(a: Geometry, b: Geometry): number {
+  const shapesA = shapesOf(a, "a");
+  const shapesB = shapesOf(b, "b");
+  if (sharePoint(shapesA, shapesB)) return 0;
+  // The two directions are separate, and the minimum of two values does not depend on their order.
+  return angleApart(Math.min(nearestFrom(shapesA, shapesB), nearestFrom(shapesB, shapesA)));
 }
 
 /**
@@ -365,4 +479,45 @@ export function distanceToGeometryMeters(
 ): number {
   checkRadius(radiusMeters);
   return scale(angleToGeometry(point, geometry), radiusMeters);
+}
+
+/**
+ * This function gives the great-circle distance in kilometres between the nearest points of two GeoJSON geometries.
+ * The rules are in the description of this module. The model is a sphere.
+ *
+ * - The distance is 0 when the geometries share a point. A polygon in a hole of the other polygon does not share a
+ *   point with it, unless they touch.
+ * - The distance is 0 only when the geometries share a point.
+ * - The result does not change when `a` and `b` change places.
+ * - The distance to a geometry with no position is `Infinity`.
+ *
+ * The function measures from the positions only. A study of 1,600 pairs of edges supports this method, but it has no
+ * proof at this time. A property test with a dense sample holds it in each CI run.
+ *
+ * The time is in proportion to the product of the numbers of positions in the worst case. For large geometries, an
+ * index of the edges is the next step.
+ *
+ * @param radiusKm - The radius of the sphere, more than 0. The default is `EARTH_MEAN_RADIUS_KM`.
+ * @throws GeoError - As `distanceToGeometryKm`. The path of an error starts with `a` or `b`, for the geometry of the
+ *   error.
+ */
+export function distanceBetweenGeometriesKm(a: Geometry, b: Geometry, radiusKm: number = EARTH_MEAN_RADIUS_KM): number {
+  checkRadius(radiusKm);
+  return scale(angleBetweenGeometries(a, b), radiusKm);
+}
+
+/**
+ * This function gives the great-circle distance in metres between the nearest points of two GeoJSON geometries. It
+ * uses the rules of `distanceBetweenGeometriesKm`.
+ *
+ * @param radiusMeters - The radius of the sphere, more than 0. The default is `EARTH_MEAN_RADIUS_METERS`.
+ * @throws GeoError - As `distanceBetweenGeometriesKm`.
+ */
+export function distanceBetweenGeometriesMeters(
+  a: Geometry,
+  b: Geometry,
+  radiusMeters: number = EARTH_MEAN_RADIUS_METERS,
+): number {
+  checkRadius(radiusMeters);
+  return scale(angleBetweenGeometries(a, b), radiusMeters);
 }

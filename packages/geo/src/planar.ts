@@ -190,9 +190,9 @@ export function overlappingShifts(minA: number, maxA: number, minB: number, maxB
 /**
  * This function gives `true` when an edge of the rings `a` and an edge of the rings `b` have a common point. The rings
  * `b` move by `dx`, with no rounding. Each test of a box compares a moved value by `compareShifted`. So a test of a
- * box does not skip a pair of edges that meet.
+ * box does not skip a pair of edges that meet. The rings can also be lines, which do not close.
  */
-function edgesMeet(a: Part, b: Part, dx: number): boolean {
+export function edgesMeet(a: Part, b: Part, dx: number): boolean {
   for (const ringA of a.rings) {
     for (let i = 0; i + 1 < ringA.length; i += 1) {
       const p = ringA[i] as Position;

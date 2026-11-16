@@ -27,6 +27,8 @@ describe("the entry", () => {
         "decodeGeohash",
         "destinationKm",
         "destinationMeters",
+        "distanceBetweenGeometriesKm",
+        "distanceBetweenGeometriesMeters",
         "distanceKm",
         "distanceMeters",
         "distanceToGeometryKm",
