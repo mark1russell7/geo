@@ -9,9 +9,8 @@
  *   latitude in that range.
  * - The band of a latitude is a monotone function of the latitude. So the band of the point has each edge whose range
  *   of latitudes includes the latitude of the point. Each other edge misses the ray from the point, with no exception.
- * - The test of each edge is `rayEdge` of `@mark1russell7/predicates`, the exact test of `locatePoint`. The rule is the
- *   even-odd rule over all rings, as in `locatePoint`. So each result is the result of `locatePoint`. This is also
- *   true on the boundary, across the antimeridian and for a hole that crosses the exterior.
+ * - The test of each edge is `rayEdge` of `@mark1russell7/predicates`, the exact test of `locatePoint`. So each result is
+ *   the same as the result of `locatePoint`, also on the boundary and across the antimeridian.
  * - The count of bands keeps the index small: the mean count of the bands of an edge is approximately 5 or less.
  *
  * The time of one test is in proportion to the count of the edges in the band of the point. A ring with long edges in
@@ -36,9 +35,11 @@ const BANDS_PER_EDGE = 3;
 interface BandedPart extends PartBox {
   /** The x and y of each position: x at `2 * i` and y at `2 * i + 1`. The edge `i` goes from the position `i` to `i + 1`. */
   readonly xy: Float64Array;
+  /** The ring of each edge: 0 is the exterior, and the next rings are holes. */
+  readonly ringOf: Uint32Array;
   /** The first entry of each band in `entries`. The entry at the index `bands` is the end of the last band. */
   readonly starts: Uint32Array;
-  /** The edges of each band, by the position that starts each edge. */
+  /** The edges of each band, in the order of the rings. */
   readonly entries: Uint32Array;
   /** The count of bands. */
   readonly bands: number;
@@ -74,13 +75,15 @@ function bandedPart(part: Part): BandedPart {
   let positions = 0;
   for (const ring of part.rings) positions += ring.length;
   const xy = new Float64Array(2 * positions);
+  const ringOf = new Uint32Array(positions);
   // The last position of each ring starts no edge: it is equal to the first position of the ring.
   const startsEdge = new Uint8Array(positions);
   let at = 0;
-  part.rings.forEach((ring) => {
+  part.rings.forEach((ring, ringIndex) => {
     ring.forEach((position, index) => {
       xy[2 * at] = position[0] as number;
       xy[2 * at + 1] = position[1] as number;
+      ringOf[at] = ringIndex;
       startsEdge[at] = index + 1 < ring.length ? 1 : 0;
       at += 1;
     });
@@ -110,6 +113,7 @@ function bandedPart(part: Part): BandedPart {
   for (let band = 0; band < bands; band += 1) bandStarts[band + 1] = (bandStarts[band + 1] as number) + (bandStarts[band] as number);
   const entries = new Uint32Array(bandStarts[bands] as number);
   const next = bandStarts.slice(0, bands);
+  // The edges go into each band in the order of the positions, so the edges of each band are in the order of the rings.
   for (let i = 0; i < positions; i += 1) {
     if (startsEdge[i] === 0) continue;
     for (let band = low[i] as number; band <= (high[i] as number); band += 1) {
@@ -117,25 +121,34 @@ function bandedPart(part: Part): BandedPart {
       next[band] = (next[band] as number) + 1;
     }
   }
-  return { minX: part.minX, maxX: part.maxX, minY: part.minY, maxY: part.maxY, xy, starts: bandStarts, entries, bands, height: shape.height };
+  return { minX: part.minX, maxX: part.maxX, minY: part.minY, maxY: part.maxY, xy, ringOf, starts: bandStarts, entries, bands, height: shape.height };
 }
 
 /**
- * This function is the plane test of a banded part, with the even-odd rule over all rings of `locatePoint`. An edge
- * that is not in the band of the point misses the ray from the point, so the test examines only the band.
+ * This function is the plane test of a banded part, with the rule of holes of `locatePoint`. The edges of the band are
+ * in the order of the rings. So each run of edges of one ring gives the parity of that ring. A ring with no edge in
+ * the band does not contain the point.
  */
 function inBands(part: BandedPart, x: number, y: number, dx: number): PointLocation {
   const band = bandOf(part, y);
-  const { xy, entries } = part;
+  const { xy, ringOf, entries } = part;
   const end = part.starts[band + 1] as number;
+  let ring = 0;
   let inside = false;
   for (let entry = part.starts[band] as number; entry < end; entry += 1) {
     const i = entries[entry] as number;
+    const edgeRing = ringOf[i] as number;
+    if (edgeRing !== ring) {
+      // The run of the ring ends. A point out of the exterior or in a hole is outside.
+      if ((ring === 0) !== inside) return "outside";
+      ring = edgeRing;
+      inside = false;
+    }
     const where = rayEdge(xy[2 * i] as number, xy[2 * i + 1] as number, xy[2 * i + 2] as number, xy[2 * i + 3] as number, x, y, dx, 0);
     if (where === "boundary") return "boundary";
     if (where === "crosses") inside = !inside;
   }
-  return inside ? "inside" : "outside";
+  return (ring === 0) !== inside ? "outside" : "inside";
 }
 
 /**

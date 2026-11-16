@@ -25,7 +25,7 @@ const ringOf = (coordinate: fc.Arbitrary<number>): fc.Arbitrary<Position[]> =>
 const coarseRing = ringOf(eighth);
 const fineRing = ringOf(uniformDouble({ min: -8, max: 8 }));
 
-/** A ring near the north pole: its latitudes are from 82 to 90 on a grid of 1/16 steps, so some positions are at the pole. */
+/** A ring near the north pole: its latitudes are from 82 to 90 on a grid of 1/16 steps. Some positions are at the pole. */
 const polarRing = coarseRing.map((ring) => ring.map(([x, y]): Position => [x, y / 2 + 86]));
 
 /** A ring moved by 0, 360 or -360 on the x axis, so some rings cross the antimeridian in the plane of the tests. */
@@ -131,7 +131,7 @@ describe("pointLocator", () => {
     expect(locate({ lat: 0.5, lon: 100.5 })).toBe("outside");
     expect(locate({ lat: 0.5, lon: 100.8 })).toBe("boundary");
     expect(locate({ lat: 0.5, lon: 100.5 - 360 })).toBe("outside");
-    // A hole that crosses the exterior: the even-odd rule over all rings, as in locatePoint.
+    // A hole that crosses the exterior: a point out of the exterior is outside, as in locatePoint.
     const crossing: Polygon = {
       type: "Polygon",
       coordinates: [
@@ -140,7 +140,7 @@ describe("pointLocator", () => {
       ],
     };
     const inCrossing = pointLocator(crossing);
-    const expected = { "1,2": "inside", "3,2": "outside", "5,2": "inside", "5,1": "boundary", "3,1": "boundary", "3,3.5": "inside" };
+    const expected = { "1,2": "inside", "3,2": "outside", "5,2": "outside", "5,1": "outside", "3,1": "boundary", "3,3.5": "inside" };
     for (const [key, where] of Object.entries(expected)) {
       const [lon, lat] = key.split(",").map(Number) as [number, number];
       expect(locatePoint({ lat, lon }, crossing), key).toBe(where);
