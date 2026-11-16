@@ -103,7 +103,7 @@ export function bufferGeometryOf(spec: BufferSpec): Geometry {
 }
 
 /** This function gives each position of a geometry of a case. */
-function positionsOfGeometry(geometry: Geometry): Position[] {
+function positionsOfGeometry(geometry: Geometry): readonly Position[] {
   switch (geometry.type) {
     case "LineString":
     case "MultiPoint":
