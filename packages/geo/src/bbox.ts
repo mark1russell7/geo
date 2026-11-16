@@ -214,6 +214,27 @@ export function bboxIntersects(a: BBox, b: BBox): boolean {
   return arcHas(a.west, a.east, b.west) || arcHas(b.west, b.east, a.west);
 }
 
+/**
+ * This function gives the middle of a box. Its latitude is the middle of the latitudes of the box. Its longitude is the
+ * middle of the arc of longitudes from the west to the east. For a box that crosses the antimeridian, the middle is on
+ * the arc across the antimeridian.
+ *
+ * - The closed box has the result: `bboxContains(box, bboxCenter(box))` is `true`.
+ * - The longitude of the result is from -180 to 180. A box of the full circle, from -180 to 180, gives the longitude 0.
+ * - The middle is a place for a label or for the first view of a map. It is not the centroid of a shape in the box.
+ *
+ * @throws GeoError - The code is `not-finite`, `longitude-range`, `latitude-range` or `bbox`.
+ */
+export function bboxCenter(box: BBox): LatLon {
+  checkBBox(box);
+  // The sum of a value and a half of a difference stays between the two ends. A half of the sum can round out of them.
+  const lat = box.south + (box.north - box.south) / 2;
+  if (box.west <= box.east) return { lat, lon: box.west + (box.east - box.west) / 2 };
+  const lon = normalizeLon(box.west + (box.east + 360 - box.west) / 2);
+  // The width across the antimeridian has two roundings. A result out of the arc by one rounding step goes to the west end.
+  return { lat, lon: arcHas(box.west, box.east, lon) ? lon : box.west };
+}
+
 /** This function gives the GeoJSON form `[west, south, east, north]` of a box. */
 export function toGeoJsonBBox(box: BBox): GeoJsonBBox {
   return [box.west, box.south, box.east, box.north];
