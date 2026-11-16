@@ -3,7 +3,26 @@ import { classifySegments } from "@mark1russell7/predicates";
 import { canonicalHash } from "@mark1russell7/rigor-generators";
 import { simplifyRegions as simplifyBase } from "geo-base";
 import { describe, expect, it } from "vitest";
-import { BUFFER, caseOf, type HashLine, LOCATE, mapOf, markdown, type Pairs, positionCount, report, SIMPLIFY, speedFaults, suiteOf, TOLERANCE_KM } from "./index.ts";
+import {
+  addBudgetRounds,
+  addRounds,
+  BUFFER,
+  budgetRead,
+  budgetRounds,
+  caseOf,
+  type HashLine,
+  LOCATE,
+  mapOf,
+  markdown,
+  NO_ROUNDS,
+  type Pairs,
+  positionCount,
+  report,
+  SIMPLIFY,
+  speedFaults,
+  suiteOf,
+  TOLERANCE_KM,
+} from "./index.ts";
 
 const key = (position: Position): string => `${position[0]},${position[1]}`;
 
@@ -129,6 +148,9 @@ describe("the report", () => {
     expect(result.cases.find((row) => row.case === "tx-552-325k")?.ratio).toBeCloseTo(0.05, 2);
     expect(result.time.outcome).toBe("faster");
     expect(result.budget.outcome).toBe("within");
+    // A quiet run decides at the first look of 6 rounds, so the bench adds no rounds.
+    expect(result.budget.more).toBe(0);
+    expect(result.budget.cases[0]?.rounds).toBe(6);
     expect(result.growth.outcome).toBe("within");
     expect(result.growth.steps.map((step) => step.exponent)).toEqual(result.growth.steps.map(() => expect.closeTo(1, 1)));
     expect(result.cases.find((row) => row.case === "grid-30-1e3")?.sameResult).toBe(false);
@@ -146,7 +168,7 @@ describe("the report", () => {
     expect(speedFaults(fast, all, SIMPLIFY)).toEqual([]);
     const slow = report(fakePairs(all, 7, (_, id, round) => (sizes[id] as number) * 25 * (1 + (round % 3) / 1000)), hashes, SIMPLIFY);
     expect(speedFaults(slow, all, SIMPLIFY)).toEqual([expect.stringContaining('The budget of tx-552-325k is "beyond".')]);
-    const noisy = { budget: { outcome: "cannot decide" as const, reason: "", cases: [] }, growth: { outcome: "cannot decide" as const, reason: "", steps: [] } };
+    const noisy = { budget: { outcome: "cannot decide" as const, reason: "", cases: [], more: 0 }, growth: { outcome: "cannot decide" as const, reason: "", steps: [] } };
     expect(speedFaults(noisy, all, SIMPLIFY)).toHaveLength(2);
     expect(speedFaults(noisy, ["grid-30-1e3"], SIMPLIFY)).toEqual([]);
   });
@@ -217,7 +239,91 @@ describe("the suites", () => {
     const text = markdown(result, LOCATE);
     expect(text).toContain("## The bench of pointLocator (R10)");
     expect(text).toContain("The speed gate holds the budget and the growth.");
-    expect(text).toContain("- Budget (coast-1e5-1e4, median of head at most 86 ms): **within**.");
+    expect(text).toContain("- Budget (coast-1e5-1e4, median of head at most 86 ms, looks at 6, 12 and 24 rounds): **within**.");
+  });
+
+  describe("the looks of the budget", () => {
+    const sizes: Record<string, number> = { "coast-1e3-1e4": 10, "coast-1e4-1e4": 18, "coast-1e5-1e4": 33, "coast-1e6-1e2": 125, "star-1e5-1e3": 400, "parts-552-1e5-1e3": 26 };
+    // The rounds 2 to 5 of head-copy on the case of the budget are slow, as on a runner with a load. The A/A difference
+    // of the first look is 12 ms, above the limit of 3 ms.
+    const pairs = fakePairs(LOCATE.cases, 7, (arm, id, round) =>
+      id === "coast-1e5-1e4" && arm === "head-copy" && round >= 2 && round <= 5 ? 45 : (sizes[id] as number),
+    );
+    const quiet = (from: number, count: number, copyMs = 33) =>
+      Array.from({ length: count }, (_, index) => ({ case: "coast-1e5-1e4", round: from + index, first: "a" as const, a: 33, b: copyMs }));
+
+    it("asks for 5 more rounds when the first look is noisy", () => {
+      const result = report(pairs, [], LOCATE);
+      expect(result.budget.outcome).toBe("cannot decide");
+      expect(result.budget.reason).toContain("the A/A difference is above 3");
+      expect(result.budget.more).toBe(5);
+      expect(speedFaults(result, LOCATE.cases, LOCATE)).toEqual([expect.stringContaining('The budget of coast-1e5-1e4 is "cannot decide".')]);
+    });
+
+    it("decides at 12 rounds when the added rounds are quiet", () => {
+      const result = report(pairs, [], LOCATE, addRounds(NO_ROUNDS, quiet(7, 5)));
+      expect(result.budget.outcome).toBe("within");
+      expect(result.budget.more).toBe(0);
+      expect(result.budget.cases[0]?.rounds).toBe(12);
+      expect(speedFaults(result, LOCATE.cases, LOCATE)).toEqual([]);
+    });
+
+    it("stops at 24 rounds with no outcome when each look is noisy, and the gate does not pass", () => {
+      const twelve = addRounds(NO_ROUNDS, quiet(7, 5, 45));
+      const own = budgetRounds(pairs, LOCATE);
+      expect(budgetRead({ head: [...own.head, ...twelve.head], copy: [...own.copy, ...twelve.copy] }, LOCATE).more).toBe(12);
+      const result = report(pairs, [], LOCATE, addRounds(twelve, quiet(12, 12, 45)));
+      expect(result.budget.outcome).toBe("cannot decide");
+      expect(result.budget.more).toBe(0);
+      expect(result.budget.cases[0]?.rounds).toBe(24);
+      expect(speedFaults(result, LOCATE.cases, LOCATE)).toHaveLength(1);
+    });
+
+    it("gives no read and asks for no rounds for a suite with no budget", () => {
+      expect(budgetRounds(pairs, BUFFER)).toEqual(NO_ROUNDS);
+      expect(budgetRead(NO_ROUNDS, BUFFER)).toEqual({ outcome: "no read", reason: "The suite has no budget.", cases: [], more: 0 });
+    });
+
+    // The fake measure records each ask, and gives the rounds of `copyMs` for head-copy.
+    const measure = (copyMs: number) => {
+      const asks: [string, number, number][] = [];
+      const run = async (id: string, rounds: number, from: number) => {
+        asks.push([id, rounds, from]);
+        return quiet(from, rounds, copyMs);
+      };
+      return { asks, run };
+    };
+
+    it("adds 5 rounds from round 7, and the quiet look at 12 rounds decides", async () => {
+      const fake = measure(33);
+      const { records, added } = await addBudgetRounds(pairs, LOCATE, fake.run);
+      expect(fake.asks).toEqual([["coast-1e5-1e4", 5, 7]]);
+      expect(records.map((record) => record.round)).toEqual([7, 8, 9, 10, 11]);
+      expect(report(pairs, [], LOCATE, added).budget.outcome).toBe("within");
+    });
+
+    it("adds rounds up to 24 when each look is noisy, and then stops", async () => {
+      const fake = measure(45);
+      const { records, added } = await addBudgetRounds(pairs, LOCATE, fake.run);
+      expect(fake.asks).toEqual([
+        ["coast-1e5-1e4", 5, 7],
+        ["coast-1e5-1e4", 12, 12],
+      ]);
+      expect(records).toHaveLength(17);
+      expect(report(pairs, [], LOCATE, added).budget).toMatchObject({ outcome: "cannot decide", more: 0 });
+    });
+
+    it("adds nothing when the run is quiet, when the measure skips, or when the suite has no budget", async () => {
+      const quietPairs = fakePairs(LOCATE.cases, 7, (_arm, id) => sizes[id] as number);
+      const fake = measure(33);
+      expect(await addBudgetRounds(quietPairs, LOCATE, fake.run)).toEqual({ records: [], added: NO_ROUNDS });
+      expect(await addBudgetRounds(pairs, BUFFER, fake.run)).toEqual({ records: [], added: NO_ROUNDS });
+      expect(fake.asks).toEqual([]);
+      const skips: number[] = [];
+      const none = await addBudgetRounds(pairs, LOCATE, async (_id, rounds) => (skips.push(rounds), []));
+      expect(skips).toEqual([5]);
+      expect(none).toEqual({ records: [], added: NO_ROUNDS });
+    });
   });
 
   it("gives a fault of the growth of a linear locate, within the budget", () => {

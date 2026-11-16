@@ -4,7 +4,8 @@
  *
  * - The time verdict compares the pair (base, head) with the A/A pair (base, base) over all cases.
  * - The budget verdict holds the median of the arm `head` on the case of the budget of the suite. Its A/A arm is the
- *   arm `head-copy`: the same code in other processes.
+ *   arm `head-copy`: the same code in other processes. The verdict looks at 6, 12 and 24 rounds with
+ *   `budgetLooksVerdict` of `@mark1russell7/rigor-bench`. A noisy look gives no outcome, and the bench adds rounds.
  * - The growth verdict reads the growth of the time of `head` for each 10 times more of the size of the suite. Each
  *   round is one job, so a slow round changes each size of that round.
  * - The hashes show if `base` and `head` give the same result on each case.
@@ -14,8 +15,8 @@
  */
 
 import {
+  budgetLooksVerdict,
   type BudgetRound,
-  budgetVerdict,
   type BudgetVerdict,
   growthVerdict,
   type GrowthVerdict,
@@ -55,12 +56,99 @@ export interface Read {
   readonly reason: string;
 }
 
+/** The rounds of the case of the budget in the two arms of `head`. */
+export interface BudgetRounds {
+  readonly head: readonly BudgetRound[];
+  readonly copy: readonly BudgetRound[];
+}
+
+/** The read of the budget. The field `more` is the count of rounds that each arm of `head` needs for the next look, or 0. */
+export interface BudgetRead extends Read {
+  readonly cases: BudgetVerdict["cases"];
+  readonly more: number;
+}
+
 export interface Report {
   readonly suite: Suite["id"];
   readonly cases: readonly CaseRow[];
   readonly time: Read;
-  readonly budget: Read & { readonly cases: BudgetVerdict["cases"] };
+  readonly budget: BudgetRead;
   readonly growth: Read & { readonly steps: GrowthVerdict["steps"] };
+}
+
+/** The empty list of added rounds. */
+export const NO_ROUNDS: BudgetRounds = { head: [], copy: [] };
+
+/**
+ * This function gives the rounds of the case of the budget in a run: the time `b` of the pairs `head` and `head-copy`.
+ * The list is empty when the suite has no budget.
+ */
+export function budgetRounds(pairs: Pairs, suite: Suite): BudgetRounds {
+  const claim = suite.budget;
+  if (claim === undefined) return NO_ROUNDS;
+  const of = (records: readonly PairedTime[]): BudgetRound[] =>
+    records.filter((record) => record.case === claim.case).map((record) => ({ case: record.case, round: record.round, value: record.b }));
+  return { head: of(pairs["head"] ?? []), copy: of(pairs["head-copy"] ?? []) };
+}
+
+/**
+ * This function adds the records of a pair (head, head-copy) to the rounds of the budget. The time `a` is the time of
+ * `head`, and the time `b` is the time of `head-copy`.
+ */
+export function addRounds(rounds: BudgetRounds, records: readonly PairedTime[]): BudgetRounds {
+  return {
+    head: [...rounds.head, ...records.map((record) => ({ case: record.case, round: record.round, value: record.a }))],
+    copy: [...rounds.copy, ...records.map((record) => ({ case: record.case, round: record.round, value: record.b }))],
+  };
+}
+
+/**
+ * This function gives the read of the budget from its rounds. A look with no outcome, for example a look with an A/A
+ * difference above the limit, asks for more rounds in `more`. The last look at 24 rounds gives its outcome.
+ */
+export function budgetRead(rounds: BudgetRounds, suite: Suite): BudgetRead {
+  const claim = suite.budget;
+  if (claim === undefined) return { outcome: "no read", reason: "The suite has no budget.", cases: [], more: 0 };
+  if (rounds.head.length === 0 || rounds.copy.length === 0) {
+    return { outcome: "no read", reason: `The run has no rounds of ${claim.case} in the arms head and head-copy.`, cases: [], more: 0 };
+  }
+  const verdict = budgetLooksVerdict(rounds.head, rounds.copy, { limit: claim.limitMs, maxDifference: claim.maxDifferenceMs });
+  const next = verdict.more.find((item) => item.case === claim.case)?.rounds;
+  const more = next === undefined ? 0 : Math.max(0, next - Math.min(rounds.head.length, rounds.copy.length));
+  return { outcome: verdict.outcome, reason: verdict.reason, cases: verdict.cases, more };
+}
+
+/**
+ * The function that measures more rounds of the case `id` of the budget in a pair (head, head-copy). The rounds start
+ * at the round `from`. A skip gives no record.
+ */
+export type MeasureRounds = (id: string, rounds: number, from: number) => Promise<readonly PairedTime[]>;
+
+/** The rounds that `addBudgetRounds` added: the records of the pair (head, head-copy), and the rounds for `report`. */
+export interface AddedRounds {
+  readonly records: readonly PairedTime[];
+  readonly added: BudgetRounds;
+}
+
+/**
+ * This function adds rounds of the case of the budget while a look has no outcome, up to the last look at 24 rounds.
+ * It stops when a measure gives no records. A suite with no budget, or a run with no rounds of its case, adds nothing.
+ */
+export async function addBudgetRounds(pairs: Pairs, suite: Suite, measure: MeasureRounds): Promise<AddedRounds> {
+  const own = budgetRounds(pairs, suite);
+  const records: PairedTime[] = [];
+  let added = NO_ROUNDS;
+  for (;;) {
+    const all = { head: [...own.head, ...added.head], copy: [...own.copy, ...added.copy] };
+    const more = budgetRead(all, suite).more;
+    const id = suite.budget?.case;
+    if (more === 0 || id === undefined) break;
+    const found = await measure(id, more, 1 + Math.max(...all.head.map((item) => item.round)));
+    if (found.length === 0) break;
+    records.push(...found);
+    added = addRounds(added, found);
+  }
+  return { records, added };
 }
 
 /**
@@ -90,10 +178,12 @@ function sameResult(hashes: readonly HashLine[], id: string): boolean | undefine
   return base.size === 1 && head.size === 1 && [...base][0] === [...head][0];
 }
 
-/** This function makes the report of a run of the suite. */
-export function report(pairs: Pairs, hashes: readonly HashLine[], suite: Suite): Report {
+/**
+ * This function makes the report of a run of the suite. The rounds `added` are the rounds of the budget that the bench
+ * added after the run, with `addRounds`.
+ */
+export function report(pairs: Pairs, hashes: readonly HashLine[], suite: Suite, added: BudgetRounds = NO_ROUNDS): Report {
   const head = pairs["head"] ?? [];
-  const copy = pairs["head-copy"] ?? [];
   const aa = pairs["base~aa"] ?? [];
   const ids = [...new Set(head.map((record) => record.case))];
   const cases = ids.map((id): CaseRow => {
@@ -112,19 +202,8 @@ export function report(pairs: Pairs, hashes: readonly HashLine[], suite: Suite):
     ids.length >= 5 && aaCases >= 5
       ? timeVerdict(head, aa)
       : { outcome: "no read", reason: `The A/A band needs 5 cases or more, and the run has ${Math.min(ids.length, aaCases)}.` };
-  const claim = suite.budget;
-  const budgetRounds = (records: readonly PairedTime[], id: string): BudgetRound[] =>
-    records.filter((record) => record.case === id).map((record) => ({ case: record.case, round: record.round, value: record.b }));
-  const headBudget = claim === undefined ? [] : budgetRounds(head, claim.case);
-  const copyBudget = claim === undefined ? [] : budgetRounds(copy, claim.case);
-  const budget =
-    claim !== undefined && headBudget.length > 0 && copyBudget.length > 0
-      ? budgetVerdict(headBudget, copyBudget, { limit: claim.limitMs, maxDifference: claim.maxDifferenceMs })
-      : {
-          outcome: "no read" as const,
-          reason: claim === undefined ? "The suite has no budget." : `The run has no rounds of ${claim.case} in the arms head and head-copy.`,
-          cases: [],
-        };
+  const own = budgetRounds(pairs, suite);
+  const budget = budgetRead({ head: [...own.head, ...added.head], copy: [...own.copy, ...added.copy] }, suite);
   const growthRounds = head.flatMap((record) => {
     const size = suite.growth.sizeOf(record.case);
     return size === undefined ? [] : [{ job: `round-${record.round}`, size, value: record.b }];
@@ -135,7 +214,7 @@ export function report(pairs: Pairs, hashes: readonly HashLine[], suite: Suite):
     suite: suite.id,
     cases,
     time: { outcome: time.outcome, reason: time.reason },
-    budget: { outcome: budget.outcome, reason: budget.reason, cases: budget.cases },
+    budget,
     growth: {
       outcome: growth.outcome,
       reason: sizes >= 2 ? `The steps of ${sizes} sizes: ${suite.growth.describe}.` : `The growth needs 2 sizes or more, and the run has ${sizes}.`,
@@ -165,7 +244,7 @@ export function markdown(result: Report, suite: Suite): string {
     `- Time (head against base, with the A/A pair): **${result.time.outcome}**. ${result.time.reason}`,
     claim === undefined
       ? `- Budget: **${result.budget.outcome}**. ${result.budget.reason}`
-      : `- Budget (${claim.case}, median of head at most ${claim.limitMs} ms): **${result.budget.outcome}**. ${result.budget.reason}`,
+      : `- Budget (${claim.case}, median of head at most ${claim.limitMs} ms, looks at 6, 12 and 24 rounds): **${result.budget.outcome}**. ${result.budget.reason}`,
     `- Growth of head for each 10 times more, at most ${suite.growth.maxGrowth}: **${result.growth.outcome}**. ${result.growth.reason}`,
     ...result.growth.steps.map(
       (step) => `  - ${step.from} to ${step.to}: median ${fixed(step.median, 2)} (${fixed(step.low, 2)} to ${fixed(step.high, 2)}), exponent ${fixed(step.exponent, 2)}, ${step.outcome}`,
