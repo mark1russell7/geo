@@ -1,0 +1,87 @@
+# The bench of locatePoint (R10 of docs/ROADMAP.md): the source of packages/geo against geo 0.3.1 from npm.
+# The job is in bench-suite.yml, with the suite locate. At this time the report only reads the time and the growth.
+# The job fails when the result of the head is not the same as the result of geo 0.3.1 on a case, or has no read.
+# Start it on a branch with: gh workflow run bench-locate.yml -R mark1russell7/geo --ref <branch>
+# The input copies starts more benches of the same commit on other runners, for the limit of a gate:
+# gh workflow run bench-locate.yml -R mark1russell7/geo --ref <branch> -f copies='[1,2,3,4,5]'
+name: Bench locate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - packages/geo/src/polygon.ts
+      - packages/geo/src/planar.ts
+      - packages/geo/src/geojson.ts
+      - packages/geo/src/point.ts
+      - packages/bench/**
+      - .github/workflows/bench-locate.yml
+      - .github/workflows/bench-suite.yml
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: The rounds of each case and pair (the budget verdict needs 6 or more)
+        default: "7"
+      cases:
+        description: The names of the cases, with commas. Empty means each case.
+        default: ""
+      copies:
+        description: A JSON list of copy numbers. Each copy is one bench on its own runner (5 copies give the limit of a gate).
+        default: "[1]"
+
+permissions:
+  contents: read
+
+# A newer push cancels the run of a pull request. Each commit of main has its own group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      match: ${{ steps.changes.outputs.match }}
+    steps:
+      - id: changes
+        uses: mark1russell7/template/.github/actions/changes@eb7f3517aa8614e338a46acd37ab0c49395be5f9 # main
+        with:
+          paths: |
+            packages/geo/src/polygon.ts
+            packages/geo/src/planar.ts
+            packages/geo/src/geojson.ts
+            packages/geo/src/point.ts
+            packages/bench/**
+            pnpm-lock.yaml
+            .github/workflows/bench-locate.yml
+            .github/workflows/bench-suite.yml
+
+  bench:
+    needs: changes
+    if: needs.changes.outputs.match == 'true'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/bench-suite.yml
+    with:
+      suite: locate
+      rounds: ${{ inputs.rounds || '7' }}
+      cases: ${{ inputs.cases || '' }}
+      copies: ${{ inputs.copies || '[1]' }}
+      profile-case: coast-1e5-1e4
+      timeout-minutes: 150
+
+  bench-ok:
+    name: Bench locate OK
+    if: ${{ !cancelled() }}
+    needs: [changes, bench]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - uses: mark1russell7/template/.github/actions/gate-summary@eb7f3517aa8614e338a46acd37ab0c49395be5f9 # main
+        with:
+          needs: ${{ toJSON(needs) }}
