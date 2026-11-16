@@ -174,9 +174,9 @@ describe("the suites", () => {
     expect(SIMPLIFY.cases.filter((id) => SIMPLIFY.growth.sizeOf(id) !== undefined)).toEqual(["grid-552-1e5", "tx-552-325k", "grid-552-1e6"]);
   });
 
-  it("reads the locate suite with no budget, and the growth of the coasts with 10,000 places", () => {
+  it("reads the locate suite with a temporary budget, and the growth of the coasts with 10,000 places", () => {
     expect(LOCATE.enforced).toBe(false);
-    expect(LOCATE.budget).toBeUndefined();
+    expect(LOCATE.budget).toEqual({ case: "coast-1e5-1e4", limitMs: 10_000, maxDifferenceMs: 1_000 });
     expect(LOCATE.cases.map((id) => LOCATE.growth.sizeOf(id))).toEqual([1_000, 10_000, 100_000, undefined, undefined, undefined]);
     const sizes: Record<string, number> = { "coast-1e3-1e4": 1, "coast-1e4-1e4": 10, "coast-1e5-1e4": 100, "coast-1e6-1e2": 10, "star-1e5-1e3": 10, "parts-552-1e5-1e3": 10 };
     const pairs = fakePairs(LOCATE.cases, 7, (_, id, round) => (sizes[id] as number) * (1 + ((round * 7) % 5) / 1000));
@@ -186,18 +186,19 @@ describe("the suites", () => {
     ]);
     const result = report(pairs, hashes, LOCATE);
     expect(result.suite).toBe("locate");
-    expect(result.budget).toEqual({ outcome: "no read", reason: "The suite has no budget.", cases: [] });
+    expect(result.budget.outcome).toBe("within");
     expect(result.growth.outcome).toBe("within");
     expect(result.growth.steps).toHaveLength(2);
     expect(speedFaults(result, LOCATE.cases, LOCATE)).toEqual([]);
     const text = markdown(result, LOCATE);
-    expect(text).toContain("## The bench of locatePoint (R10)");
+    expect(text).toContain("## The bench of pointLocator (R10)");
     expect(text).toContain("The report only reads the speed claims.");
-    expect(text).toContain("- Budget: **no read**. The suite has no budget.");
+    expect(text).toContain("- Budget (coast-1e5-1e4, median of head at most 10000 ms): **within**.");
   });
 
   it("gives a fault of the growth of a quadratic locate, for the read of the report", () => {
-    const sizes: Record<string, number> = { "coast-1e3-1e4": 1, "coast-1e4-1e4": 100, "coast-1e5-1e4": 10_000 };
+    // The largest case is within the budget, so the growth gives the only fault.
+    const sizes: Record<string, number> = { "coast-1e3-1e4": 0.01, "coast-1e4-1e4": 1, "coast-1e5-1e4": 100 };
     const ids = Object.keys(sizes);
     const result = report(fakePairs(ids, 7, (_, id, round) => (sizes[id] as number) * (1 + (round % 3) / 1000)), [], LOCATE);
     expect(result.growth.outcome).toBe("beyond");

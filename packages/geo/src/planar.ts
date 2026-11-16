@@ -22,13 +22,17 @@ export type Ring = readonly Position[];
 /** The rings of one polygon: the exterior first, then the holes. */
 export type Rings = readonly Ring[];
 
-/** The extent of the rings of one polygon in the plane. */
-export interface Part {
-  readonly rings: Rings;
+/** The extent of one polygon in the plane: the ranges of its x and its y. */
+export interface PartBox {
   readonly minX: number;
   readonly maxX: number;
   readonly minY: number;
   readonly maxY: number;
+}
+
+/** The rings of one polygon with their extent in the plane. */
+export interface Part extends PartBox {
+  readonly rings: Rings;
 }
 
 /**
@@ -144,9 +148,12 @@ export function locateInRings(rings: Rings, x: number, y: number, dx: number = 0
   return "inside";
 }
 
-/** This function gives `true` when a ring of the polygon has a position at the latitude. */
-export function touchesLatitude(rings: Rings, lat: number): boolean {
-  return rings.some((ring) => ring.some((position) => position[1] === lat));
+/**
+ * This function gives `true` when the part has a position at the pole `pole`, 90 or -90. A valid latitude is from -90 to
+ * 90, so the extent of the part gives the result.
+ */
+export function touchesPole(part: PartBox, pole: number): boolean {
+  return pole > 0 ? part.maxY === pole : part.minY === pole;
 }
 
 /**

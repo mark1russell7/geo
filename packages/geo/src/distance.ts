@@ -25,8 +25,8 @@
  */
 
 import { checkGeometry, type Geometry } from "./geojson.ts";
-import { checkGeometryLongitudes, onLine, partOf, type Part, type PointLocation, type Rings } from "./planar.ts";
-import { locateInParts } from "./polygon.ts";
+import { checkGeometryLongitudes, onLine, partOf, type Part, type Rings } from "./planar.ts";
+import { inRings, locateInParts, type PlaneTest } from "./polygon.ts";
 import { checkPoint, normalizeLon, type LatLon, type Position } from "./point.ts";
 import { checkRadius, EARTH_MEAN_RADIUS_KM, EARTH_MEAN_RADIUS_METERS } from "./sphere.ts";
 
@@ -95,9 +95,7 @@ function collect(geometry: Geometry, path: string, shapes: Shapes): void {
 }
 
 /** The plane test of a line: a point on an edge is on the line. The line has no inside. */
-function onLines(rings: Rings, x: number, y: number, dx: number = 0): PointLocation {
-  return rings.some((line) => onLine(line, x, y, dx)) ? "boundary" : "outside";
-}
+const onLines: PlaneTest = (part, x, y, dx) => (part.rings.some((line) => onLine(line, x, y, dx)) ? "boundary" : "outside");
 
 /** This function gives `true` when two positions are the same point of the sphere. The test has no rounding. */
 function samePoint(point: LatLon, position: Position): boolean {
@@ -304,7 +302,7 @@ export function angleBoundToEdge(viewer: Viewer, a: Position, b: Position): numb
 
 /** This function gives the central angle from a valid point to the shapes, in radians. */
 function angleToShapes(point: LatLon, shapes: Shapes): number {
-  if (locateInParts(shapes.polygons, point) !== "outside") return 0;
+  if (locateInParts(shapes.polygons, point, inRings) !== "outside") return 0;
   if (shapes.points.some((position) => samePoint(point, position))) return 0;
   if (locateInParts(shapes.lines, point, onLines) !== "outside") return 0;
   const viewer: Viewer = { lat: point.lat, lon: normalizeLon(point.lon), cosLat: Math.cos(point.lat * RADIANS) };
