@@ -13,6 +13,7 @@ export {
   type CaseRow,
   type HashLine,
   MAX_GROWTH,
+  TARGET_MS,
   markdown,
   type Pairs,
   type Read,
