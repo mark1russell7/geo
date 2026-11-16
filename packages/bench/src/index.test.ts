@@ -191,7 +191,7 @@ describe("the suites", () => {
     expect(result.growth.steps).toHaveLength(2);
     expect(speedFaults(result, LOCATE.cases, LOCATE)).toEqual([]);
     const text = markdown(result, LOCATE);
-    expect(text).toContain("## The bench of locatePoint (R10)");
+    expect(text).toContain("## The bench of pointLocator (R10)");
     expect(text).toContain("The report only reads the speed claims.");
     expect(text).toContain("- Budget: **no read**. The suite has no budget.");
   });

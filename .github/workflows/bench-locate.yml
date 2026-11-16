@@ -1,4 +1,4 @@
-# The bench of locatePoint (R10 of docs/ROADMAP.md): the source of packages/geo against geo 0.3.1 from npm.
+# The bench of the location of points (R10 of docs/ROADMAP.md): pointLocator of packages/geo against locatePoint of geo 0.3.1.
 # The job is in bench-suite.yml, with the suite locate. At this time the report only reads the time and the growth.
 # The job fails when the result of the head is not the same as the result of geo 0.3.1 on a case, or has no read.
 # Start it on a branch with: gh workflow run bench-locate.yml -R mark1russell7/geo --ref <branch>
@@ -12,6 +12,7 @@ on:
     branches: [main]
     paths:
       - packages/geo/src/polygon.ts
+      - packages/geo/src/locator.ts
       - packages/geo/src/planar.ts
       - packages/geo/src/geojson.ts
       - packages/geo/src/point.ts
@@ -52,6 +53,7 @@ jobs:
         with:
           paths: |
             packages/geo/src/polygon.ts
+            packages/geo/src/locator.ts
             packages/geo/src/planar.ts
             packages/geo/src/geojson.ts
             packages/geo/src/point.ts
