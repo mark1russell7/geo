@@ -20,4 +20,22 @@ export {
   samplesOf,
 } from "./buffers.ts";
 export { BUFFER, type BudgetClaim, type GrowthClaim, LOCATE, SIMPLIFY, type Suite, type SuiteBase, type SuiteId, SUITES, suiteOf } from "./suites.ts";
-export { type CaseRow, type HashLine, markdown, type Pairs, type Read, type Report, report, speedFaults } from "./report.ts";
+export {
+  addBudgetRounds,
+  type AddedRounds,
+  addRounds,
+  type BudgetRead,
+  budgetRead,
+  type BudgetRounds,
+  budgetRounds,
+  type CaseRow,
+  type HashLine,
+  markdown,
+  type MeasureRounds,
+  NO_ROUNDS,
+  type Pairs,
+  type Read,
+  type Report,
+  report,
+  speedFaults,
+} from "./report.ts";

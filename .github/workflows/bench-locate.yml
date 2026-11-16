@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       rounds:
-        description: The rounds of each case and pair (the budget verdict needs 6 or more)
+        description: The rounds of each case and pair. The bench adds rounds of the budget case when a look has no outcome.
         default: "7"
       cases:
         description: The names of the cases, with commas. Empty means each case.
