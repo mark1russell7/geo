@@ -1,6 +1,6 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry, and a circle around a point as a GeoJSON polygon. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry, and a circle around a point as a GeoJSON polygon. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
@@ -18,7 +18,7 @@ The package is an ES module with types. It has two dependencies, [`@mark1russell
 ## Example
 
 ```ts
-import { circleKm, distanceKm, distanceToGeometryKm, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
+import { circleKm, distanceKm, distanceToGeometryKm, geodesicInverse, geohash, locatePoint, parseGeometry } from "@mark1russell7/geo";
 
 // An area as a GeoJSON Polygon. The positions are [longitude, latitude].
 const area = parseGeometry({
@@ -31,7 +31,8 @@ const paris = { lat: 48.8566, lon: 2.3522 }; // the center of Paris
 const london = { lat: 51.5074, lon: -0.1278 }; // the center of London
 
 if (area.value.type === "Polygon") locatePoint(paris, area.value); // "inside"
-distanceKm(paris, london); // 343.556...
+distanceKm(paris, london); // 343.556... on a sphere
+geodesicInverse(paris, london).meters; // 343923.120... on the WGS84 ellipsoid
 distanceToGeometryKm(paris, area.value); // 0, because the area contains the point
 distanceToGeometryKm(london, area.value) <= 400; // true: London is in a buffer of 400 km around the area
 geohash(paris, 7); // "u09tvw0"
@@ -63,7 +64,18 @@ circleKm(paris, 50); // a Polygon of 64 vertices: the area of 50 km around Paris
 | `distanceToGeometryKm(point, geometry, radiusKm?)`, `distanceToGeometryMeters(...)` | The great-circle distance from a point to the nearest point of a GeoJSON geometry. It is 0 in a polygon. The section [The distance to a geometry](#the-distance-to-a-geometry) gives the rules. |
 | `distanceBetweenGeometriesKm(a, b, radiusKm?)`, `distanceBetweenGeometriesMeters(...)` | The great-circle distance between the nearest points of two GeoJSON geometries. It is 0 when they have a common point. The section [The distance between two geometries](#the-distance-between-two-geometries) gives the rules. |
 
-The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance.
+The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance. For the ellipsoid, use the geodesic functions.
+
+### Geodesics on the ellipsoid
+
+| Name | What it does |
+| --- | --- |
+| `WGS84` | The ellipsoid of WGS84: an equatorial radius of 6,378,137 m and a flattening of 1/298.257223563. |
+| `Ellipsoid` | `{ equatorialRadiusMeters, flattening }`. A flattening less than 0 gives a prolate ellipsoid. |
+| `geodesicInverse(from, to, ellipsoid?)` | The length of the shortest geodesic between two points in meters, and its bearings at the two points. |
+| `geodesicDirect(from, bearing, meters, ellipsoid?)` | The point at a distance along the geodesic on an initial bearing, and the bearing at that point. |
+
+The section [Geodesics](#geodesics) gives the method and the accuracy.
 
 ### Circles
 
@@ -88,6 +100,7 @@ The distance and the destination use a sphere, not the ellipsoid of WGS84. Again
 | Name | What it does |
 | --- | --- |
 | `locatePoint(point, polygon)` | Gives `"inside"`, `"boundary"` or `"outside"` for a Polygon or a MultiPolygon. The polygon contains the point when the result is not `"outside"`. |
+| `pointLocator(polygon)` | Examines a polygon one time, and gives a function that locates each point with the result of `locatePoint`. Use it for many points. |
 | `polygonsIntersect(a, b)` | Gives `true` when two polygons have a common point. |
 | `polygonIntersectsBBox(polygon, box)` | Gives `true` when a polygon and a box have a common point. |
 | `ringWinding(ring)` | Gives `"counterclockwise"`, `"clockwise"` or `"degenerate"`, from the exact sign of the area. |
@@ -196,14 +209,36 @@ The function measures each distance on the sphere, to the straight edge in longi
 
 A position of one region on an edge of another region does not join the two regions. So give the neighbors equal positions on their shared borders. The outlines of the US Census and of the NWS do this.
 
+### Geodesics
+
+`geodesicInverse` and `geodesicDirect` use the method of C. F. F. Karney, [Algorithms for geodesics](https://doi.org/10.1007/s00190-012-0578-z) (2013). The code is a port of the inverse and the direct problems of [GeographicLib](https://geographiclib.sourceforge.io/) 2.2.0 for JavaScript, by Charles Karney, with the MIT license.
+
+- On WGS84, GeographicLib gives an error of less than 15 nm for a distance. The tests hold a limit of 1e-6 m for a distance. They hold a limit of 1e-9 degrees for a bearing or a position. The test values come from GeographicLib.
+- The accuracy stays at this level for a flattening from -1/50 to 1/50. For a larger flattening, the error increases.
+- The bearings are in degrees from 0 to 360 (360 not included), clockwise from north. At a pole, the bearing is measured from the meridian of the longitude of the point.
+- For two equal points, the distance and the two bearings are 0.
+- Two points that are almost antipodal can have more than one shortest geodesic. The function gives one of them.
+- `geodesicDirect` accepts each finite distance. A negative distance goes in the opposite direction of the bearing.
+- The geodesic functions compute the coefficients of each ellipsoid one time, and keep them while the ellipsoid object stays.
+
 ### Exact results
 
 The orientation and segment tests are exact. A test across the antimeridian also moves the point or a polygon by a multiple of 360 degrees.
 
 - The float sum of a longitude and 360 can round. For example, `-70.1 + 360` rounds.
 - The tests do not use that sum. The shifted predicates of `@mark1russell7/predicates` take the longitude and the move as two inputs, and give the sign of the exact moved point.
-- So `locatePoint`, `polygonsIntersect` and `polygonIntersectsBBox` are exact for each longitude. The result of `polygonsIntersect` does not change when the two polygons change places.
+- So `locatePoint`, `pointLocator`, `polygonsIntersect` and `polygonIntersectsBBox` are exact for each longitude. The result of `polygonsIntersect` does not change when the two polygons change places.
 - The polygon tests refuse a position with a longitude out of -540 to 540 (`MAX_GEOMETRY_LONGITUDE`) with the error `longitude-range`. Each area of the Earth has a written form in that range, and the limit keeps the time of a test small.
+
+### Many points against one polygon
+
+`locatePoint` examines each edge of the polygon for each point. `pointLocator` makes an index of the edges one time.
+
+- The index puts the edges of each part in bands of latitude. A point examines only the edges of its band.
+- The test of each edge is `rayEdge` of `@mark1russell7/predicates`, the exact test of `locatePoint`. So the two functions give the same result for each point.
+- The locator copies the positions. A later change of the polygon does not change the locator.
+- The index needs approximately 40 bytes for each edge.
+- A ring with many long edges in latitude, for example a star, puts many edges in each band. Then each point examines many edges.
 
 ### Rings
 
@@ -254,7 +289,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `geohash-precision`, `geohash-length`, `geohash-character` | A precision, the length of a geohash or a character of a geohash is incorrect. |
 | `too-many-cells` | A cover of a box has more cells than `maxCells`. |
 | `max-cells` | The value of `maxCells` is `NaN` or less than 0. |
-| `radius` | The radius of the sphere or of a circle is not more than 0. |
+| `radius` | The radius of the sphere or of a circle is not more than 0. Or the equatorial radius of an ellipsoid is not more than 0, or its polar radius is not a finite number more than 0. |
 | `vertices` | The number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`. |
 | `tolerance` | The tolerance of a simplification is less than 0. |
 
@@ -271,3 +306,5 @@ The geohash tests use the vectors of `@procedures/geo`, of [geohash.org](http://
 ## License
 
 MIT
+
+The geodesic functions are a port of [GeographicLib](https://geographiclib.sourceforge.io/) for JavaScript, Copyright (c) 2011-2022, Charles Karney, with the MIT license. The file `src/geodesic.ts` keeps its notice.

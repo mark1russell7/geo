@@ -54,11 +54,10 @@ import {
   overlappingShifts,
   partOf,
   type Part,
-  type PointLocation,
   type Ring,
   type Rings,
 } from "./planar.ts";
-import { locateInParts } from "./polygon.ts";
+import { inRings, locateInParts, type PlaneTest } from "./polygon.ts";
 import { checkPoint, normalizeLon, type LatLon, type Position } from "./point.ts";
 import { checkRadius, EARTH_MEAN_RADIUS_KM, EARTH_MEAN_RADIUS_METERS } from "./sphere.ts";
 
@@ -127,9 +126,7 @@ function collect(geometry: Geometry, path: string, shapes: Shapes): void {
 }
 
 /** The plane test of a line: a point on an edge is on the line. The line has no inside. */
-function onLines(rings: Rings, x: number, y: number, dx: number = 0): PointLocation {
-  return rings.some((line) => onLine(line, x, y, dx)) ? "boundary" : "outside";
-}
+const onLines: PlaneTest = (part, x, y, dx) => (part.rings.some((line) => onLine(line, x, y, dx)) ? "boundary" : "outside");
 
 /** This function gives `true` when two positions are the same point of the sphere. The test has no rounding. */
 function samePoint(point: LatLon, position: Position): boolean {
@@ -336,7 +333,7 @@ export function angleBoundToEdge(viewer: Viewer, a: Position, b: Position): numb
 
 /** This function gives `true` when a valid point is on the shapes or in a polygon of the shapes. The test is exact. */
 function onShapes(point: LatLon, shapes: Shapes): boolean {
-  if (locateInParts(shapes.polygons, point) !== "outside") return true;
+  if (locateInParts(shapes.polygons, point, inRings) !== "outside") return true;
   if (shapes.points.some((position) => samePoint(point, position))) return true;
   return locateInParts(shapes.lines, point, onLines) !== "outside";
 }

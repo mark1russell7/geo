@@ -4,7 +4,8 @@
  * time `ms` and the hash of the result. The time does not include the input or the hash.
  *
  * - The suite `simplify` times one use of `simplifyRegions` on the map of the case.
- * - The suite `locate` times `locatePoint` for each place of the case, against the polygon of the case.
+ * - The suite `locate` times the location of each place of the case against the polygon of the case. The head uses
+ *   `pointLocator`, and the time includes its index. geo 0.3.1 has no locator, so the base uses `locatePoint`.
  * - The arm `base` is `@mark1russell7/geo` 0.3.1 from npm (the package `geo-base`).
  * - The arm `head` is the source of `packages/geo` in this commit.
  *
@@ -21,8 +22,8 @@ import { locateCaseOf, placesOf, polygonOf } from "./shapes.ts";
 import { suiteOf } from "./suites.ts";
 
 type Geo = typeof import("@mark1russell7/geo");
-/** The part of the API of geo that the arms use. The API of geo 0.3.1 has it too. */
-type Used = Pick<Geo, "simplifyRegions" | "locatePoint">;
+/** The part of the API of geo that the arms use. The API of geo 0.3.1 has it too, but it has no `pointLocator`. */
+type Used = Pick<Geo, "simplifyRegions" | "locatePoint"> & Partial<Pick<Geo, "pointLocator">>;
 
 const USAGE = "Usage: node src/arm.ts --suite <simplify | locate> --geo <base | head> --case <id>";
 const args = process.argv.slice(2);
@@ -49,7 +50,12 @@ function workOf(): () => unknown {
   const spec = locateCaseOf(id as string);
   const polygon = polygonOf(spec);
   const places = placesOf(spec, polygon);
-  return () => places.map((place) => geo.locatePoint(place, polygon));
+  const { pointLocator } = geo;
+  if (pointLocator === undefined) return () => places.map((place) => geo.locatePoint(place, polygon));
+  return () => {
+    const locate = pointLocator(polygon);
+    return places.map((place) => locate(place));
+  };
 }
 
 const work = workOf();

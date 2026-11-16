@@ -3,8 +3,9 @@
  *
  * - The suite `simplify` (roadmap item R14) times `simplifyRegions` on the maps of `map.ts`. Its speed gate holds a
  *   budget and a growth.
- * - The suite `locate` (roadmap item R10) times `locatePoint` for each place of a case of `shapes.ts`. At this time its
- *   report only reads the time and the growth. The limits of its gate come from 5 CI runs of the index of R10.
+ * - The suite `locate` (roadmap item R10) times the location of each place of a case of `shapes.ts`. The head uses
+ *   `pointLocator`, and the base uses `locatePoint`. At this time its report only reads the claims, and its budget is a
+ *   temporary value. The limits of its gate come from 5 benches of the index of R10 in CI.
  *
  * In each suite, a case with a different result in `head` and `base`, or with no result, fails the run.
  *
@@ -75,12 +76,14 @@ export const SIMPLIFY: Suite = {
 
 /**
  * The suite of R10. The growth reads the coasts with 10,000 places for each 10 times more vertices. The value 12 is the
- * growth of a cost as n log n. The suite has no budget and is not enforced until the index of R10 and its 5 CI runs.
+ * growth of a cost as n log n. At this time the budget is a temporary value, and the suite is not enforced. The limits
+ * of its gate come from 5 CI benches of this budget.
  */
 export const LOCATE: Suite = {
   id: "locate",
-  title: "The bench of locatePoint (R10)",
+  title: "The bench of pointLocator (R10)",
   cases: LOCATE_CASES.map((spec) => spec.id),
+  budget: { case: "coast-1e5-1e4", limitMs: 10_000, maxDifferenceMs: 1_000 },
   growth: {
     sizeOf: (id) => {
       const spec = LOCATE_CASES.find((entry) => entry.id === id);

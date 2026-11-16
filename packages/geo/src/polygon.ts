@@ -47,8 +47,9 @@ import {
   partsMeet,
   polygonParts,
   shiftsInto,
-  touchesLatitude,
+  touchesPole,
   type Part,
+  type PartBox,
   type PointLocation,
   type Ring,
   type Rings,
@@ -61,21 +62,28 @@ export { MAX_GEOMETRY_LONGITUDE, type PointLocation } from "./planar.ts";
 export type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
 
 /**
- * A test of a point against the rings of one part in the plane. The rings move by `dx` on the x axis. The default test
- * is `locateInRings`.
+ * A test of a point against one part in the plane. The part moves by `dx` on the x axis. The test of the rings of a
+ * polygon is `inRings`.
  *
  * @internal
  */
-export type PlaneTest = (rings: Rings, x: number, y: number, dx?: number) => PointLocation;
+export type PlaneTest<P extends PartBox = Part> = (part: P, x: number, y: number, dx: number) => PointLocation;
 
-function locateInPart(part: Part, point: LatLon, test: PlaneTest): PointLocation {
-  if (Math.abs(point.lat) === 90) return touchesLatitude(part.rings, point.lat) ? "boundary" : "outside";
+/**
+ * This function is the plane test of the rings of a polygon, with the rule of holes.
+ *
+ * @internal
+ */
+export const inRings: PlaneTest = (part, x, y, dx) => locateInRings(part.rings, x, y, dx);
+
+function locateInPart<P extends PartBox>(part: P, point: LatLon, test: PlaneTest<P>): PointLocation {
+  if (Math.abs(point.lat) === 90) return touchesPole(part, point.lat) ? "boundary" : "outside";
   if (point.lat < part.minY || point.lat > part.maxY) return "outside";
   const lon = normalizeLon(point.lon);
   let result: PointLocation = "outside";
   for (const shift of shiftsInto(lon, part.minX, part.maxX)) {
     // The rings move by -shift in place of the point by shift. The plane test makes this move with no rounding.
-    const where = test(part.rings, lon, point.lat, 0 - shift);
+    const where = test(part, lon, point.lat, 0 - shift);
     if (where === "inside") return "inside";
     if (where === "boundary") result = "boundary";
   }
@@ -84,11 +92,11 @@ function locateInPart(part: Part, point: LatLon, test: PlaneTest): PointLocation
 
 /**
  * This function gives the location of a valid point against the parts, with the rules of this module. It tries the
- * point at each of its longitudes in the range of each part. The plane test is `locateInRings` by default.
+ * point at each of its longitudes in the range of each part. The plane test gives the location in the plane.
  *
  * @internal
  */
-export function locateInParts(parts: readonly Part[], point: LatLon, test: PlaneTest = locateInRings): PointLocation {
+export function locateInParts<P extends PartBox>(parts: readonly P[], point: LatLon, test: PlaneTest<P>): PointLocation {
   let result: PointLocation = "outside";
   for (const part of parts) {
     const where = locateInPart(part, point, test);
@@ -108,7 +116,7 @@ export function locateInParts(parts: readonly Part[], point: LatLon, test: Plane
  */
 export function locatePoint(point: LatLon, polygon: Polygon | MultiPolygon): PointLocation {
   checkPoint(point);
-  return locateInParts(polygonParts(polygon), point);
+  return locateInParts(polygonParts(polygon), point, inRings);
 }
 
 /**
@@ -181,7 +189,7 @@ export function rewind<T extends Polygon | MultiPolygon>(polygon: T): T {
 function partsIntersect(a: Part, b: Part): boolean {
   if (a.maxY < b.minY || b.maxY < a.minY) return false;
   for (const pole of [90, -90]) {
-    if (touchesLatitude(a.rings, pole) && touchesLatitude(b.rings, pole)) return true;
+    if (touchesPole(a, pole) && touchesPole(b, pole)) return true;
   }
   // The move of b by the shift has no rounding, so the result is exact. The shifts of b against a are the negatives of
   // the shifts of a against b, so the result does not depend on the order of a and b.

@@ -13,6 +13,7 @@ DEFAULT_GEOHASH_PRECISION: dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
 DEFAULT_MAX_GEOHASH_CELLS: dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
 EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
 EARTH_MEAN_RADIUS_METERS: dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
+type Ellipsoid: dist/index.d.ts#Ellipsoid
 type Feature: dist/index.d.ts#Feature
 type FeatureCollection: dist/index.d.ts#FeatureCollection
 GEOHASH_ALPHABET: dist/index.d.ts#GEOHASH_ALPHABET
@@ -22,6 +23,8 @@ type GeoJson: dist/index.d.ts#GeoJson
 type GeoJsonBBox: dist/index.d.ts#GeoJsonBBox
 type GeoJsonObject: dist/index.d.ts#GeoJsonObject
 type GeoJsonProperties: dist/index.d.ts#GeoJsonProperties
+type GeodesicDirect: dist/index.d.ts#GeodesicDirect
+type GeodesicInverse: dist/index.d.ts#GeodesicInverse
 type GeohashCell: dist/index.d.ts#GeohashCell
 type GeohashDirection: dist/index.d.ts#GeohashDirection
 type GeohashNeighbors: dist/index.d.ts#GeohashNeighbors
@@ -38,10 +41,12 @@ type MultiPoint: dist/index.d.ts#MultiPoint
 type MultiPolygon: dist/index.d.ts#MultiPolygon
 type Point: dist/index.d.ts#Point
 type PointLocation: dist/index.d.ts#PointLocation
+type PointLocator: dist/index.d.ts#PointLocator
 type Polygon: dist/index.d.ts#Polygon
 type Position: dist/index.d.ts#Position
 type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
+WGS84: dist/index.d.ts#WGS84
 bboxContains: dist/index.d.ts#bboxContains
 bboxIntersects: dist/index.d.ts#bboxIntersects
 bboxOfGeoJson: dist/index.d.ts#bboxOfGeoJson
@@ -61,6 +66,8 @@ distanceToGeometryMeters: dist/index.d.ts#distanceToGeometryMeters
 followsRightHandRule: dist/index.d.ts#followsRightHandRule
 fromGeoJsonBBox: dist/index.d.ts#fromGeoJsonBBox
 fromPosition: dist/index.d.ts#fromPosition
+geodesicDirect: dist/index.d.ts#geodesicDirect
+geodesicInverse: dist/index.d.ts#geodesicInverse
 geohash: dist/index.d.ts#geohash
 geohashNeighbor: dist/index.d.ts#geohashNeighbor
 geohashNeighbors: dist/index.d.ts#geohashNeighbors
@@ -72,6 +79,7 @@ normalizeLon: dist/index.d.ts#normalizeLon
 parseGeoJson: dist/index.d.ts#parseGeoJson
 parseGeometry: dist/index.d.ts#parseGeometry
 parseLatLon: dist/index.d.ts#parseLatLon
+pointLocator: dist/index.d.ts#pointLocator
 polygonIntersectsBBox: dist/index.d.ts#polygonIntersectsBBox
 polygonsIntersect: dist/index.d.ts#polygonsIntersect
 regionSimplifier: dist/index.d.ts#regionSimplifier
@@ -110,6 +118,12 @@ export declare const EARTH_MEAN_RADIUS_KM = 6371.0088;
 
 ### dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
 export declare const EARTH_MEAN_RADIUS_METERS = 6371008.8;
+
+### dist/index.d.ts#Ellipsoid
+interface Ellipsoid {
+  readonly equatorialRadiusMeters: number;
+  readonly flattening: number;
+}
 
 ### dist/index.d.ts#Feature
 interface Feature<G extends Geometry | null = Geometry | null, P extends GeoJsonProperties = GeoJsonProperties> extends GeoJsonObject {
@@ -153,6 +167,19 @@ interface GeoJsonObject {
 type GeoJsonProperties = {
   readonly [name: string]: unknown;
 } | null;
+
+### dist/index.d.ts#GeodesicDirect
+interface GeodesicDirect {
+  readonly point: LatLon;
+  readonly finalBearing: number;
+}
+
+### dist/index.d.ts#GeodesicInverse
+interface GeodesicInverse {
+  readonly meters: number;
+  readonly initialBearing: number;
+  readonly finalBearing: number;
+}
 
 ### dist/index.d.ts#GeohashCell
 interface GeohashCell {
@@ -229,6 +256,9 @@ interface Point extends GeoJsonObject {
 ### dist/index.d.ts#PointLocation
 type PointLocation = "inside" | "boundary" | "outside";
 
+### dist/index.d.ts#PointLocator
+type PointLocator = (point: LatLon) => PointLocation;
+
 ### dist/index.d.ts#Polygon
 interface Polygon extends GeoJsonObject {
   readonly type: "Polygon";
@@ -243,6 +273,9 @@ type Region = Polygon | MultiPolygon;
 
 ### dist/index.d.ts#RingWinding
 type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
+
+### dist/index.d.ts#WGS84
+export declare const WGS84: Ellipsoid;
 
 ### dist/index.d.ts#bboxContains
 export declare function bboxContains(box: BBox, point: LatLon): boolean;
@@ -301,6 +334,12 @@ export declare function fromGeoJsonBBox(bbox: readonly number[]): BBox;
 ### dist/index.d.ts#fromPosition
 export declare function fromPosition(position: readonly number[]): LatLon;
 
+### dist/index.d.ts#geodesicDirect
+export declare function geodesicDirect(from: LatLon, bearingDegrees: number, meters: number, ellipsoid?: Ellipsoid): GeodesicDirect;
+
+### dist/index.d.ts#geodesicInverse
+export declare function geodesicInverse(from: LatLon, to: LatLon, ellipsoid?: Ellipsoid): GeodesicInverse;
+
 ### dist/index.d.ts#geohash
 export declare function geohash(point: LatLon, precision?: number): string;
 
@@ -333,6 +372,9 @@ export declare function parseGeometry(value: unknown): Result<Geometry, GeoError
 
 ### dist/index.d.ts#parseLatLon
 export declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
+
+### dist/index.d.ts#pointLocator
+export declare function pointLocator(polygon: Polygon | MultiPolygon): PointLocator;
 
 ### dist/index.d.ts#polygonIntersectsBBox
 export declare function polygonIntersectsBBox(polygon: Polygon | MultiPolygon, box: BBox): boolean;
