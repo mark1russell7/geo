@@ -349,6 +349,19 @@ describe("the bound of the angle to an edge", () => {
     const viewer = viewerAt([3, 0]);
     expect(angleBoundToEdge(viewer, [0, 0], [1, 0])).toBeCloseTo(angleToEdge(viewer, [0, 0], [1, 0]), 12);
   });
+
+  // The counterexample of the CI run 43951591517 (seed -1427318154). The viewer is at the south pole, and the near end
+  // of the edge is 3.6e-13 degrees from it. The probe point is that end, but the probe gets its latitude difference from
+  // the far end, with a loss of precision. So the probe value was less than the value of the end. The box bound of the
+  // search was not less than the value of the end, so the search gave the value of the end with no probe. The bound was
+  // 1 rounding step less than the angle.
+  it("is not less than the angle for an edge from pole to pole and a viewer at a pole", () => {
+    const a: Position = [179.9999999999996, -89.99999999999964];
+    const b: Position = [126.59037307505119, 89.99999999999903];
+    const viewer = viewerAt([180.00077279447837, -90]);
+    expect(angleBoundToEdge(viewer, a, b)).toBeGreaterThanOrEqual(angleToEdge(viewer, a, b));
+    expect(angleBoundToEdge(viewer, b, a)).toBeGreaterThanOrEqual(angleToEdge(viewer, b, a));
+  });
 });
 
 /** A coordinate on a grid of 1/8 steps from -8 to 8. */
