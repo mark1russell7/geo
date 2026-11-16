@@ -48,6 +48,7 @@ export {
   type PointLocation,
   type RingWinding,
 } from "./polygon.ts";
+export { pointLocator, type PointLocator } from "./locator.ts";
 export {
   circleKm,
   circleMeters,
