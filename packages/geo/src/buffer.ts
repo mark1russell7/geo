@@ -35,7 +35,7 @@
  * @packageDocumentation
  */
 
-import { angleToEdge, angleToEdges, shapesOf, viewerAt } from "./distance.ts";
+import { angleToEdge, angleToEdges, scanEdges, shapesOf, viewerAt } from "./distance.ts";
 import { GeoError } from "./errors.ts";
 import type { Geometry, MultiPolygon, Polygon } from "./geojson.ts";
 import { pointLocator } from "./locator.ts";
@@ -335,27 +335,29 @@ function contourRings(elements: Elements, grid: Grid, angle: number, maxCells: n
     const centerIn = block.inside === -1 && inPolygon !== undefined && inPolygon(lon, lat);
     if (centerIn && angle > limit) continue;
     const viewer = viewerAt([lon, lat]);
-    const angles = new Float64Array(block.list.length);
-    let best = Number.POSITIVE_INFINITY;
-    let bestPolygonEdge = Number.POSITIVE_INFINITY;
-    block.list.forEach((k, index) => {
-      const value = angleToEdge(viewer, from[k] as Position, to[k] as Position);
-      angles[index] = value;
-      if (value < best) best = value;
-      if (polygonEdge[k] === 1 && value < bestPolygonEdge) bestPolygonEdge = value;
-    });
+    const bounds = new Float64Array(block.list.length);
+    const best = scanEdges(viewer, from, to, block.list, bounds);
     const center = centerIn ? -angle : best - angle;
     if (Math.abs(center) > limit) continue;
     // An element that is more than `best + 2 radius` from the center is not the nearest element for a point of the block.
+    // The bound of an element is not more than its angle, so the list keeps each element that can be the nearest.
     const keep = best + 2 * limit;
     let kept = 0;
-    for (let index = 0; index < angles.length; index += 1) if ((angles[index] as number) <= keep) kept += 1;
+    for (let index = 0; index < bounds.length; index += 1) if ((bounds[index] as number) <= keep) kept += 1;
     const list = new Int32Array(kept);
     kept = 0;
-    for (let index = 0; index < angles.length; index += 1) if ((angles[index] as number) <= keep) list[kept++] = block.list[index] as number;
-    // No edge of a polygon meets the block, so the block is wholly in a polygon or wholly out of each polygon.
+    for (let index = 0; index < bounds.length; index += 1) if ((bounds[index] as number) <= keep) list[kept++] = block.list[index] as number;
+    // When no edge of a polygon meets the block, the block is wholly in a polygon or wholly out of each polygon.
     let inside = block.inside;
-    if (inside === -1 && bestPolygonEdge > limit) inside = centerIn ? 1 : 0;
+    if (inside === -1) {
+      let meets = false;
+      for (let index = 0; index < bounds.length && !meets; index += 1) {
+        const k = block.list[index] as number;
+        if (polygonEdge[k] !== 1 || (bounds[index] as number) > limit) continue;
+        meets = angleToEdge(viewer, from[k] as Position, to[k] as Position) <= limit;
+      }
+      if (!meets) inside = centerIn ? 1 : 0;
+    }
     if (inside === 1) continue;
     // A block divides along each side that is not much shorter than the other side, in cells.
     const splitX = width > 1 && 2 * width > height;

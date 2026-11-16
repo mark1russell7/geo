@@ -172,6 +172,23 @@ const gapOf = (viewer: Viewer, a: Position, b: Position): number =>
   Math.max(0, Math.min(a[1], b[1]) - viewer.lat, viewer.lat - Math.max(a[1], b[1]));
 
 /**
+ * This function gives a haversine value that is not more than the value at each point of the edge from `a` to `b`. The
+ * position `a` does not come after `b`, so the longitude increases from `a` to `b`. For each point of the edge, the
+ * latitude difference is not less than the latitude gap, and the longitude difference is not less than the longitude
+ * gap. The cosine of its latitude is not less than the smaller cosine of the two ends.
+ */
+function boxBound(viewer: Viewer, a: Position, b: Position): number {
+  const latGap = gapBound(gapOf(viewer, a, b));
+  // The longitudes of the edge from the viewer are from `p` to `q`. The gap is the distance to the nearest multiple of 360.
+  const p = reduceLon(a[0] - viewer.lon);
+  const q = p + (b[0] - a[0]);
+  const lonGap = p <= 0 ? Math.max(0, -q) : q >= 360 ? 0 : Math.min(p, 360 - q);
+  if (lonGap === 0) return latGap;
+  const s = Math.sin((lonGap * RADIANS) / 2);
+  return latGap + viewer.cosLat * Math.min(Math.cos(a[1] * RADIANS), Math.cos(b[1] * RADIANS)) * s * s;
+}
+
+/**
  * This function gives the haversine value at one point of the edge from `a` to `b`. That point is the nearest point to
  * the viewer in a local plane. In that plane, a longitude difference counts with the cosine of the latitude of the
  * viewer. Thus the value is near the smallest value of the edge, and it is not less than it.
@@ -199,8 +216,9 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
   const swap = comesBefore(to, from);
   const a = swap ? to : from;
   const b = swap ? from : to;
-  // The central angle is not less than the difference of the latitudes.
-  if (gapBound(gapOf(viewer, a, b)) >= best) return best;
+  if (boxBound(viewer, a, b) >= best) {
+    return best;
+  }
   const latA = a[1];
   const dLat = b[1] - latA;
   const dLon = b[0] - a[0];
@@ -338,6 +356,38 @@ export function angleToEdges(viewer: Viewer, from: readonly Position[], to: read
     const b = to[k] as Position;
     best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)));
   }
+  return best === Number.POSITIVE_INFINITY ? best : angleOfHaversine(best);
+}
+
+/**
+ * This function gives the smallest central angle in radians from the viewer to the edges of the list, as
+ * `angleToEdges`. It also writes a bound for each edge into `bounds`, at the index of the edge in the list. The bound is
+ * an angle that is not more than the angle to the edge. Thus a caller can drop the edges whose bound is too large, and
+ * this function finds the exact angle only of the edges that can be the nearest.
+ *
+ * @internal
+ */
+export function scanEdges(viewer: Viewer, from: readonly Position[], to: readonly Position[], list: Int32Array, bounds: Float64Array): number {
+  // The first pass gives the bound of each edge, and the smallest value of one point of each edge.
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < list.length; index += 1) {
+    const k = list[index] as number;
+    const swap = comesBefore(to[k] as Position, from[k] as Position);
+    const a = (swap ? to[k] : from[k]) as Position;
+    const b = (swap ? from[k] : to[k]) as Position;
+    bounds[index] = boxBound(viewer, a, b);
+    best = Math.min(best, probeValue(viewer, a, b));
+  }
+  // The second pass finds the exact value only for the edges whose bound is less than the best value.
+  for (let index = 0; index < list.length; index += 1) {
+    if ((bounds[index] as number) >= best) continue;
+    const k = list[index] as number;
+    const a = from[k] as Position;
+    const b = to[k] as Position;
+    best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)));
+  }
+  // The factor is more than the rounding of `Math.asin`, so the angle of a smaller haversine value is not larger.
+  for (let index = 0; index < list.length; index += 1) bounds[index] = angleOfHaversine(bounds[index] as number) * (1 - 2 ** -40);
   return best === Number.POSITIVE_INFINITY ? best : angleOfHaversine(best);
 }
 
