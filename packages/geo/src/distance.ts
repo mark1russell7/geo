@@ -325,6 +325,23 @@ export function angleToEdge(viewer: Viewer, a: Position, b: Position): number {
 }
 
 /**
+ * This function gives the smallest central angle in radians from the viewer to the edges `from[k]` to `to[k]` of the
+ * list, as the smallest `angleToEdge` of the list. The scan gives its best value to each next edge, so an edge that
+ * is farther than that value needs no search. An empty list gives `Infinity`.
+ *
+ * @internal
+ */
+export function angleToEdges(viewer: Viewer, from: readonly Position[], to: readonly Position[], list: Int32Array): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (const k of list) {
+    const a = from[k] as Position;
+    const b = to[k] as Position;
+    best = edgeMinimum(viewer, a, b, Math.min(best, haversineOf(viewer, a), haversineOf(viewer, b)));
+  }
+  return best === Number.POSITIVE_INFINITY ? best : angleOfHaversine(best);
+}
+
+/**
  * This function gives an angle in radians that is not less than `angleToEdge(viewer, a, b)`. It measures one point of
  * the edge, so it is fast. A scan skips each edge whose bound is not more than its best angle.
  *

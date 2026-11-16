@@ -35,7 +35,7 @@
  * @packageDocumentation
  */
 
-import { angleToEdge, shapesOf, viewerAt } from "./distance.ts";
+import { angleToEdge, angleToEdges, shapesOf, viewerAt } from "./distance.ts";
 import { GeoError } from "./errors.ts";
 import type { Geometry, MultiPolygon, Polygon } from "./geojson.ts";
 import { pointLocator } from "./locator.ts";
@@ -214,10 +214,7 @@ function contourRings(elements: Elements, grid: Grid, angle: number, maxCells: n
   /** The field at a point, from the elements of a list. */
   const fieldAt = (lon: number, lat: number, list: Int32Array, inside: number): number => {
     if (inside === 1 || (inside === -1 && inPolygon !== undefined && inPolygon(lon, lat))) return -angle;
-    const viewer = viewerAt([lon, lat]);
-    let best = Number.POSITIVE_INFINITY;
-    for (const k of list) best = Math.min(best, angleToEdge(viewer, from[k] as Position, to[k] as Position));
-    return best - angle;
+    return angleToEdges(viewerAt([lon, lat]), from, to, list) - angle;
   };
 
   // The value of each corner of the grid. All the corners at a pole are one point, so they get one value.
