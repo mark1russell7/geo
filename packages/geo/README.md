@@ -155,7 +155,7 @@ The function divides each edge into pieces of 1 degree or less. In each piece, i
 - The ring has a vertex at each of `vertices` bearings from the center, at equal steps. The first vertex is to the north of the center.
 - Each edge is a straight line in longitude and latitude, as in the polygon tests. More vertices give a polygon nearer to the circle.
 - The result follows RFC 7946. Each longitude is from -180 to 180. The exterior ring goes counterclockwise, and a hole goes clockwise.
-- A circle across the antimeridian is a `MultiPolygon` of two parts. The cut is at 180 and at -180 (RFC 7946, section 3.1.9).
+- A circle across the antimeridian is a `MultiPolygon` of two parts. The cut is at 180 and at -180 (RFC 7946, section 3.1.9). So `locatePoint` gives `boundary` for a point on the cut.
 - A circle around one pole is a `Polygon` from -180 to 180, with an edge along the pole. So `locatePoint` gives `boundary` for that pole.
 - A circle around the two poles is the Earth less the opposite circle, as one `Polygon`. The opposite circle has its center at the antipode.
 - A radius of half the circumference of the sphere or more gives the whole Earth, from -180 to 180 and from -90 to 90.

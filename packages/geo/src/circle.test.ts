@@ -268,7 +268,9 @@ describe("the properties of a circle", () => {
           const degrees = (r / HALF) * 180;
           fc.pre(Math.abs(c.lat) + 1.5 * degrees < 85);
           const circle = circleKm(c, r);
-          expect(locatePoint(destinationKm(c, bearing, r / 3), circle)).toBe("inside");
+          const near = destinationKm(c, bearing, r / 3);
+          // A point on the cut at 180 or -180 is on the boundary of the written parts (README, "The boundary").
+          expect(locatePoint(near, circle)).toBe(Math.abs(near.lon) === 180 && circle.type === "MultiPolygon" ? "boundary" : "inside");
           expect(locatePoint(destinationKm(c, bearing, r * 1.5), circle)).toBe("outside");
         },
       ),
