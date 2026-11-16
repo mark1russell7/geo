@@ -83,6 +83,9 @@ The bench uses `freshRun` of `@mark1russell7/rigor-bench`. Each arm of each pair
 - The budget verdict of `locate` holds the median of the source on `coast-1e5-1e4` to 86 ms. geo 0.3.1 takes 30 s to 60 s.
 - The growth verdict of `locate` holds the growth of the time for each 10 times more vertices on the coasts with 10,000 places to 3.1.
 - Each limit of the gate of `locate` is the worst value of 5 CI runs plus their spread (runs 43830188869, 43843439775, 43849286887, 43862267058 and 43877513514).
+- Each budget verdict looks at 6, 12 and 24 rounds with `budgetLooksVerdict` of `@mark1russell7/rigor-bench`. The three looks together keep the chance of a false outcome below 0.05.
+- A look with an A/A difference above the limit of the suite gives no outcome. Then the bench adds rounds of the case of the budget in the pair (`head`, `head-copy`), with no base. The added records go to `records-budget.jsonl`.
+- A budget with no outcome at 24 rounds does not pass the gate.
 - The report of `buffer` reads the growth of the time on one coast for each 10 times less tolerance. A cost in proportion to the count of the cells gives 10. It has no budget at this time.
 - The hashes show that the source gives the same result as the base on each case. A different hash or a missing hash fails the job.
 - One gate line shows the speed read on the check of the run. It is an error in an enforced suite, and a warning in a suite that only reads its claims.

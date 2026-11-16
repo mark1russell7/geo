@@ -6,6 +6,9 @@
  * npm that the suite names. The arms `head` and `head-copy` are the source of this commit. The suites are in
  * `suites.ts`.
  *
+ * The budget looks at 6, 12 and 24 rounds. When a look has no outcome, the bench adds rounds of the case of the budget
+ * in a pair (head, head-copy). It writes them to `records-budget.jsonl`.
+ *
  * It writes the records of each pair to `records-<pair>.jsonl` and the skips to `skipped.json`. It writes the hashes of
  * the results to `hashes.jsonl` and the facts of the computer to `env.json`. The report goes to `report.json` and
  * `report.md`. The workflows `bench-simplify.yml`, `bench-locate.yml` and `bench-buffer.yml` start it in CI. Do not start a full run on a
@@ -23,7 +26,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gateLine, writeGateLine } from "@mark1russell7/rigor-bench";
 import { freshRun } from "@mark1russell7/rigor-bench/fresh";
-import { type HashLine, markdown, report, speedFaults } from "./report.ts";
+import { addBudgetRounds, type HashLine, markdown, report, speedFaults } from "./report.ts";
 import { suiteOf } from "./suites.ts";
 
 const USAGE = "Usage: node src/bench.ts --suite <simplify | locate | buffer> --out <folder> [--rounds 7] [--cases <id,id>] [--timeout-ms 180000]";
@@ -67,18 +70,38 @@ const run = await freshRun({
   overLimit: "skip",
 });
 
+// The looks of the budget: a look with no outcome, for example a noisy look, adds rounds of the case of the budget to
+// the arms head and head-copy, up to 24. The pair (head, head-copy) has no base and no A/A pair, so it costs little.
+const skipped = [...run.skipped];
+const { records: extra, added } = await addBudgetRounds(run.pairs, suite, async (id, count, from) => {
+  console.log(`The budget of ${id} has no outcome. The bench adds ${count} rounds from round ${from}.`);
+  const look = await freshRun({
+    base: { id: "head", command: command("head") },
+    candidates: [{ id: "head-copy", command: command("head") }],
+    cases: [id],
+    rounds: count,
+    roundOffset: from,
+    aa: false,
+    timeoutMs,
+    overLimit: "skip",
+  });
+  skipped.push(...look.skipped);
+  return look.pairs["head-copy"] ?? [];
+});
+
 const jsonl = (rows: readonly unknown[]): string => rows.map((row) => JSON.stringify(row)).join("\n") + "\n";
 for (const [pair, records] of Object.entries(run.pairs)) fs.writeFileSync(path.join(out, `records-${pair}.jsonl`), jsonl(records));
-fs.writeFileSync(path.join(out, "skipped.json"), JSON.stringify(run.skipped, null, 2) + "\n");
+if (extra.length > 0) fs.writeFileSync(path.join(out, "records-budget.jsonl"), jsonl(extra));
+fs.writeFileSync(path.join(out, "skipped.json"), JSON.stringify(skipped, null, 2) + "\n");
 fs.writeFileSync(path.join(out, "env.json"), JSON.stringify(run.env, null, 2) + "\n");
 const hashes = fs
   .readFileSync(hashFile, "utf8")
   .split("\n")
   .filter((line) => line !== "")
   .map((line) => JSON.parse(line) as HashLine);
-const result = report(run.pairs, hashes, suite);
-fs.writeFileSync(path.join(out, "report.json"), JSON.stringify({ env: run.env, skipped: run.skipped, ...result }, null, 2) + "\n");
-const text = markdown(result, suite) + (run.skipped.length > 0 ? `\nSkipped: ${run.skipped.map((skip) => `${skip.case} (${skip.arm}: ${skip.reason})`).join(", ")}\n` : "");
+const result = report(run.pairs, hashes, suite, added);
+fs.writeFileSync(path.join(out, "report.json"), JSON.stringify({ env: run.env, skipped, ...result }, null, 2) + "\n");
+const text = markdown(result, suite) + (skipped.length > 0 ? `\nSkipped: ${skipped.map((skip) => `${skip.case} (${skip.arm}: ${skip.reason})`).join(", ")}\n` : "");
 fs.writeFileSync(path.join(out, "report.md"), text);
 console.log(text);
 
