@@ -84,6 +84,25 @@ describe("bboxOfGeoJson", () => {
     expect(bboxOfGeoJson({ type: "LineString", coordinates: [[170, 0], [190, 0]] })).toEqual(box(170, 0, -170, 0));
   });
 
+  it("gives the ends of an edge with no rounding", () => {
+    // In floating point, 1.1 + (6.8 - 1.1) is less than 6.8. The box has the two ends of the edge.
+    const line: Geometry = { type: "LineString", coordinates: [[1.1, 0], [6.8, 1]] };
+    expect(bboxOfGeoJson(line)).toEqual(box(1.1, 0, 6.8, 1));
+    expect(bboxContains(bboxOfGeoJson(line) as BBox, { lat: 1, lon: 6.8 })).toBe(true);
+  });
+
+  it("gives arcs that touch for two edges with a common position", () => {
+    // In floating point, -180 + (0.1 - -180) is less than 0.1. The two edges go around the full circle with no gap.
+    const around: Geometry = { type: "LineString", coordinates: [[-180, 80], [0.1, 80], [180, 80]] };
+    expect(bboxOfGeoJson(around)).toEqual(box(-180, 80, 180, 80));
+  });
+
+  it("gives 0 and not -0 for a longitude of -0", () => {
+    const zero = bboxOfGeoJson({ type: "LineString", coordinates: [[-0, 0], [-0, 1]] }) as BBox;
+    expect(Object.is(zero.west, 0)).toBe(true);
+    expect(Object.is(zero.east, 0)).toBe(true);
+  });
+
   // RFC 7946, section 5.3: the box of a polygon around a pole has the full range of longitudes.
   it("gives the full longitude range for a polygon around a pole", () => {
     const cap: Geometry = { type: "Polygon", coordinates: [[[-180, 80], [180, 80], [180, 90], [-180, 90], [-180, 80]]] };

@@ -1,5 +1,5 @@
 /**
- * Distances, bearings and destinations on a sphere with the mean radius of the Earth.
+ * Distances, bearings, destinations and unit vectors on a sphere. The default radius is the mean radius of the Earth.
  *
  * @packageDocumentation
  */
@@ -163,4 +163,78 @@ export function destinationMeters(
 ): LatLon {
   checkRadius(radiusMeters);
   return destinationByAngle(from, bearingDegrees, distance / radiusMeters);
+}
+
+/**
+ * A direction from the center of the Earth, as a vector. A point on the Earth has a vector with the length 1.
+ *
+ * The axes are the axes of ECEF (Earth-centered, Earth-fixed). `x` points to latitude 0 and longitude 0. `y` points to
+ * latitude 0 and longitude 90 east. `z` points to the north pole.
+ */
+export interface UnitVector {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/**
+ * This function gives the unit vector of a point, from the center of a sphere to the point. A drawing in 3D
+ * multiplies the vector by its radius.
+ *
+ * All the longitudes of a pole give one vector: `z` is 1 or -1, and `x` and `y` are 0.
+ *
+ * @throws GeoError - The code is `not-finite` or `latitude-range`.
+ */
+export function toUnitVector(point: LatLon): UnitVector {
+  checkPoint(point);
+  if (Math.abs(point.lat) === 90) return { x: 0, y: 0, z: point.lat > 0 ? 1 : -1 };
+  const phi = toRadians(point.lat);
+  const lambda = toRadians(point.lon);
+  const cosPhi = Math.cos(phi);
+  return { x: cosPhi * Math.cos(lambda), y: cosPhi * Math.sin(lambda), z: Math.sin(phi) };
+}
+
+/**
+ * This function gives the point in the direction of a vector from the center of a sphere. The vector can have each
+ * length other than 0. The longitude of the result is normalized.
+ *
+ * For a vector along the axis of the poles, the longitude of the result is 0.
+ *
+ * @throws GeoError - The code is `not-finite`, or `vector` for a vector with the length 0.
+ */
+export function fromUnitVector(vector: UnitVector): LatLon {
+  checkFinite(vector.x, "vector coordinate");
+  checkFinite(vector.y, "vector coordinate");
+  checkFinite(vector.z, "vector coordinate");
+  // The division by the largest coordinate prevents an overflow and an underflow of the length.
+  const scale = Math.max(Math.abs(vector.x), Math.abs(vector.y), Math.abs(vector.z));
+  if (scale === 0) throw new GeoError("vector", "A vector with the length 0 has no direction");
+  const x = vector.x / scale;
+  const y = vector.y / scale;
+  const z = vector.z / scale;
+  if (x === 0 && y === 0) return { lat: z > 0 ? 90 : -90, lon: 0 };
+  const lat = toDegrees(Math.atan2(z, Math.hypot(x, y)));
+  return latLon(Math.max(-90, Math.min(90, lat)), toDegrees(Math.atan2(y, x)));
+}
+
+/**
+ * This function gives the point at a part of the way along the great circle from `from` to `to`. A part of 0 gives
+ * the start, 0.5 gives the middle, and 1 gives the end. The longitude of the result is normalized.
+ *
+ * - A part of less than 0 gives a point before the start, on the same great circle. A part of more than 1 gives a
+ *   point after the end.
+ * - Two opposite points have many great circles between them. Then the function uses the great circle of
+ *   `initialBearing`.
+ *
+ * @param part - The part of the way, as a number. Each finite value is correct.
+ * @throws GeoError - The code is `not-finite` or `latitude-range`.
+ */
+export function intermediatePoint(from: LatLon, to: LatLon, part: number): LatLon {
+  checkFinite(part, "part");
+  const a = toUnitVector(from);
+  const b = toUnitVector(to);
+  // The angle from the cross product and the dot product is accurate for each angle, also near 0 and near pi.
+  const cross = Math.hypot(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+  const angle = Math.atan2(cross, a.x * b.x + a.y * b.y + a.z * b.z);
+  return destinationByAngle(from, initialBearing(from, to), angle * part);
 }

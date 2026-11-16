@@ -61,10 +61,21 @@ circleKm(paris, 50); // a Polygon of 64 vertices: the area of 50 km around Paris
 | `centralAngleRadians(a, b)` | The angle between two points at the center of the sphere. |
 | `initialBearing(from, to)` | The bearing at the start of the great circle, from 0 to 360 (360 not included), clockwise from north. |
 | `destinationKm(from, bearing, distance, radiusKm?)`, `destinationMeters(...)` | The point at a distance from a point, on an initial bearing. |
+| `intermediatePoint(from, to, part)` | The point at a part of the way along the great circle: 0 gives the start, and 1 gives the end. |
 | `distanceToGeometryKm(point, geometry, radiusKm?)`, `distanceToGeometryMeters(...)` | The great-circle distance from a point to the nearest point of a GeoJSON geometry. It is 0 in a polygon. The section [The distance to a geometry](#the-distance-to-a-geometry) gives the rules. |
 | `distanceBetweenGeometriesKm(a, b, radiusKm?)`, `distanceBetweenGeometriesMeters(...)` | The great-circle distance between the nearest points of two GeoJSON geometries. It is 0 when they have a common point. The section [The distance between two geometries](#the-distance-between-two-geometries) gives the rules. |
 
 The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance. For the ellipsoid, use the geodesic functions.
+
+### Unit vectors
+
+| Function | Use |
+| --- | --- |
+| `UnitVector` | `{ x, y, z }`: a direction from the center of the Earth, on the axes of ECEF. |
+| `toUnitVector(point)` | The vector of a point, with the length 1. |
+| `fromUnitVector(vector)` | The point in the direction of a vector. The vector can have each length other than 0. |
+
+The section [A globe](#a-globe) gives the rules.
 
 ### Geodesics on the ellipsoid
 
@@ -92,6 +103,13 @@ The section [Geodesics](#geodesics) gives the method and the accuracy.
 | `bufferKm(geometry, distance, options?, radiusKm?)`, `bufferMeters(...)` | The area within a distance of a geometry as a GeoJSON Polygon or MultiPolygon, for a map. The section [The buffer of a geometry](#the-buffer-of-a-geometry) gives the rules. |
 | `BufferOptions` | `{ tolerance?, maxCells? }`: the tolerance of the boundary, and the limit of the cells near the boundary. |
 | `DEFAULT_MAX_BUFFER_CELLS` | The default limit of the cells: 1,000,000. |
+
+### Short edges
+
+| Function | Use |
+| --- | --- |
+| `densify(geometry, maxStep)` | A copy of a geometry with more positions on its edges. No part of an edge is longer than `maxStep` degrees. The section [A globe](#a-globe) gives the rules. |
+| `MAX_DENSIFY_POSITIONS` | The largest number of positions that one call of `densify` adds: 1,000,000. |
 
 ### Bounding boxes
 
@@ -288,6 +306,22 @@ The orientation and segment tests are exact. A test across the antimeridian also
 - A box that reaches a pole contains the pole at each longitude. A box around a pole has the longitudes from -180 to 180 (RFC 7946, section 5.3).
 - `geohashNeighbor` gives `undefined` past a pole.
 
+### A globe
+
+A globe shows a point as a vector from the center of the Earth. An edge of GeoJSON is not a great circle, so a globe needs short edges.
+
+- The axes of a `UnitVector` are the axes of ECEF. `x` points to latitude 0 and longitude 0. `y` points to latitude 0 and longitude 90 east. `z` points to the north pole.
+- All the longitudes of a pole give one vector. A vector along the axis of the poles gives the longitude 0.
+- `intermediatePoint` follows the great circle. A part of less than 0 gives a point before the start, on the same great circle. A part of more than 1 gives a point after the end.
+- Two opposite points have many great circles. For them, `intermediatePoint` uses the great circle of `initialBearing`.
+- `densify` follows the edge of RFC 7946, a straight line in longitude and latitude. It does not follow the great circle. So an edge from 170 to -170 gets positions through 0.
+- `densify` divides each edge into equal parts. The number of the parts is the smallest that makes each part `maxStep` degrees or less, in longitude and in latitude.
+- The positions of the geometry stay, in the same sequence. So the geometry has the same points and the same box.
+- An edge gives the same new positions in the two directions. So two polygons with a common border stay together.
+- A new position has an altitude only when the two ends of its edge have one. A `Point` and a `MultiPoint` do not change.
+- `densify` refuses a step that adds more than `MAX_DENSIFY_POSITIONS` positions, with the error `step`.
+- To draw a polygon on a globe, use `densify` first. Then use `toUnitVector` for each position.
+
 ### Geohashes
 
 - A point on an edge between two cells goes to the cell on the north or on the east.
@@ -315,6 +349,8 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `radius` | The radius of the sphere or of a circle, or the distance of a buffer, is not more than 0. Or the equatorial radius of an ellipsoid is not more than 0, or its polar radius is not a finite number more than 0. |
 | `vertices` | The number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`. |
 | `tolerance` | The tolerance of a simplification is less than 0. Or the tolerance of a buffer is 0 or less, or it is equal to the distance or more. |
+| `vector` | A vector has the length 0, so it has no direction. |
+| `step` | The largest step of `densify` is not more than 0. Or the step is too small, and the function adds more than `MAX_DENSIFY_POSITIONS` positions. |
 
 ## The differences from @procedures/geo
 

@@ -35,6 +35,7 @@ type GeometryCollection: dist/index.d.ts#GeometryCollection
 type LatLon: dist/index.d.ts#LatLon
 type LineString: dist/index.d.ts#LineString
 MAX_CIRCLE_VERTICES: dist/index.d.ts#MAX_CIRCLE_VERTICES
+MAX_DENSIFY_POSITIONS: dist/index.d.ts#MAX_DENSIFY_POSITIONS
 MAX_GEOHASH_PRECISION: dist/index.d.ts#MAX_GEOHASH_PRECISION
 MAX_GEOJSON_DEPTH: dist/index.d.ts#MAX_GEOJSON_DEPTH
 MAX_GEOMETRY_LONGITUDE: dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
@@ -48,6 +49,7 @@ type Polygon: dist/index.d.ts#Polygon
 type Position: dist/index.d.ts#Position
 type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
+type UnitVector: dist/index.d.ts#UnitVector
 WGS84: dist/index.d.ts#WGS84
 bboxContains: dist/index.d.ts#bboxContains
 bboxIntersects: dist/index.d.ts#bboxIntersects
@@ -59,6 +61,7 @@ centralAngleRadians: dist/index.d.ts#centralAngleRadians
 circleKm: dist/index.d.ts#circleKm
 circleMeters: dist/index.d.ts#circleMeters
 decodeGeohash: dist/index.d.ts#decodeGeohash
+densify: dist/index.d.ts#densify
 destinationKm: dist/index.d.ts#destinationKm
 destinationMeters: dist/index.d.ts#destinationMeters
 distanceBetweenGeometriesKm: dist/index.d.ts#distanceBetweenGeometriesKm
@@ -70,6 +73,7 @@ distanceToGeometryMeters: dist/index.d.ts#distanceToGeometryMeters
 followsRightHandRule: dist/index.d.ts#followsRightHandRule
 fromGeoJsonBBox: dist/index.d.ts#fromGeoJsonBBox
 fromPosition: dist/index.d.ts#fromPosition
+fromUnitVector: dist/index.d.ts#fromUnitVector
 geodesicDirect: dist/index.d.ts#geodesicDirect
 geodesicInverse: dist/index.d.ts#geodesicInverse
 geohash: dist/index.d.ts#geohash
@@ -77,6 +81,7 @@ geohashNeighbor: dist/index.d.ts#geohashNeighbor
 geohashNeighbors: dist/index.d.ts#geohashNeighbors
 geohashesInBBox: dist/index.d.ts#geohashesInBBox
 initialBearing: dist/index.d.ts#initialBearing
+intermediatePoint: dist/index.d.ts#intermediatePoint
 latLon: dist/index.d.ts#latLon
 locatePoint: dist/index.d.ts#locatePoint
 normalizeLon: dist/index.d.ts#normalizeLon
@@ -92,6 +97,7 @@ ringWinding: dist/index.d.ts#ringWinding
 simplifyRegions: dist/index.d.ts#simplifyRegions
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
 toPosition: dist/index.d.ts#toPosition
+toUnitVector: dist/index.d.ts#toUnitVector
 
 ## Declarations
 
@@ -163,7 +169,7 @@ export declare class GeoError extends RangeError {
 }
 
 ### dist/index.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices";
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step";
 
 ### dist/index.d.ts#GeoJson
 type GeoJson = Geometry | Feature | FeatureCollection;
@@ -233,6 +239,9 @@ interface LineString extends GeoJsonObject {
 ### dist/index.d.ts#MAX_CIRCLE_VERTICES
 export declare const MAX_CIRCLE_VERTICES = 65536;
 
+### dist/index.d.ts#MAX_DENSIFY_POSITIONS
+export declare const MAX_DENSIFY_POSITIONS = 1e6;
+
 ### dist/index.d.ts#MAX_GEOHASH_PRECISION
 export declare const MAX_GEOHASH_PRECISION = 12;
 
@@ -287,6 +296,13 @@ type Region = Polygon | MultiPolygon;
 ### dist/index.d.ts#RingWinding
 type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
 
+### dist/index.d.ts#UnitVector
+interface UnitVector {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
 ### dist/index.d.ts#WGS84
 export declare const WGS84: Ellipsoid;
 
@@ -319,6 +335,9 @@ export declare function circleMeters(center: LatLon, distance: number, options?:
 
 ### dist/index.d.ts#decodeGeohash
 export declare function decodeGeohash(hash: string): GeohashCell;
+
+### dist/index.d.ts#densify
+export declare function densify<G extends Geometry>(geometry: G, maxStep: number): G;
 
 ### dist/index.d.ts#destinationKm
 export declare function destinationKm(from: LatLon, bearingDegrees: number, distance: number, radiusKm?: number): LatLon;
@@ -353,6 +372,9 @@ export declare function fromGeoJsonBBox(bbox: readonly number[]): BBox;
 ### dist/index.d.ts#fromPosition
 export declare function fromPosition(position: readonly number[]): LatLon;
 
+### dist/index.d.ts#fromUnitVector
+export declare function fromUnitVector(vector: UnitVector): LatLon;
+
 ### dist/index.d.ts#geodesicDirect
 export declare function geodesicDirect(from: LatLon, bearingDegrees: number, meters: number, ellipsoid?: Ellipsoid): GeodesicDirect;
 
@@ -373,6 +395,9 @@ export declare function geohashesInBBox(box: BBox, precision: number, maxCells?:
 
 ### dist/index.d.ts#initialBearing
 export declare function initialBearing(from: LatLon, to: LatLon): number;
+
+### dist/index.d.ts#intermediatePoint
+export declare function intermediatePoint(from: LatLon, to: LatLon, part: number): LatLon;
 
 ### dist/index.d.ts#latLon
 export declare function latLon(lat: number, lon: number): LatLon;
@@ -418,3 +443,6 @@ export declare function toGeoJsonBBox(box: BBox): GeoJsonBBox;
 
 ### dist/index.d.ts#toPosition
 export declare function toPosition(point: LatLon): Position;
+
+### dist/index.d.ts#toUnitVector
+export declare function toUnitVector(point: LatLon): UnitVector;
