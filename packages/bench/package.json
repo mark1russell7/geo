@@ -19,7 +19,7 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },
-  "description": "The bench of simplifyRegions of @mark1russell7/geo (R14): seeded maps, fresh processes, and the verdicts of rigor-bench.",
+  "description": "The bench of @mark1russell7/geo: simplifyRegions (R14) and locatePoint (R10) on seeded inputs, in fresh processes, with the verdicts of rigor-bench.",
   "dependencies": {
     "@mark1russell7/geo": "workspace:*",
     "@mark1russell7/rigor-bench": "^0.2.46",

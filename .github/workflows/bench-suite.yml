@@ -1,0 +1,93 @@
+# The job of one suite of packages/bench: the source of packages/geo against geo 0.3.1 from npm.
+# The callers are bench-simplify.yml (R14) and bench-locate.yml (R10). Each caller has its triggers, its paths and its gate.
+# The job keeps the raw PairedTime records, the hashes, the facts of the computer, the report and a CPU profile of the head.
+# The job fails when the result of the head is not the same as the result of geo 0.3.1 on a case, or has no read.
+# In an enforced suite, it also fails on a fault of the speed gate (packages/bench/src/suites.ts).
+name: Bench suite
+
+on:
+  workflow_call:
+    inputs:
+      suite:
+        description: The suite of packages/bench/src/suites.ts, simplify or locate
+        type: string
+        required: true
+      rounds:
+        description: The rounds of each case and pair (the budget verdict needs 6 or more)
+        type: string
+        default: "7"
+      cases:
+        description: The names of the cases, with commas. Empty means each case of the suite.
+        type: string
+        default: ""
+      copies:
+        description: A JSON list of copy numbers. Each copy is one bench on its own runner.
+        type: string
+        default: "[1]"
+      profile-case:
+        description: The case of the CPU profile of the head
+        type: string
+        required: true
+      timeout-minutes:
+        description: The time limit of one bench job
+        type: number
+        default: 75
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      # The fleet permits 3 heavy jobs at one time for a P1 item.
+      max-parallel: 3
+      matrix:
+        copy: ${{ fromJSON(inputs.copies) }}
+    env:
+      SUITE: ${{ inputs.suite }}
+      ROUNDS: ${{ inputs.rounds }}
+      CASES: ${{ inputs.cases }}
+      PROFILE_CASE: ${{ inputs.profile-case }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The computer
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          { lscpu; nproc; free -m; node --version; git rev-parse HEAD; } > "$RUNNER_TEMP/out/machine.txt"
+          cat "$RUNNER_TEMP/out/machine.txt"
+      - name: Bench
+        working-directory: packages/bench
+        run: node src/bench.ts --suite "$SUITE" --out "$RUNNER_TEMP/out" --rounds "$ROUNDS" ${CASES:+--cases "$CASES"}
+      # One more start of the head on the case of the profile, with the CPU profile of V8.
+      - name: CPU profile
+        if: always()
+        working-directory: packages/bench
+        run: node --cpu-prof --cpu-prof-dir "$RUNNER_TEMP/out/profile" src/arm.ts --suite "$SUITE" --geo head --case "$PROFILE_CASE"
+      - name: Summary
+        if: always()
+        run: cat "$RUNNER_TEMP/out/report.md" >> "$GITHUB_STEP_SUMMARY" || true
+      # The raw records, the hashes, the profile and the report, kept 90 days.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: bench-${{ inputs.suite }}${{ matrix.copy != 1 && format('-{0}', matrix.copy) || '' }}
+          path: ${{ runner.temp }}/out
+          if-no-files-found: error
+          retention-days: 90
