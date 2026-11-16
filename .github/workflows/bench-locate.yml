@@ -1,6 +1,7 @@
 # The bench of the location of points (R10 of docs/ROADMAP.md): pointLocator of packages/geo against locatePoint of geo 0.3.1.
-# The job is in bench-suite.yml, with the suite locate. At this time the report only reads the time and the growth.
+# The job is in bench-suite.yml, with the suite locate. Its speed gate holds the budget and the growth of packages/bench/src/suites.ts.
 # The job fails when the result of the head is not the same as the result of geo 0.3.1 on a case, or has no read.
+# It also fails when the budget or the growth is not within its limit, and on a noisy run.
 # Start it on a branch with: gh workflow run bench-locate.yml -R mark1russell7/geo --ref <branch>
 # The input copies starts more benches of the same commit on other runners, for the limit of a gate:
 # gh workflow run bench-locate.yml -R mark1russell7/geo --ref <branch> -f copies='[1,2,3,4,5]'

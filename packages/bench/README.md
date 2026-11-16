@@ -3,7 +3,7 @@
 This private package is the bench of `@mark1russell7/geo`. It compares the source of `packages/geo` with geo 0.3.1 from npm. It has two suites:
 
 - The suite `simplify` times `simplifyRegions` (roadmap item R14). Its speed gate holds a budget and a growth.
-- The suite `locate` times `locatePoint` for many places against one large polygon (roadmap item R10). At this time, its report only reads the speed claims.
+- The suite `locate` times `pointLocator` for many places against one large polygon (roadmap item R10). Its speed gate holds a budget and a growth.
 
 The file `src/suites.ts` gives the cases and the claims of each suite.
 
@@ -60,7 +60,9 @@ The bench uses `freshRun` of `@mark1russell7/rigor-bench`. Each arm of each pair
 - The budget verdict of `simplify` holds the median of the source on `tx-552-325k` to 360 ms. The target of the alerts project is 500 ms.
 - The growth verdict of `simplify` holds the growth of the time for each 10 times more positions on the 552 regions to 12.
 - Each limit of the gate of `simplify` is the worst value of 5 CI runs plus their spread (run 43779851312).
-- The growth read of `locate` reads the coasts with 10,000 places. It has no budget until the index of R10 and its 5 CI runs.
+- The budget verdict of `locate` holds the median of the source on `coast-1e5-1e4` to 86 ms. geo 0.3.1 takes 30 s to 60 s.
+- The growth verdict of `locate` holds the growth of the time for each 10 times more vertices on the coasts with 10,000 places to 3.1.
+- Each limit of the gate of `locate` is the worst value of 5 CI runs plus their spread (runs 43830188869, 43843439775, 43849286887, 43862267058 and 43877513514).
 - The hashes show that the source gives the same result as geo 0.3.1 on each case. A different hash or a missing hash fails the job.
 - One gate line shows the speed read on the check of the run. It is an error in an enforced suite, and a warning in the other suite.
 
