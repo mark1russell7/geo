@@ -26,7 +26,7 @@
  */
 
 import { classifySegments, orient2dSign } from "@mark1russell7/predicates";
-import { angleToEdge, angleToPosition, scale, viewerAt, type Viewer } from "./distance.ts";
+import { angleBoundToEdge, angleToEdge, scale, viewerAt, type Viewer } from "./distance.ts";
 import { GeoError } from "./errors.ts";
 import { checkGeometry, type MultiPolygon, type Polygon } from "./geojson.ts";
 import { locateInRings } from "@mark1russell7/predicates";
@@ -40,24 +40,34 @@ export type Region = Polygon | MultiPolygon;
 /**
  * An arc: the positions from a junction to the next junction, or a full ring with no junction. The tree of the method
  * of Douglas and Peucker is in the arrays. A node is the index of an inner position.
+ *
+ * The tree grows when a simplification reads it: a span gets its node at the first read. Thus a large tolerance makes
+ * only the top of the tree, and the next tolerance uses the nodes that are made.
  */
 interface Arc {
   readonly positions: readonly Position[];
-  /** The angle in radians from each inner position to the edge of its span. */
+  /** The angle in radians from each node to the edge of its span. */
   readonly angles: Float64Array;
-  /** The node that splits the span from the start of the span of a node to that node, or -1. */
+  /** The node that splits the span from the start of the span of a node to that node, -1, or `UNMADE`. */
   readonly left: Int32Array;
-  /** The node that splits the span from a node to the end of the span of that node, or -1. */
+  /** The node that splits the span from a node to the end of the span of that node, -1, or `UNMADE`. */
   readonly right: Int32Array;
-  /** The node that splits the full arc, or -1 when the arc has no inner position. */
-  readonly root: number;
+  /** The start of the span of each node. */
+  readonly starts: Int32Array;
+  /** The end of the span of each node. */
+  readonly ends: Int32Array;
+  /** The node that splits the full arc, -1 when the arc has no inner position, or `UNMADE`. */
+  root: number;
 }
+
+/** The value of a child or of the root that is not made yet. */
+const UNMADE = -2;
 
 /** A reference to an arc: the index for the arc in its direction, and `~index` for the other direction. */
 type ArcRef = number;
 
 /** A ring of the topology: its arcs, or the ring as written when it has fewer than 3 different positions. */
-type TopologyRing = { readonly arcs: readonly ArcRef[]; readonly first: string } | { readonly fixed: readonly Position[] };
+type TopologyRing = { readonly arcs: readonly ArcRef[]; readonly first: Position } | { readonly fixed: readonly Position[] };
 
 interface TopologyRegion {
   readonly type: Region["type"];
@@ -119,49 +129,70 @@ function openRing(ring: readonly Position[]): Position[] {
   return positions;
 }
 
+/** This function gives `true` when the ids have 3 or more different values. */
+function hasThreeDifferent(ids: Int32Array): boolean {
+  const first = ids[0];
+  let second = -1;
+  for (const id of ids) {
+    if (id === first) continue;
+    if (second < 0) second = id;
+    else if (id !== second) return true;
+  }
+  return false;
+}
+
 /**
- * This function gives the junctions of the rings. A position is a junction when two of its occurrences have different
- * neighbors. The neighbors of an occurrence are the positions before and after it, in any order.
+ * This function gives a flag for each position id: 1 when the position is a junction. A position is a junction when two
+ * of its occurrences have different neighbors. The neighbors of an occurrence are the positions before and after it, in
+ * any order.
  */
-function findJunctions(rings: readonly (readonly string[])[]): Set<string> {
-  const neighbors = new Map<string, string>();
-  const junctions = new Set<string>();
-  for (const keys of rings) {
-    keys.forEach((key, index) => {
-      const previous = keys[(index + keys.length - 1) % keys.length] as string;
-      const next = keys[(index + 1) % keys.length] as string;
-      const pair = previous < next ? `${previous} ${next}` : `${next} ${previous}`;
-      const seen = neighbors.get(key);
-      if (seen === undefined) neighbors.set(key, pair);
-      else if (seen !== pair) junctions.add(key);
-    });
+function findJunctions(rings: readonly Int32Array[], count: number): Uint8Array {
+  const low = new Int32Array(count).fill(-1);
+  const high = new Int32Array(count);
+  const junctions = new Uint8Array(count);
+  for (const ids of rings) {
+    const length = ids.length;
+    for (let index = 0; index < length; index += 1) {
+      const id = ids[index] as number;
+      const previous = ids[(index + length - 1) % length] as number;
+      const next = ids[(index + 1) % length] as number;
+      const first = Math.min(previous, next);
+      const second = Math.max(previous, next);
+      if (low[id] === -1) {
+        low[id] = first;
+        high[id] = second;
+      } else if (low[id] !== first || high[id] !== second) {
+        junctions[id] = 1;
+      }
+    }
   }
   return junctions;
 }
 
 /**
- * This function cuts an open ring into arcs at its junctions. A ring with no junction becomes one closed arc. That arc
- * starts at the first of its positions by longitude and then by latitude, so each ring with these positions gives it.
+ * This function cuts an open ring into arcs at its junctions. It gives the indexes in the ring of the positions of each
+ * arc. A ring with no junction becomes one closed arc. That arc starts at the first of its positions by longitude and
+ * then by latitude, so each ring with these positions gives it.
  */
-function cutRing(ring: readonly Position[], keys: readonly string[], junctions: ReadonlySet<string>): Position[][] {
-  const start = keys.findIndex((key) => junctions.has(key));
+function cutRing(ring: readonly Position[], ids: Int32Array, junctions: Uint8Array): number[][] {
+  const count = ring.length;
+  const start = ids.findIndex((id) => junctions[id] === 1);
   if (start < 0) {
     let first = 0;
     ring.forEach((position, index) => {
       if (comesBefore(position, ring[first] as Position)) first = index;
     });
-    const rotated = [...ring.slice(first), ...ring.slice(0, first)];
-    return [[...rotated, rotated[0] as Position]];
+    const order = Array.from({ length: count }, (_, step) => (first + step) % count);
+    return [[...order, first]];
   }
-  const arcs: Position[][] = [];
-  let current: Position[] = [ring[start] as Position];
-  for (let step = 1; step <= ring.length; step += 1) {
-    const index = (start + step) % ring.length;
-    const position = ring[index] as Position;
-    current.push(position);
-    if (junctions.has(keys[index] as string)) {
+  const arcs: number[][] = [];
+  let current = [start];
+  for (let step = 1; step <= count; step += 1) {
+    const index = (start + step) % count;
+    current.push(index);
+    if (junctions[ids[index] as number] === 1) {
       arcs.push(current);
-      current = [position];
+      current = [index];
     }
   }
   return arcs;
@@ -185,20 +216,44 @@ function edgeAngle(viewer: Viewer, position: Position, a: Position, b: Position)
   return Math.max(Number.MIN_VALUE, angleToEdge(viewer, a, b));
 }
 
-/** This function gives the inner position of the span from `i` to `j` that is farthest from the edge of the span. */
+/** The bounds of the positions of a span, for `farthest`. Each span uses this array, and it grows for a long arc. */
+let scratch = new Float64Array(64);
+
+/**
+ * This function gives the inner position of the span from `i` to `j` that is farthest from the edge of the span. Of
+ * two positions with the same angle, the first wins.
+ */
 function farthest(positions: readonly Position[], i: number, j: number): { readonly node: number; readonly angle: number } {
   const a = positions[i] as Position;
   const b = positions[j] as Position;
-  let node = -1;
-  let best = -1;
+  if (j - i === 2) {
+    const position = positions[i + 1] as Position;
+    return { node: i + 1, angle: edgeAngle(viewerAt(position), position, a, b) };
+  }
+  if (scratch.length < j) scratch = new Float64Array(Math.max(j, 2 * scratch.length));
+  const bounds = scratch;
+  // The angle of a position is not more than its bound. The position with the largest bound gets the first best angle,
+  // so the bounds of the other positions skip most of them.
+  let top = i + 1;
+  let topBound = -1;
   for (let k = i + 1; k < j; k += 1) {
+    const bound = Math.max(Number.MIN_VALUE, angleBoundToEdge(viewerAt(positions[k] as Position), a, b));
+    bounds[k] = bound;
+    if (bound > topBound) {
+      top = k;
+      topBound = bound;
+    }
+  }
+  const first = positions[top] as Position;
+  let node = top;
+  let best = edgeAngle(viewerAt(first), first, a, b);
+  for (let k = i + 1; k < j; k += 1) {
+    const bound = bounds[k] as number;
+    // A position wins with an angle more than the best, or with the same angle before the node.
+    if (k === top || bound < best || (bound === best && k > node)) continue;
     const position = positions[k] as Position;
-    const viewer = viewerAt(position);
-    // The angle to the edge is not more than the angle to its nearer end. This bound skips most positions.
-    const bound = Math.max(Number.MIN_VALUE, Math.min(angleToPosition(viewer, a), angleToPosition(viewer, b)));
-    if (bound <= best) continue;
-    const angle = edgeAngle(viewer, position, a, b);
-    if (angle > best) {
+    const angle = edgeAngle(viewerAt(position), position, a, b);
+    if (angle > best || (angle === best && k < node)) {
       node = k;
       best = angle;
     }
@@ -206,51 +261,121 @@ function farthest(positions: readonly Position[], i: number, j: number): { reado
   return { node, angle: best };
 }
 
-/** This function makes the tree of the method of Douglas and Peucker for an arc. */
+/** This function makes an arc with no tree. A simplification makes the nodes that it reads. */
 function arcOf(positions: readonly Position[]): Arc {
   const count = positions.length;
-  const angles = new Float64Array(count);
-  const left = new Int32Array(count).fill(-1);
-  const right = new Int32Array(count).fill(-1);
-  let root = -1;
-  // Each entry is a span from i to j, its parent node and its side: 0 for left and 1 for right. The root has no parent.
-  const stack: number[] = [0, count - 1, -1, 0];
-  while (stack.length > 0) {
-    const side = stack.pop() as number;
-    const parent = stack.pop() as number;
-    const j = stack.pop() as number;
-    const i = stack.pop() as number;
-    if (j - i < 2) continue;
-    const { node, angle } = farthest(positions, i, j);
-    angles[node] = angle;
-    if (parent < 0) root = node;
-    else if (side === 0) left[parent] = node;
-    else right[parent] = node;
-    stack.push(i, node, node, 0, node, j, node, 1);
+  return {
+    positions,
+    angles: new Float64Array(count),
+    left: new Int32Array(count).fill(-1),
+    right: new Int32Array(count).fill(-1),
+    starts: new Int32Array(count),
+    ends: new Int32Array(count),
+    root: UNMADE,
+  };
+}
+
+/** This function splits the span from `i` to `j` of an arc. It gives the new node, or -1 for a span with no inner position. */
+function split(arc: Arc, i: number, j: number): number {
+  if (j - i < 2) return -1;
+  const { node, angle } = farthest(arc.positions, i, j);
+  arc.angles[node] = angle;
+  arc.starts[node] = i;
+  arc.ends[node] = j;
+  arc.left[node] = UNMADE;
+  arc.right[node] = UNMADE;
+  return node;
+}
+
+/** This function gives the node that splits the full arc, or -1. */
+function rootOf(arc: Arc): number {
+  if (arc.root === UNMADE) arc.root = split(arc, 0, arc.positions.length - 1);
+  return arc.root;
+}
+
+/** This function gives the left child of a node, or -1. A position that is not a node has no children. */
+function leftOf(arc: Arc, node: number): number {
+  let child = arc.left[node] as number;
+  if (child === UNMADE) {
+    child = split(arc, arc.starts[node] as number, node);
+    arc.left[node] = child;
   }
-  return { positions, angles, left, right, root };
+  return child;
+}
+
+/** This function gives the right child of a node, or -1. A position that is not a node has no children. */
+function rightOf(arc: Arc, node: number): number {
+  let child = arc.right[node] as number;
+  if (child === UNMADE) {
+    child = split(arc, node, arc.ends[node] as number);
+    arc.right[node] = child;
+  }
+  return child;
 }
 
 /** This function makes the topology of valid regions: the shared arcs and the rings of each region. */
 function topologyOf(regions: readonly Region[]): Topology {
   const opened = regions.map((region) => polygonsOf(region).map((rings) => rings.map(openRing)));
-  const usable = (ring: readonly Position[]): boolean => new Set(ring.map(keyOf)).size >= 3;
-  const keyed = new Map<readonly Position[], string[]>();
-  for (const ring of opened.flat(2)) if (usable(ring)) keyed.set(ring, ring.map(keyOf));
-  const junctions = findJunctions([...keyed.values()]);
+  // Each different position gets an id. Most positions have a longitude of their own, so the map by longitude finds
+  // them with no key. The map by key holds the other positions. A map finds 0 for -0, as `===` does.
+  const byLon = new Map<number, number>();
+  const byKey = new Map<string, number>();
+  const lats: number[] = [];
+  const idOf = (position: Position): number => {
+    const first = byLon.get(position[0]);
+    if (first === undefined) {
+      byLon.set(position[0], lats.length);
+      lats.push(position[1]);
+      return lats.length - 1;
+    }
+    if (lats[first] === position[1]) return first;
+    const key = keyOf(position);
+    let id = byKey.get(key);
+    if (id === undefined) {
+      id = lats.length;
+      byKey.set(key, id);
+      lats.push(position[1]);
+    }
+    return id;
+  };
+  const keyed = new Map<readonly Position[], Int32Array>();
+  for (const ring of opened.flat(2)) {
+    const ringIds = new Int32Array(ring.length);
+    for (let index = 0; index < ring.length; index += 1) ringIds[index] = idOf(ring[index] as Position);
+    if (hasThreeDifferent(ringIds)) keyed.set(ring, ringIds);
+  }
+  const junctions = findJunctions([...keyed.values()], lats.length);
   const arcs: Arc[] = [];
-  const indexes = new Map<string, number>();
-  const refOf = (positions: Position[]): ArcRef => {
-    const keys = positions.map(keyOf);
-    const forward = keys.join(" ");
-    const backward = keys.reverse().join(" ");
-    const canonical = forward <= backward;
-    const key = canonical ? forward : backward;
-    let index = indexes.get(key);
+  // The ids of each arc, and the arcs by the id of their first position. Two arcs are the same when their ids are equal.
+  const arcIds: Int32Array[] = [];
+  const found = new Map<number, number[]>();
+  const refOf = (ring: readonly Position[], ringIds: Int32Array, order: readonly number[]): ArcRef => {
+    const count = order.length;
+    // The direction of the arc whose keys come first, one key at a time. This is also the order of the joined keys,
+    // because a space comes before each character of a key. Equal ids have equal keys.
+    let canonical = true;
+    for (let s = 0, e = count - 1; s < e; s += 1, e -= 1) {
+      const start = order[s] as number;
+      const end = order[e] as number;
+      if (ringIds[start] !== ringIds[end]) {
+        canonical = keyOf(ring[start] as Position) < keyOf(ring[end] as Position);
+        break;
+      }
+    }
+    const sequenceIds = new Int32Array(count);
+    for (let step = 0; step < count; step += 1) {
+      sequenceIds[step] = ringIds[order[canonical ? step : count - 1 - step] as number] as number;
+    }
+    const firstId = sequenceIds[0] as number;
+    const candidates = found.get(firstId);
+    let index = candidates?.find((candidate) => sameIds(arcIds[candidate] as Int32Array, sequenceIds));
     if (index === undefined) {
       index = arcs.length;
-      arcs.push(arcOf(canonical ? positions : [...positions].reverse()));
-      indexes.set(key, index);
+      const sequence = canonical ? order : [...order].reverse();
+      arcs.push(arcOf(sequence.map((k) => ring[k] as Position)));
+      arcIds.push(sequenceIds);
+      if (candidates === undefined) found.set(firstId, [index]);
+      else candidates.push(index);
     }
     return canonical ? index : ~index;
   };
@@ -259,13 +384,21 @@ function topologyOf(regions: readonly Region[]): Topology {
     polygons: polygonsOf(region).map((rings, polygonIndex) =>
       rings.map((ring, ringIndex): TopologyRing => {
         const open = opened[regionIndex]?.[polygonIndex]?.[ringIndex] as Position[];
-        const keys = keyed.get(open);
-        if (keys === undefined) return { fixed: ring };
-        return { arcs: cutRing(open, keys, junctions).map(refOf), first: keys[0] as string };
+        const ringIds = keyed.get(open);
+        if (ringIds === undefined) return { fixed: ring };
+        const refs = cutRing(open, ringIds, junctions).map((order) => refOf(open, ringIds, order));
+        return { arcs: refs, first: open[0] as Position };
       }),
     ),
   }));
   return { arcs, regions: topologyRegions };
+}
+
+/** This function gives `true` when two lists of ids are equal. */
+function sameIds(a: Int32Array, b: Int32Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) if (a[index] !== b[index]) return false;
+  return true;
 }
 
 /** The positions that a simplification keeps, for each arc. */
@@ -288,16 +421,17 @@ function keptOf(arc: Arc, forced: Uint8Array, toleranceKm: number, radiusKm: num
     node >= 0 && (forced[node] === 1 || scale(arc.angles[node] as number, radiusKm) > toleranceKm);
   const kept = [0];
   const stack: number[] = [];
-  let current = keeps(arc.root) ? arc.root : -1;
+  const root = rootOf(arc);
+  let current = keeps(root) ? root : -1;
   while (current >= 0 || stack.length > 0) {
     while (current >= 0) {
       stack.push(current);
-      const next = arc.left[current] as number;
+      const next = leftOf(arc, current);
       current = keeps(next) ? next : -1;
     }
     const node = stack.pop() as number;
     kept.push(node);
-    const next = arc.right[node] as number;
+    const next = rightOf(arc, node);
     current = keeps(next) ? next : -1;
   }
   kept.push(arc.positions.length - 1);
@@ -309,7 +443,7 @@ function keptOf(arc: Arc, forced: Uint8Array, toleranceKm: number, radiusKm: num
  * That node is the right child of `i`, the left child of `j`, or the root. The result is -1 for an edge of the input.
  */
 function spanNode(arc: Arc, i: number, j: number): number {
-  for (const node of [arc.right[i] ?? -1, arc.left[j] ?? -1, arc.root]) if (node > i && node < j) return node;
+  for (const node of [rightOf(arc, i), leftOf(arc, j), rootOf(arc)]) if (node > i && node < j) return node;
   return -1;
 }
 
@@ -554,7 +688,7 @@ function ringOf(selection: Selection, ring: TopologyRing): Position[] {
     for (const k of order.slice(positions.length === 0 ? 0 : 1)) positions.push(arc[k] as Position);
   }
   // The ring starts at the first position of the input ring when that position is kept.
-  const start = positions.findIndex((position) => keyOf(position) === ring.first);
+  const start = positions.findIndex((position) => samePosition(position, ring.first));
   if (start <= 0) return positions;
   const open = positions.slice(0, -1);
   const rotated = [...open.slice(start), ...open.slice(0, start)];

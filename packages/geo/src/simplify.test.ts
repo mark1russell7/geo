@@ -305,6 +305,18 @@ describe("simplifyRegions", () => {
     }
   });
 
+  it("gives the same result for each order of the tolerances", () => {
+    // The simplifier makes the nodes of its tree when it reads them. Thus the order of the tolerances must not change a result.
+    fc.assert(
+      fc.property(noise, fc.shuffledSubarray([0, 0.3, 1, 4, 20], { minLength: 5, maxLength: 5 }), (values, order) => {
+        const { regions } = tiling(values, 2, 2);
+        const simplify = regionSimplifier(regions);
+        for (const toleranceKm of order) expect(simplify(toleranceKm)).toEqual(simplifyRegions(regions, toleranceKm));
+      }),
+      { numRuns: 30 },
+    );
+  });
+
   it("measures the tolerance on the sphere of the radius", () => {
     const { regions } = tiling([0.7, -0.2, 0.4, -0.9, 0.1], 2, 2);
     // On a sphere of half the radius, each distance is half. So half the tolerance gives the same result.

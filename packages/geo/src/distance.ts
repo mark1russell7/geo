@@ -35,6 +35,9 @@ const RADIANS = Math.PI / 180;
 /** The largest change of latitude or of longitude in one piece of an edge, in degrees. */
 const PIECE_DEGREES = 1;
 
+/** The count of rounds of split points near the root of the slope, before the halving of a bracket. */
+const SPLIT_ROUNDS = 4;
+
 /** The parts of a geometry, by kind. */
 interface Shapes {
   readonly points: Position[];
@@ -131,19 +134,42 @@ function gapBound(gap: number): number {
 /** This function gives `true` when the position `b` comes before the position `a`, by longitude and then by latitude. */
 const comesBefore = (b: Position, a: Position): boolean => b[0] < a[0] || (b[0] === a[0] && b[1] < a[1]);
 
+/** This function gives the latitude gap from the viewer to the edge from `a` to `b`, in degrees, or 0. */
+const gapOf = (viewer: Viewer, a: Position, b: Position): number =>
+  Math.max(0, Math.min(a[1], b[1]) - viewer.lat, viewer.lat - Math.max(a[1], b[1]));
+
+/**
+ * This function gives the haversine value at one point of the edge from `a` to `b`. That point is the nearest point to
+ * the viewer in a local plane. In that plane, a longitude difference counts with the cosine of the latitude of the
+ * viewer. Thus the value is near the smallest value of the edge, and it is not less than it.
+ */
+function probeValue(viewer: Viewer, a: Position, b: Position): number {
+  const latA = a[1];
+  const dLat = b[1] - latA;
+  const dLon = b[0] - a[0];
+  const lat0 = latA - viewer.lat;
+  const lon0 = reduceLon(a[0] - viewer.lon);
+  const scale = viewer.cosLat * viewer.cosLat;
+  const length = dLat * dLat + scale * dLon * dLon;
+  const u = length > 0 ? Math.min(1, Math.max(0, -(lat0 * dLat + scale * lon0 * dLon) / length)) : 0;
+  return haversine(viewer, latA + u * dLat, lat0 + u * dLat, lon0 + u * dLon);
+}
+
 /**
  * This function gives the smallest haversine value from the viewer to the edge from `a` to `b`, or `best` when that is
  * smaller. A point of the edge is `(latA + u dLat, lonA + u dLon)`, with `u` from 0 to 1. The function measures each
  * edge from its first position by longitude and latitude. Thus the edge from `b` to `a` gives the same value.
+ *
+ * The result is not more than `edgeBound` of the edge, for each `best`.
  */
 function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number): number {
-  const [a, b] = comesBefore(to, from) ? [to, from] : [from, to];
-  const latA = a[1];
-  const latB = b[1];
+  const swap = comesBefore(to, from);
+  const a = swap ? to : from;
+  const b = swap ? from : to;
   // The central angle is not less than the difference of the latitudes.
-  const gap = Math.max(0, Math.min(latA, latB) - viewer.lat, viewer.lat - Math.max(latA, latB));
-  if (gapBound(gap) >= best) return best;
-  const dLat = latB - latA;
+  if (gapBound(gapOf(viewer, a, b)) >= best) return best;
+  const latA = a[1];
+  const dLat = b[1] - latA;
   const dLon = b[0] - a[0];
   const lat0 = latA - viewer.lat;
   const lon0 = reduceLon(a[0] - viewer.lon);
@@ -157,8 +183,9 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
     const cosLat = viewer.cosLat;
     return dLat * (Math.sin(dPhi) - 2 * cosLat * Math.sin(phi) * s * s) + dLon * cosLat * Math.cos(phi) * Math.sin(dLambda);
   };
+  // The probe makes the result not more than the bound. A small result also skips more pieces.
+  let result = Math.min(best, probeValue(viewer, a, b));
   const pieces = Math.max(1, Math.ceil(Math.max(Math.abs(dLat), Math.abs(dLon)) / PIECE_DEGREES));
-  let result = best;
   let u0 = 0;
   let slope0 = slopeAt(0);
   for (let index = 1; index <= pieces; index += 1) {
@@ -170,8 +197,38 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
       const lat2 = latA + u1 * dLat;
       const pieceGap = Math.max(0, Math.min(lat1, lat2) - viewer.lat, viewer.lat - Math.max(lat1, lat2));
       if (gapBound(pieceGap) < result) {
+        // Each split keeps the slope less than 0 at `low` and not less than 0 at `high`, and the bisection ends at two
+        // adjacent doubles. When the sign of the slope changes one time, each order of splits gives the same two doubles.
         let low = u0;
         let high = u1;
+        let slopeLow = slope0;
+        let slopeHigh = slope1;
+        // The split points near the root of the slope make the bracket small with few steps.
+        for (let round = 0; round < SPLIT_ROUNDS; round += 1) {
+          const root = low + (high - low) * (slopeLow / (slopeLow - slopeHigh));
+          if (!(root > low && root < high)) break;
+          const slope = slopeAt(root);
+          if (slope < 0) {
+            low = root;
+            slopeLow = slope;
+          } else {
+            high = root;
+            slopeHigh = slope;
+          }
+          // A second split past the root, on the other side, closes the bracket from that side.
+          const next = low + (high - low) * (slopeLow / (slopeLow - slopeHigh));
+          const reach = 2 * Math.abs(next - root);
+          const other = slope < 0 ? next + reach : next - reach;
+          if (!(other > low && other < high)) continue;
+          const otherSlope = slopeAt(other);
+          if (otherSlope < 0) {
+            low = other;
+            slopeLow = otherSlope;
+          } else {
+            high = other;
+            slopeHigh = otherSlope;
+          }
+        }
         for (;;) {
           const middle = low + (high - low) / 2;
           if (middle <= low || middle >= high) break;
@@ -185,6 +242,19 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number)
     slope0 = slope1;
   }
   return result;
+}
+
+/**
+ * This function gives a haversine value that is not less than the result of `edgeMinimum` for the edge, for each
+ * `best`. It measures one point of the edge, so it is fast.
+ */
+function edgeBound(viewer: Viewer, from: Position, to: Position): number {
+  const swap = comesBefore(to, from);
+  const a = swap ? to : from;
+  const b = swap ? from : to;
+  const gap = gapOf(viewer, a, b);
+  const value = probeValue(viewer, a, b);
+  return gap > 0 ? Math.max(gapBound(gap), value) : value;
 }
 
 function ringsMinimum(viewer: Viewer, rings: Rings, best: number): number {
@@ -211,16 +281,6 @@ export function viewerAt(position: Position): Viewer {
 }
 
 /**
- * This function gives the central angle in radians from the viewer to a position, with the method of
- * `distanceToGeometryKm`. It is not less than the angle from the viewer to an edge from that position.
- *
- * @internal
- */
-export function angleToPosition(viewer: Viewer, position: Position): number {
-  return angleOfHaversine(haversineOf(viewer, position));
-}
-
-/**
  * This function gives the central angle in radians from the viewer to the edge from `a` to `b`, with the method of
  * `distanceToGeometryKm`. The edge from `b` to `a` gives the same angle. The angle can be 0 for a viewer that is
  * very near the edge but not on it.
@@ -229,6 +289,17 @@ export function angleToPosition(viewer: Viewer, position: Position): number {
  */
 export function angleToEdge(viewer: Viewer, a: Position, b: Position): number {
   return angleOfHaversine(edgeMinimum(viewer, a, b, Math.min(haversineOf(viewer, a), haversineOf(viewer, b))));
+}
+
+/**
+ * This function gives an angle in radians that is not less than `angleToEdge(viewer, a, b)`. It measures one point of
+ * the edge, so it is fast. A scan skips each edge whose bound is not more than its best angle.
+ *
+ * @internal
+ */
+export function angleBoundToEdge(viewer: Viewer, a: Position, b: Position): number {
+  // The factor is more than the rounding of `Math.asin`, so a larger haversine value does not give a smaller angle.
+  return angleOfHaversine(edgeBound(viewer, a, b)) * (1 + 2 ** -40);
 }
 
 /** This function gives the central angle from a valid point to the shapes, in radians. */

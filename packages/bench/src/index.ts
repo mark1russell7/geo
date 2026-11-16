@@ -13,9 +13,11 @@ export {
   type CaseRow,
   type HashLine,
   MAX_GROWTH,
+  TARGET_MS,
   markdown,
   type Pairs,
   type Read,
   type Report,
   report,
+  speedFaults,
 } from "./report.ts";

@@ -33,8 +33,9 @@ The bench uses `freshRun` of `@mark1russell7/rigor-bench`. Each arm of each pair
 ## The report
 
 - The time verdict compares the source with geo 0.3.1. It uses the band of the A/A pair.
-- The budget verdict holds the median of the source on `tx-552-325k` to 500 ms.
-- The growth verdict reads the growth of the time for each 10 times more positions on the 552 regions.
+- The budget verdict holds the median of the source on `tx-552-325k` to 360 ms. The target of the alerts project is 500 ms.
+- The growth verdict holds the growth of the time for each 10 times more positions on the 552 regions to 12.
+- Each limit of the gate is the worst value of 5 CI runs plus their spread (run 43779851312).
 - The hashes show that the source gives the same result as geo 0.3.1 on each case. A different hash or a missing hash fails the job.
 
 The artifact of the run keeps the raw records, the hashes, the facts of the computer and the report. It also keeps a CPU profile of the source on `tx-552-325k`.

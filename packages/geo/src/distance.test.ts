@@ -14,6 +14,7 @@ import {
   type Polygon,
   type Position,
 } from "./index.ts";
+import { angleBoundToEdge, angleToEdge, viewerAt } from "./distance.ts";
 
 /** The length of an arc of the sphere in kilometres, for an angle in degrees. */
 const km = (degrees: number): number => (degrees * Math.PI * EARTH_MEAN_RADIUS_KM) / 180;
@@ -322,6 +323,28 @@ describe("the distance to an edge, against a dense reference", () => {
         },
       ),
     );
+  });
+});
+
+describe("the bound of the angle to an edge", () => {
+  it("is not less than the angle, and is the same for the two directions of the edge", () => {
+    fc.assert(
+      fc.property(
+        edge.chain((ab) => fc.tuple(fc.constant(ab), viewerFor(ab))),
+        ([[a, b], from]) => {
+          const viewer = viewerAt([from.lon, from.lat]);
+          const bound = angleBoundToEdge(viewer, a, b);
+          expect(bound).toBeGreaterThanOrEqual(angleToEdge(viewer, a, b));
+          expect(angleBoundToEdge(viewer, b, a)).toBe(bound);
+        },
+      ),
+      { numRuns: 400 },
+    );
+  });
+
+  it("is the angle to the end for a viewer past the end of the edge", () => {
+    const viewer = viewerAt([3, 0]);
+    expect(angleBoundToEdge(viewer, [0, 0], [1, 0])).toBeCloseTo(angleToEdge(viewer, [0, 0], [1, 0]), 12);
   });
 });
 

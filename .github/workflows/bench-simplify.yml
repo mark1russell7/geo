@@ -3,6 +3,8 @@
 # and a CPU profile of the head on the case tx-552-325k.
 # The job fails when the result of the head is not the same as the result of geo 0.3.1 on a case, or has no read.
 # Start it on a branch with: gh workflow run bench-simplify.yml -R mark1russell7/geo --ref <branch>
+# The input copies starts more benches of the same commit on other runners, for the limit of a gate:
+# gh workflow run bench-simplify.yml -R mark1russell7/geo --ref <branch> -f copies='[1,2,3,4,5]'
 name: Bench simplify
 
 on:
@@ -23,6 +25,9 @@ on:
       cases:
         description: The names of the cases, with commas. Empty means each case.
         default: ""
+      copies:
+        description: A JSON list of copy numbers. Each copy is one bench on its own runner (5 copies give the limit of a gate).
+        default: "[1]"
 
 permissions:
   contents: read
@@ -63,6 +68,12 @@ jobs:
     timeout-minutes: 75
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      # The fleet permits 3 heavy jobs at one time for a P1 item.
+      max-parallel: 3
+      matrix:
+        copy: ${{ fromJSON(inputs.copies || '[1]') }}
     env:
       ROUNDS: ${{ inputs.rounds || '7' }}
       CASES: ${{ inputs.cases }}
@@ -96,7 +107,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: bench-simplify
+          name: bench-simplify${{ matrix.copy != 1 && format('-{0}', matrix.copy) || '' }}
           path: ${{ runner.temp }}/out
           if-no-files-found: error
           retention-days: 90

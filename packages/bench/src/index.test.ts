@@ -3,7 +3,7 @@ import { classifySegments } from "@mark1russell7/predicates";
 import { canonicalHash } from "@mark1russell7/rigor-generators";
 import { simplifyRegions as simplifyBase } from "geo-base";
 import { describe, expect, it } from "vitest";
-import { BUDGET_CASE, caseOf, type HashLine, mapOf, markdown, type Pairs, positionCount, report, TOLERANCE_KM } from "./index.ts";
+import { BUDGET_CASE, caseOf, type HashLine, mapOf, markdown, type Pairs, positionCount, report, speedFaults, TOLERANCE_KM } from "./index.ts";
 
 const key = (position: Position): string => `${position[0]},${position[1]}`;
 
@@ -139,6 +139,16 @@ describe("the report", () => {
   it("reads the base over the budget", () => {
     const pairs = fakePairs(all, 7, (_, id, round) => (sizes[id] as number) * 25 * (1 + (round % 3) / 1000));
     expect(report(pairs, hashes).budget.outcome).toBe("beyond");
+  });
+
+  it("passes the speed gate only when the budget and the growth are within", () => {
+    const fast = report(fakePairs(all, 7, (_, id, round) => (sizes[id] as number) * (1 + (round % 3) / 1000)), hashes);
+    expect(speedFaults(fast, all)).toEqual([]);
+    const slow = report(fakePairs(all, 7, (_, id, round) => (sizes[id] as number) * 25 * (1 + (round % 3) / 1000)), hashes);
+    expect(speedFaults(slow, all)).toEqual([expect.stringContaining('The budget of tx-552-325k is "beyond".')]);
+    const noisy = { budget: { outcome: "cannot decide" as const, reason: "", cases: [] }, growth: { outcome: "cannot decide" as const, reason: "", steps: [] } };
+    expect(speedFaults(noisy, all)).toHaveLength(2);
+    expect(speedFaults(noisy, ["grid-30-1e3"])).toEqual([]);
   });
 
   it("gives no read for a run with too few cases", () => {

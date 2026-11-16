@@ -3,11 +3,12 @@
  * tests hold them.
  *
  * - The time verdict compares the pair (base, head) with the A/A pair (base, base) over all cases.
- * - The budget verdict holds the median of the arm `head` on the case `tx-552-325k` to 500 ms. Its A/A arm is the
- *   arm `head-copy`: the same code in other processes.
+ * - The budget verdict holds the median of the arm `head` on the case `tx-552-325k` to 360 ms, under the target of
+ *   500 ms. Its A/A arm is the arm `head-copy`: the same code in other processes.
  * - The growth verdict reads the growth of the time of `head` for each 10 times more positions on the 552 regions.
  *   Each round is one job, so a slow round changes each size of that round.
  * - The hashes show if `base` and `head` give the same result on each case.
+ * - The speed gate holds the budget and the growth of `head`. A verdict that cannot decide does not pass the gate.
  *
  * @packageDocumentation
  */
@@ -25,13 +26,25 @@ import {
 import { median } from "@mark1russell7/rigor-statistics";
 import { CASES } from "./map.ts";
 
-/** The case of the budget, and its limit in milliseconds: the target of the alerts project for one state. */
+/** The case of the budget. */
 export const BUDGET_CASE = "tx-552-325k";
-export const BUDGET_MS = 500;
-/** The largest difference of the medians of the two arms of `head`. A larger difference makes the case too noisy. */
-export const BUDGET_DIFFERENCE_MS = 250;
-/** The largest growth of the time for each 10 times more positions. A cost that grows as n log n gives approximately 12. */
-export const MAX_GROWTH = 15;
+/** The target of the alerts project for one state, in milliseconds. The limit of the gate is lower. */
+export const TARGET_MS = 500;
+/**
+ * The limit of the gate on the high end of the interval of `head`, in milliseconds. It is the worst high end of 5 CI runs
+ * (287.5) plus their spread (71.8), from run 43779851312.
+ */
+export const BUDGET_MS = 360;
+/**
+ * The largest difference of the medians of the two arms of `head`, in milliseconds. A larger difference makes the case
+ * too noisy. It is the worst difference of the 5 CI runs (6.7) plus their spread (4.9), rounded up.
+ */
+export const BUDGET_DIFFERENCE_MS = 12;
+/**
+ * The largest growth of the time for each 10 times more positions, on the high end of the interval of each step. It is
+ * the worst high end of the 5 CI runs (10.19) plus their spread (1.81). A cost that grows as n log n gives approximately 12.
+ */
+export const MAX_GROWTH = 12;
 
 /** The records of a run, by the id of the pair: `head`, `head-copy` and `base~aa`. */
 export type Pairs = Readonly<Record<string, readonly PairedTime[]>>;
@@ -73,6 +86,22 @@ const sizeOf = (id: string): number | undefined => {
   const spec = CASES.find((entry) => entry.id === id);
   return spec !== undefined && spec.columns * spec.rows === 552 ? spec.positions : undefined;
 };
+
+/**
+ * This function gives the faults of the speed gate of a run, or an empty list. The gate holds the budget when the run
+ * has its case, and the growth when the run has 2 or more sizes. Each outcome other than `within` is a fault. Thus a
+ * noisy run does not pass the gate.
+ */
+export function speedFaults(result: Pick<Report, "budget" | "growth">, ids: readonly string[]): string[] {
+  const faults: string[] = [];
+  if (ids.includes(BUDGET_CASE) && result.budget.outcome !== "within") {
+    faults.push(`The budget of ${BUDGET_CASE} is "${result.budget.outcome}". ${result.budget.reason}`);
+  }
+  if (ids.filter((id) => sizeOf(id) !== undefined).length >= 2 && result.growth.outcome !== "within") {
+    faults.push(`The growth is "${result.growth.outcome}". ${result.growth.reason}`);
+  }
+  return faults;
+}
 
 /** This function gives `true`, `false` or `undefined` for the hashes of `base` and `head` on one case. */
 function sameResult(hashes: readonly HashLine[], id: string): boolean | undefined {
