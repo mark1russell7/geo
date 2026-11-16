@@ -281,16 +281,6 @@ export function viewerAt(position: Position): Viewer {
 }
 
 /**
- * This function gives the central angle in radians from the viewer to a position, with the method of
- * `distanceToGeometryKm`. It is not less than the angle from the viewer to an edge from that position.
- *
- * @internal
- */
-export function angleToPosition(viewer: Viewer, position: Position): number {
-  return angleOfHaversine(haversineOf(viewer, position));
-}
-
-/**
  * This function gives the central angle in radians from the viewer to the edge from `a` to `b`, with the method of
  * `distanceToGeometryKm`. The edge from `b` to `a` gives the same angle. The angle can be 0 for a viewer that is
  * very near the edge but not on it.
