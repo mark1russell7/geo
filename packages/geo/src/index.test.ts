@@ -19,6 +19,7 @@ describe("the entry", () => {
         "MAX_GEOJSON_DEPTH",
         "MAX_GEOMETRY_LONGITUDE",
         "WGS84",
+        "bboxCenter",
         "bboxContains",
         "bboxIntersects",
         "bboxOfGeoJson",

@@ -4,6 +4,7 @@ import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
 import {
   EARTH_MEAN_RADIUS_KM,
+  bboxCenter,
   bboxContains,
   bboxOfGeoJson,
   bboxOfPoints,
@@ -553,6 +554,30 @@ describe("normalizeLon", () => {
 });
 
 describe("the bounding box", () => {
+  it("has its middle, at the same angle from its west and from its east", () => {
+    const edges = fc.record({
+      west: uniformDouble({ min: -180, max: 180 }),
+      east: uniformDouble({ min: -180, max: 180 }),
+      a: uniformDouble({ min: -90, max: 90 }),
+      b: uniformDouble({ min: -90, max: 90 }),
+    });
+    fc.assert(
+      fc.property(edges, ({ west, east, a, b }) => {
+        const box = { west, south: Math.min(a, b), east, north: Math.max(a, b) };
+        const center = bboxCenter(box);
+        expect(bboxContains(box, center)).toBe(true);
+        expect(center.lon).toBeGreaterThanOrEqual(-180);
+        expect(center.lon).toBeLessThanOrEqual(180);
+        // The angle to the east from a longitude to a longitude, from 0 to less than 360.
+        const turn = (from: number, to: number): number => (((to - from) % 360) + 360) % 360;
+        // The full circle from -180 to 180 has the width 360, and the turn from -180 to 180 is 0.
+        const width = west <= east ? east - west : east + 360 - west;
+        expect(Math.abs(turn(west, center.lon) - width / 2)).toBeLessThan(1e-9);
+        expect(Math.abs(center.lat - (a + b) / 2)).toBeLessThan(1e-12);
+      }),
+    );
+  });
+
   it("has each of its points", () => {
     fc.assert(
       fc.property(fc.array(point, { minLength: 1, maxLength: 20 }), (points) => {
