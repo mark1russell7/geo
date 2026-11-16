@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import {
   EARTH_MEAN_RADIUS_KM,
   GeoError,
+  distanceBetweenGeometriesKm,
+  distanceBetweenGeometriesMeters,
   distanceKm,
   distanceToGeometryKm,
   distanceToGeometryMeters,
   locatePoint,
+  polygonsIntersect,
   type Geometry,
   type LatLon,
   type LineString,
@@ -388,6 +391,223 @@ describe("the zero of the distance", () => {
         });
         expect(distanceToGeometryKm({ lat: y, lon: x }, path) === 0).toBe(onEdge);
       }),
+    );
+  });
+});
+
+describe("the distance between two geometries", () => {
+  const RAD = Math.PI / 180;
+  const point = (lon: number, lat: number): Geometry => ({ type: "Point", coordinates: [lon, lat] });
+
+  it("is 0 for lines that cross, and for a line that crosses an edge of a polygon", () => {
+    expect(distanceBetweenGeometriesKm(line([0, 0], [10, 10]), line([0, 10], [10, 0]))).toBe(0);
+    expect(distanceBetweenGeometriesKm(line([-5, 0], [5, 0]), square(0, -5, 10, 5))).toBe(0);
+    expect(distanceBetweenGeometriesKm(square(0, -5, 10, 5), line([-5, 0], [5, 0]))).toBe(0);
+  });
+
+  it("is 0 for a polygon in a polygon and for a line in a polygon, in the two orders", () => {
+    const outer = square(0, -10, 30, 10);
+    const inner = square(12, -3, 18, 3);
+    expect(distanceBetweenGeometriesKm(outer, inner)).toBe(0);
+    expect(distanceBetweenGeometriesKm(inner, outer)).toBe(0);
+    expect(distanceBetweenGeometriesKm(line([2, 0], [3, 1]), outer)).toBe(0);
+    expect(distanceBetweenGeometriesKm(outer, line([2, 0], [3, 1]))).toBe(0);
+  });
+
+  it("is more than 0 for a polygon in a hole, and is the distance to the edge of the hole", () => {
+    const withHole: Polygon = { type: "Polygon", coordinates: [...square(0, -10, 30, 10).coordinates, ...square(10, -5, 20, 5).coordinates] };
+    const inner = square(12, -3, 18, 3);
+    // The nearest point of the meridian 20 to the corner (18, 3) is on the edge of the hole: sin d = sin 2° cos 3°.
+    const expected = km(Math.asin(Math.sin(2 * RAD) * Math.cos(3 * RAD)) / RAD);
+    expect(polygonsIntersect(withHole, inner)).toBe(false);
+    expect(distanceBetweenGeometriesKm(withHole, inner)).toBeCloseTo(expected, 6);
+    expect(distanceBetweenGeometriesKm(inner, withHole)).toBe(distanceBetweenGeometriesKm(withHole, inner));
+    expect(distanceBetweenGeometriesKm(withHole, square(10, -5, 20, 5))).toBe(0);
+  });
+
+  it("is 0 for polygons that touch at one vertex, and more than 0 for polygons very near", () => {
+    expect(distanceBetweenGeometriesKm(square(0, 0, 1, 1), square(1, 1, 2, 2))).toBe(0);
+    expect(distanceBetweenGeometriesKm(square(0, 0, 1, 1), point(1, 1))).toBe(0);
+    const near = square(1 + 2 ** -40, 1, 2, 2);
+    const d = distanceBetweenGeometriesKm(square(0, 0, 1, 1), near);
+    expect(d).toBeGreaterThan(0);
+    expect(d).toBeLessThan(1e-6);
+    expect(distanceBetweenGeometriesKm(square(0, 0, 1, 1), near, 1e-300)).toBeGreaterThan(0);
+  });
+
+  it("is the gap of two parallel lines, and the gap to the nearest end of two lines on the equator", () => {
+    expect(distanceBetweenGeometriesKm(line([0, 0], [10, 0]), line([0, 2], [10, 2]))).toBeCloseTo(km(2), 9);
+    expect(distanceBetweenGeometriesKm(line([0, 0], [10, 0]), line([13, 0], [20, 0]))).toBeCloseTo(km(3), 9);
+    // The nearest point of the equator to the end (5, 4) of the second line is (5, 0).
+    expect(distanceBetweenGeometriesKm(line([0, 0], [10, 0]), line([5, 4], [5, 9]))).toBeCloseTo(km(4), 9);
+  });
+
+  it("is the distance of distanceToGeometryKm for a point, in the two orders", () => {
+    const area = square(10, -5, 20, 5);
+    const lines: Geometry = { type: "MultiLineString", coordinates: [[[0, 40], [30, 50]], [[-170, -80], [170, -60]]] };
+    for (const [lon, lat] of [[25, 0], [0, 0], [15, 0], [20, 5], [33, 44], [-170, -80], [181, 89.5], [0, -90]] as const) {
+      for (const geometry of [area, lines]) {
+        const expected = distanceToGeometryKm({ lat, lon }, geometry);
+        expect(distanceBetweenGeometriesKm(point(lon, lat), geometry)).toBe(expected);
+        expect(distanceBetweenGeometriesKm(geometry, point(lon, lat))).toBe(expected);
+      }
+    }
+  });
+
+  it("works across the antimeridian", () => {
+    expect(distanceBetweenGeometriesKm(line([170, 0], [178, 0]), line([-178, 0], [-170, 0]))).toBeCloseTo(km(4), 9);
+    // In the plane, the second line is from (180, 5) to (185, -5), and it crosses the first line at 181 2/3.
+    expect(distanceBetweenGeometriesKm(line([175, -5], [185, 5]), line([-180, 5], [-175, -5]))).toBe(0);
+    expect(distanceBetweenGeometriesKm(square(170, -5, 190, 5), square(-178, -1, -172, 1))).toBe(0);
+    expect(distanceBetweenGeometriesKm(square(-178, -1, -172, 1), square(170, -5, 190, 5))).toBe(0);
+    // The meridians 175 and 185 come nearer to the poles, so the nearest points are the corners at 5 and -5.
+    const corners = distanceKm({ lat: 5, lon: 175 }, { lat: 5, lon: -175 });
+    expect(distanceBetweenGeometriesKm(square(170, -5, 175, 5), square(-175, -5, -170, 5))).toBeCloseTo(corners, 9);
+  });
+
+  it("is 0 for two lines that touch a pole at different longitudes", () => {
+    expect(distanceBetweenGeometriesKm(line([0, 80], [0, 90]), line([90, 85], [90, 90]))).toBe(0);
+    expect(distanceBetweenGeometriesKm(line([0, -80], [0, -90]), line([90, -85], [90, -90]))).toBe(0);
+    // The two lines are on one meridian, so the nearest points are the ends at 80 and at -85.
+    expect(distanceBetweenGeometriesKm(line([0, 80], [0, 90]), line([0, -85], [0, -90]))).toBeCloseTo(km(165), 9);
+  });
+
+  it("is the gap from a cap around a pole to a line, and 0 for a pole in the cap", () => {
+    const cap = square(-180, 80, 180, 90);
+    expect(distanceBetweenGeometriesKm(cap, line([0, 70], [10, 70]))).toBeCloseTo(km(10), 9);
+    expect(distanceBetweenGeometriesKm(line([0, 70], [10, 70]), cap)).toBeCloseTo(km(10), 9);
+    expect(distanceBetweenGeometriesKm(cap, point(45, 90))).toBe(0);
+    expect(distanceBetweenGeometriesKm(cap, line([33, 85], [34, 86]))).toBe(0);
+  });
+
+  it("is the smallest distance between the members of collections", () => {
+    const a: Geometry = { type: "GeometryCollection", geometries: [point(40, 0), line([0, 20], [10, 20])] };
+    const b: Geometry = { type: "MultiPolygon", coordinates: [square(10, -5, 20, 5).coordinates, square(45, -1, 50, 1).coordinates] };
+    expect(distanceBetweenGeometriesKm(a, b)).toBeCloseTo(km(5), 9);
+    expect(distanceBetweenGeometriesKm(b, a)).toBe(distanceBetweenGeometriesKm(a, b));
+  });
+
+  it("is Infinity when a geometry has no position, in the two orders", () => {
+    const empty: Geometry = { type: "GeometryCollection", geometries: [] };
+    expect(distanceBetweenGeometriesKm(empty, square(0, 0, 1, 1))).toBe(Number.POSITIVE_INFINITY);
+    expect(distanceBetweenGeometriesKm(square(0, 0, 1, 1), { type: "MultiPoint", coordinates: [] })).toBe(Number.POSITIVE_INFINITY);
+    expect(distanceBetweenGeometriesKm(line(), empty)).toBe(Number.POSITIVE_INFINITY);
+    expect(distanceBetweenGeometriesMeters({ type: "Polygon", coordinates: [] }, point(0, 0))).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("gives metres as kilometres times 1000, and scales with the radius", () => {
+    const a = line([0, 0], [10, 0]);
+    const b = square(12, 3, 20, 9);
+    const inKm = distanceBetweenGeometriesKm(a, b);
+    expect(inKm).toBeGreaterThan(0);
+    expect(distanceBetweenGeometriesMeters(a, b)).toBeCloseTo(inKm * 1000, 6);
+    expect(distanceBetweenGeometriesKm(a, b, 1)).toBeCloseTo(inKm / EARTH_MEAN_RADIUS_KM, 12);
+  });
+
+  it("refuses a radius that is not more than 0", () => {
+    expect(codeOf(() => distanceBetweenGeometriesKm(point(0, 0), point(1, 1), 0)).code).toBe("radius");
+    expect(codeOf(() => distanceBetweenGeometriesMeters(point(0, 0), point(1, 1), Number.NaN)).code).toBe("not-finite");
+  });
+
+  it("refuses an incorrect geometry with a path that starts with a or b", () => {
+    const open = { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1]]] } as Polygon;
+    expect(codeOf(() => distanceBetweenGeometriesKm(line([0, 0], [1, 1]), open))).toEqual({ code: "ring-not-closed", path: "b.coordinates[0]" });
+    expect(codeOf(() => distanceBetweenGeometriesKm(line([0, 0], [1e12, 0]), open))).toEqual({ code: "longitude-range", path: "a.coordinates[1]" });
+    const nested: Geometry = { type: "GeometryCollection", geometries: [point(0, 0), line([0, 0], [600, 0])] };
+    expect(codeOf(() => distanceBetweenGeometriesKm(point(0, 0), nested))).toEqual({
+      code: "longitude-range",
+      path: "b.geometries[1].coordinates[1]",
+    });
+    expect(codeOf(() => distanceBetweenGeometriesKm({ type: "Circle" } as unknown as Geometry, point(0, 0)))).toEqual({
+      code: "geojson-type",
+      path: "a",
+    });
+  });
+});
+
+// The reference of two edges: the smallest distance over a grid of pairs of points of the two edges, refined near the
+// best pair. It uses distanceKm, so it does not share the formula of the function under test.
+const PAIR_SAMPLES = 200;
+
+function golden(at: (t: number) => number, from: number, to: number): number {
+  let low = from;
+  let high = to;
+  const ratio = (Math.sqrt(5) - 1) / 2;
+  for (let round = 0; round < 60; round += 1) {
+    const p = high - ratio * (high - low);
+    const q = low + ratio * (high - low);
+    if (at(p) < at(q)) high = q;
+    else low = p;
+  }
+  return at(low) < at(high) ? low : high;
+}
+
+function pairReference(
+  [a, b]: readonly [Position, Position],
+  [c, d]: readonly [Position, Position],
+): { sampled: number; refined: number; steps: number } {
+  const at = (u: number, v: number): number => distanceKm(pointAt(a, b, u), pointAt(c, d, v));
+  let sampled = Number.POSITIVE_INFINITY;
+  let u = 0;
+  let v = 0;
+  for (let i = 0; i <= PAIR_SAMPLES; i += 1) {
+    for (let j = 0; j <= PAIR_SAMPLES; j += 1) {
+      const value = at(i / PAIR_SAMPLES, j / PAIR_SAMPLES);
+      if (value < sampled) {
+        sampled = value;
+        u = i / PAIR_SAMPLES;
+        v = j / PAIR_SAMPLES;
+      }
+    }
+  }
+  // A descent on one coordinate at a time, in a window of one step around the best pair.
+  const window = 1 / PAIR_SAMPLES;
+  let refined = sampled;
+  for (let round = 0; round < 20; round += 1) {
+    u = golden((t) => at(t, v), Math.max(0, u - window), Math.min(1, u + window));
+    v = golden((t) => at(u, t), Math.max(0, v - window), Math.min(1, v + window));
+    refined = Math.min(refined, at(u, v));
+  }
+  // The arc between two points of an edge at a distance of 1 / PAIR_SAMPLES is not more than one step.
+  const step = (p: Position, q: Position): number => km(Math.hypot(q[0] - p[0], q[1] - p[1]) / PAIR_SAMPLES);
+  return { sampled, refined, steps: step(a, b) + step(c, d) };
+}
+
+/** An edge near a point of the edge `ab`, nearly parallel to it, so that the nearest points can be inside both edges. */
+const nearEdge = ([a, b]: readonly [Position, Position]): fc.Arbitrary<readonly [Position, Position]> =>
+  fc
+    .tuple(
+      uniformDouble({ min: 0, max: 1 }),
+      uniformDouble({ min: -1, max: 1 }),
+      uniformDouble({ min: -1, max: 1 }),
+      uniformDouble({ min: -0.3, max: 0.3 }),
+      uniformDouble({ min: 0.1, max: 1 }),
+    )
+    .map(([u, dy, dx, turn, scale]): readonly [Position, Position] => {
+      const on = pointAt(a, b, u);
+      const ex = b[0] - a[0];
+      const ey = b[1] - a[1];
+      const hx = ((ex * Math.cos(turn) - ey * Math.sin(turn)) * scale) / 2;
+      const hy = ((ex * Math.sin(turn) + ey * Math.cos(turn)) * scale) / 2;
+      const clamp = (y: number): number => Math.max(-90, Math.min(90, y));
+      const x = on.lon + dx;
+      const y = clamp(on.lat + dy);
+      return [[x - hx, clamp(y - hy)], [x + hx, clamp(y + hy)]];
+    });
+
+describe("the distance between two edges, against a dense reference", () => {
+  it("is not more than the reference, and not less than the sample by more than half the steps", () => {
+    fc.assert(
+      fc.property(
+        edge.chain((ab) => fc.tuple(fc.constant(ab), fc.oneof(edge, nearEdge(ab)))),
+        ([ab, cd]) => {
+          const d = distanceBetweenGeometriesKm(line(...ab), line(...cd));
+          const { sampled, refined, steps } = pairReference(ab, cd);
+          expect(d).toBeLessThanOrEqual(refined + 1e-7);
+          expect(d).toBeGreaterThanOrEqual(sampled - steps / 2 - 1e-7);
+        },
+      ),
+      { numRuns: 150 },
     );
   });
 });

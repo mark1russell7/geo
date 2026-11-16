@@ -55,7 +55,12 @@ export {
   MAX_CIRCLE_VERTICES,
   type CircleOptions,
 } from "./circle.ts";
-export { distanceToGeometryKm, distanceToGeometryMeters } from "./distance.ts";
+export {
+  distanceBetweenGeometriesKm,
+  distanceBetweenGeometriesMeters,
+  distanceToGeometryKm,
+  distanceToGeometryMeters,
+} from "./distance.ts";
 export { regionSimplifier, simplifyRegions, type Region } from "./simplify.ts";
 export {
   decodeGeohash,

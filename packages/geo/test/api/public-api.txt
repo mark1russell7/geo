@@ -52,6 +52,8 @@ circleMeters: dist/index.d.ts#circleMeters
 decodeGeohash: dist/index.d.ts#decodeGeohash
 destinationKm: dist/index.d.ts#destinationKm
 destinationMeters: dist/index.d.ts#destinationMeters
+distanceBetweenGeometriesKm: dist/index.d.ts#distanceBetweenGeometriesKm
+distanceBetweenGeometriesMeters: dist/index.d.ts#distanceBetweenGeometriesMeters
 distanceKm: dist/index.d.ts#distanceKm
 distanceMeters: dist/index.d.ts#distanceMeters
 distanceToGeometryKm: dist/index.d.ts#distanceToGeometryKm
@@ -271,6 +273,12 @@ export declare function destinationKm(from: LatLon, bearingDegrees: number, dist
 
 ### dist/index.d.ts#destinationMeters
 export declare function destinationMeters(from: LatLon, bearingDegrees: number, distance: number, radiusMeters?: number): LatLon;
+
+### dist/index.d.ts#distanceBetweenGeometriesKm
+export declare function distanceBetweenGeometriesKm(a: Geometry, b: Geometry, radiusKm?: number): number;
+
+### dist/index.d.ts#distanceBetweenGeometriesMeters
+export declare function distanceBetweenGeometriesMeters(a: Geometry, b: Geometry, radiusMeters?: number): number;
 
 ### dist/index.d.ts#distanceKm
 export declare function distanceKm(a: LatLon, b: LatLon, radiusKm?: number): number;

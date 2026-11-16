@@ -61,6 +61,7 @@ circleKm(paris, 50); // a Polygon of 64 vertices: the area of 50 km around Paris
 | `initialBearing(from, to)` | The bearing at the start of the great circle, from 0 to 360 (360 not included), clockwise from north. |
 | `destinationKm(from, bearing, distance, radiusKm?)`, `destinationMeters(...)` | The point at a distance from a point, on an initial bearing. |
 | `distanceToGeometryKm(point, geometry, radiusKm?)`, `distanceToGeometryMeters(...)` | The great-circle distance from a point to the nearest point of a GeoJSON geometry. It is 0 in a polygon. The section [The distance to a geometry](#the-distance-to-a-geometry) gives the rules. |
+| `distanceBetweenGeometriesKm(a, b, radiusKm?)`, `distanceBetweenGeometriesMeters(...)` | The great-circle distance between the nearest points of two GeoJSON geometries. It is 0 when they have a common point. The section [The distance between two geometries](#the-distance-between-two-geometries) gives the rules. |
 
 The distance and the destination use a sphere, not the ellipsoid of WGS84. Against the ellipsoid, the error of the sphere is up to approximately 0.6 % of the distance.
 
@@ -147,6 +148,21 @@ RFC 7946 (section 3.1) says that an edge is a straight line in longitude and lat
 - A line or a polygon must have its longitudes from -540 to 540 (`MAX_GEOMETRY_LONGITUDE`). A point of the geometry can have each finite longitude.
 
 The function divides each edge into pieces of 1 degree or less. In each piece, it finds the nearest point with a bisection on the slope of the haversine function. The property tests compare each result with a dense sample of the edge, refined by a golden-section search. No result is more than the reference by 1e-7 km or more.
+
+### The distance between two geometries
+
+`distanceBetweenGeometriesKm` and `distanceBetweenGeometriesMeters` give the great-circle distance between the nearest points of two geometries. A test `distance <= buffer` thus tells if an area and its buffer touch a different area.
+
+- The distance is 0 when the geometries have a common point. Then two edges meet, or a position of one geometry is on or in the other. These tests use the exact predicates, as `polygonsIntersect` does.
+- A polygon in a hole of a different polygon does not touch it. Thus its distance is more than 0.
+- Otherwise, the distance is the smallest distance from a position of one geometry to the other geometry, in the two directions. A distance that is not 0 is `Number.MIN_VALUE` or more.
+- A geometry with no position gives `Infinity`.
+- The result does not change when `a` and `b` change places. For a `Point`, the result is equal to the result of `distanceToGeometryKm`.
+- The path of an error starts with `a` or `b`, for the geometry of the error.
+
+An edge in longitude and latitude is not a great circle. Thus the nearest points of two edges can both be inside the edges, and not at a position. A study of 1,600 pairs of edges found no such pair. This result is evidence, not a proof. In each CI run, a property test compares each result with a dense sample of two edges.
+
+The time is in proportion to the product of the numbers of positions. A latitude bound skips the parts that are too far. For large geometries, an index of the edges is the next step.
 
 ### The shape of a circle
 

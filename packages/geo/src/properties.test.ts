@@ -9,7 +9,9 @@ import {
   bboxOfPoints,
   decodeGeohash,
   destinationKm,
+  distanceBetweenGeometriesKm,
   distanceKm,
+  distanceToGeometryKm,
   fromGeoJsonBBox,
   geohash,
   geohashNeighbor,
@@ -22,6 +24,7 @@ import {
   ringWinding,
   toGeoJsonBBox,
   type GeohashDirection,
+  type Geometry,
   type LatLon,
   type Polygon,
   type Position,
@@ -361,22 +364,24 @@ describe("the winding", () => {
   });
 });
 
-describe("the overlap", () => {
-  /**
-   * A polygon moved by 360, and a triangle near 0 with a vertex P on an edge of the polygon before the move. So the two
-   * closed polygons have the point P in common.
-   */
-  const touchingPair: fc.Arbitrary<readonly [Polygon, Polygon]> = fc
-    .tuple(coarseRing, farShift, fc.nat(), edgeFraction, fc.array(uniformDouble({ min: -1, max: 1 }), { minLength: 4, maxLength: 4 }))
-    .map(([near, shift, edge, k, [a = 0, b = 0, c = 0, d = 0]]) => {
-      const { point } = onEdge(near, edge, k);
-      const p: Position = [point.lon, point.lat];
-      return [polygonOf(moved(near, shift)), polygonOf([p, [p[0] + a, p[1] + b], [p[0] + c, p[1] + d], p])] as const;
-    });
+/**
+ * A polygon moved by 360, and a triangle near 0 with a vertex P on an edge of the polygon before the move. So the two
+ * closed polygons have the point P in common.
+ */
+const touchingPair: fc.Arbitrary<readonly [Polygon, Polygon]> = fc
+  .tuple(coarseRing, farShift, fc.nat(), edgeFraction, fc.array(uniformDouble({ min: -1, max: 1 }), { minLength: 4, maxLength: 4 }))
+  .map(([near, shift, edge, k, [a = 0, b = 0, c = 0, d = 0]]) => {
+    const { point } = onEdge(near, edge, k);
+    const p: Position = [point.lon, point.lat];
+    return [polygonOf(moved(near, shift)), polygonOf([p, [p[0] + a, p[1] + b], [p[0] + c, p[1] + d], p])] as const;
+  });
 
+/** A polygon near 0, and a polygon past 180 or past -180, or a wide polygon that no move makes exact. */
+const randomPair = fc.tuple(fineRing(-60, 60).map(polygonOf), fc.oneof(farRing, fineRing(100, 420)).map(polygonOf));
+
+describe("the overlap", () => {
   it("is the same in the two orders, for polygons on the two sides of the antimeridian", () => {
     // The polygon b is past 180 or past -180, or it is wide and no move of it is exact. Or the two polygons touch.
-    const randomPair = fc.tuple(fineRing(-60, 60).map(polygonOf), fc.oneof(farRing, fineRing(100, 420)).map(polygonOf));
     fc.assert(fc.property(fc.oneof(randomPair, touchingPair), ([a, b]) => polygonsIntersect(a, b) === polygonsIntersect(b, a)));
   });
 
@@ -401,6 +406,125 @@ describe("the overlap", () => {
 
   it("includes each polygon with itself", () => {
     fc.assert(fc.property(ring, (a) => polygonsIntersect(polygonOf(a), polygonOf(a))));
+  });
+});
+
+const lineOf = (positions: readonly Position[]): Geometry => ({ type: "LineString", coordinates: [...positions] });
+const pointOf = ({ lat, lon }: LatLon): Geometry => ({ type: "Point", coordinates: [lon, lat] });
+
+/** The edges of a line or of a ring, as pairs of positions. */
+const edgesOf = (positions: readonly Position[]): (readonly [Position, Position])[] =>
+  positions.slice(1).map((q, index) => [positions[index] as Position, q] as const);
+
+/** The sign of the orientation of three positions. For small integers, the products have no rounding. */
+const orient = (p: Position, q: Position, r: Position): number =>
+  Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+
+const inBox = (p: Position, q: Position, r: Position): boolean =>
+  Math.min(p[0], q[0]) <= r[0] && r[0] <= Math.max(p[0], q[0]) && Math.min(p[1], q[1]) <= r[1] && r[1] <= Math.max(p[1], q[1]);
+
+/** The test of two segments with small integer positions: a proper crossing, or an end on the other segment. */
+const segmentsMeet = ([p, q]: readonly [Position, Position], [r, s]: readonly [Position, Position]): boolean => {
+  const o1 = orient(p, q, r);
+  const o2 = orient(p, q, s);
+  const o3 = orient(r, s, p);
+  const o4 = orient(r, s, q);
+  if (o1 * o2 < 0 && o3 * o4 < 0) return true;
+  return (o1 === 0 && inBox(p, q, r)) || (o2 === 0 && inBox(p, q, s)) || (o3 === 0 && inBox(r, s, p)) || (o4 === 0 && inBox(r, s, q));
+};
+
+const linesMeet = (a: readonly Position[], b: readonly Position[]): boolean =>
+  edgesOf(a).some((edgeA) => edgesOf(b).some((edgeB) => segmentsMeet(edgeA, edgeB)));
+
+/** A Point, a LineString or a Polygon on the grid of 1/8 steps, so that two shapes often touch. */
+const coarseGeometry: fc.Arbitrary<Geometry> = fc.oneof(
+  coarseRing.map(polygonOf),
+  coarseRing.map((positions) => lineOf(positions.slice(0, -1))),
+  gridPoint.map(pointOf),
+);
+
+/** A Polygon or a LineString with fine bits, near 0, past 180, past -180 or wide, or a Point with fine bits. */
+const fineGeometry: fc.Arbitrary<Geometry> = fc.oneof(
+  fineRing(-60, 60).map(polygonOf),
+  farRing.map(polygonOf),
+  farRing.map(lineOf),
+  fineRing(100, 420).map(lineOf),
+  finePoint.map(pointOf),
+);
+
+/** A line of small integer positions. */
+const integerLine = fc.array(fc.tuple(fc.integer({ min: -6, max: 6 }), fc.integer({ min: -6, max: 6 })), { minLength: 2, maxLength: 5 });
+
+describe("the distance between two geometries", () => {
+  it("does not change when the two geometries change places", () => {
+    const pair = fc.oneof(fc.tuple(coarseGeometry, coarseGeometry), fc.tuple(fineGeometry, fineGeometry), randomPair, touchingPair);
+    fc.assert(
+      fc.property(pair, ([a, b]) => {
+        expect(distanceBetweenGeometriesKm(a, b)).toBe(distanceBetweenGeometriesKm(b, a));
+      }),
+    );
+  });
+
+  it("is the distance of distanceToGeometryKm for a Point, in the two orders", () => {
+    fc.assert(
+      fc.property(fc.oneof(gridPoint, finePoint, point), fc.oneof(coarseGeometry, fineGeometry), (p, geometry) => {
+        const expected = distanceToGeometryKm(p, geometry);
+        expect(distanceBetweenGeometriesKm(pointOf(p), geometry)).toBe(expected);
+        expect(distanceBetweenGeometriesKm(geometry, pointOf(p))).toBe(expected);
+      }),
+    );
+  });
+
+  it("is 0 exactly when polygonsIntersect gives true", () => {
+    const pair = fc.oneof(
+      fc.tuple(ring.map(polygonOf), ring.map(polygonOf)),
+      fc.tuple(coarseRing.map(polygonOf), coarseRing.map(polygonOf)),
+      randomPair,
+      touchingPair,
+    );
+    fc.assert(
+      fc.property(pair, ([a, b]) => {
+        expect(distanceBetweenGeometriesKm(a, b) === 0).toBe(polygonsIntersect(a, b));
+        expect(distanceBetweenGeometriesKm(a, b)).toBeGreaterThanOrEqual(0);
+      }),
+    );
+  });
+
+  it("is 0 for a polygon that touches a polygon moved by 360 at one point, in the two orders", () => {
+    fc.assert(
+      fc.property(touchingPair, ([far, touching]) => {
+        expect(distanceBetweenGeometriesKm(far, touching)).toBe(0);
+        expect(distanceBetweenGeometriesKm(touching, far)).toBe(0);
+      }),
+    );
+  });
+
+  it("is 0 exactly when two lines meet, by an exact test of their segments", () => {
+    fc.assert(
+      fc.property(integerLine, integerLine, (a, b) => {
+        expect(distanceBetweenGeometriesKm(lineOf(a), lineOf(b)) === 0).toBe(linesMeet(a, b));
+      }),
+    );
+  });
+
+  it("is 0 exactly when a line meets an edge of a polygon or has a position in the polygon", () => {
+    fc.assert(
+      fc.property(integerLine, ring, (a, positions) => {
+        const polygon = polygonOf(positions);
+        const meet = linesMeet(a, positions) || a.some(([x, y]) => locatePoint({ lat: y, lon: x }, polygon) !== "outside");
+        expect(distanceBetweenGeometriesKm(lineOf(a), polygon) === 0).toBe(meet);
+        expect(distanceBetweenGeometriesKm(polygon, lineOf(a)) === 0).toBe(meet);
+      }),
+    );
+  });
+
+  it("is 0 when a point is on the two geometries or in them", () => {
+    fc.assert(
+      fc.property(coarseGeometry, coarseGeometry, gridPoint, (a, b, p) => {
+        const onBoth = distanceToGeometryKm(p, a) === 0 && distanceToGeometryKm(p, b) === 0;
+        return !onBoth || distanceBetweenGeometriesKm(a, b) === 0;
+      }),
+    );
   });
 });
 
