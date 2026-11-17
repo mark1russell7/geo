@@ -303,14 +303,16 @@ function edgeMinimum(viewer: Viewer, from: Position, to: Position, best: number,
 /**
  * This function gives a haversine value that is not less than the result of `edgeMinimum` for the edge, for each
  * `best`. It measures one point of the edge, so it is fast.
+ *
+ * The result of `edgeMinimum` is not more than its probe value, or it is `best` when the box bound is not less than
+ * `best`. Thus the larger of the probe value and the box bound is not less than the result, also in floating point.
+ * In exact arithmetic, the box bound is not more than the probe value, so the bound is the probe value.
  */
 function edgeBound(viewer: Viewer, from: Position, to: Position): number {
   const swap = comesBefore(to, from);
   const a = swap ? to : from;
   const b = swap ? from : to;
-  const gap = gapOf(viewer, a, b);
-  const value = probeValue(viewer, a, b);
-  return gap > 0 ? Math.max(gapBound(gap), value) : value;
+  return Math.max(boxBound(viewer, a, b), probeValue(viewer, a, b));
 }
 
 function ringsMinimum(viewer: Viewer, rings: Rings, best: number): number {

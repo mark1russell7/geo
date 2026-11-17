@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.3
+
+- Fix: `simplifyRegions` and `regionSimplifier` give the same output as the search of each position, also near a pole. Since 0.3.2, the search of a span skips each position whose bound is less than the best angle.
+- Before, the bound of a position very near a pole was able to be less than its angle. So the search was able to skip a position with an angle that was larger than the best angle.
+- The fix: the bound is the larger of the box bound and the probe value of the edge. The measure of the angle uses these two values. So the bound is not less than the angle, also in floating point.
+- A property test of CI found this fault with a viewer at the south pole. A new test keeps that case.
+- PATCH: a bug fix with no change of the public API. Thus the version is a PATCH change.
+
 ## 0.5.2
 
 - `bboxCenter` gives the middle of a box: the middle of its latitudes, and the middle of its arc of longitudes. For a box that crosses the antimeridian, the middle is on the arc across the antimeridian.
