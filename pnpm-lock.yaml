@@ -168,13 +168,13 @@ importers:
     devDependencies:
       '@mark1russell7/api-report':
         specifier: ^0.5.6
-        version: 0.5.6
+        version: 0.5.9
       '@mark1russell7/boundaries':
         specifier: ^0.2.1
         version: 0.2.1(@swc/core@1.16.22)(dependency-cruiser@18.7.2)
       '@mark1russell7/conventions':
-        specifier: ^0.41.5
-        version: 0.41.12
+        specifier: ^0.43.0
+        version: 0.43.0
       '@mark1russell7/cue':
         specifier: ^2.0.0
         version: 2.1.4
@@ -183,7 +183,7 @@ importers:
         version: 0.3.2
       '@mark1russell7/template-cli':
         specifier: ^0.1.7
-        version: 0.1.7
+        version: 0.1.9
       '@swc/core':
         specifier: ^1.15.0
         version: 1.16.22
@@ -229,7 +229,7 @@ importers:
         version: 2.1.4
       '@mark1russell7/predicates':
         specifier: ^0.1.4
-        version: 0.1.4
+        version: 0.1.5
       '@types/node':
         specifier: ^26.6.5
         version: 26.6.6
@@ -293,8 +293,8 @@ importers:
         specifier: ^2.0.0
         version: 2.1.4
       '@mark1russell7/site-pages':
-        specifier: ^0.4.8
-        version: 0.4.8
+        specifier: ^0.7.0
+        version: 0.7.0
       '@types/d3-geo':
         specifier: ^3.1.1
         version: 3.1.1
@@ -523,8 +523,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mark1russell7/api-report@0.5.6':
-    resolution: {integrity: sha512-WgMnxnLhm7UoZL8aaosuAk8eik69SyhgoJ6y5rSwwX4A4v9kr98/DV+uGZE6B0XsO0oCg6cg57DhPMQKapKyrw==}
+  '@mark1russell7/api-report@0.5.9':
+    resolution: {integrity: sha512-xnd9PUUBlwjYCBe7lAVmWfKv1qgl8gqkjehkXnfduCVVMyZPbIlxgqy5lSfgCzCVyZfgTW2AoOYcbIJMhJcxJQ==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -540,8 +540,8 @@ packages:
       dependency-cruiser:
         optional: true
 
-  '@mark1russell7/conventions@0.41.12':
-    resolution: {integrity: sha512-KR/hoz40N21xdcxVwyojHH0m4ZwC5PhetuKcxLru5kKfAKKawyN7KV+mWSkDgJEg93CB6ZJI2+wX2dN4l86tRg==}
+  '@mark1russell7/conventions@0.43.0':
+    resolution: {integrity: sha512-6qPRXFHb6Ac3mIAjOoXrlosq1WurWQmcjk9hdf11jhJdRqY+lZl1oYmh9Whw3sXsYSEu/UDlxzBOQgSOB6ks/A==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -562,10 +562,6 @@ packages:
     resolution: {integrity: sha512-vS5jF21WC/VApRv4p8afRZahcMl9cuNp03LxbVngY9nYkzq+S7Oit6ksySt2baML+tp46UF60sxnHxn1jlwtTg==}
     engines: {node: '>=22.12'}
 
-  '@mark1russell7/predicates@0.1.4':
-    resolution: {integrity: sha512-1lh7XAAejuygPdes/Ze4XV+p+CqxzLGRW9aUwavnSk5hhnc5YkhZN2rjz1ps7oEC9eImd2yfmbt6QKZktT4XPQ==}
-    engines: {node: '>=22'}
-
   '@mark1russell7/predicates@0.1.5':
     resolution: {integrity: sha512-WXgTOliDm5650i3adkTjAj85Uzp22LD7KQFqwhETlQWG4CK3pDnd4I4ef9YrOAfzik1uTdChVk8RZaqdeP+YxA==}
     engines: {node: '>=22'}
@@ -582,10 +578,6 @@ packages:
 
   '@mark1russell7/rigor-generators@0.1.16':
     resolution: {integrity: sha512-C94Q4C31aZ8UXx1R0JSBV7DiQFl5tVpbFxHxHzHaSqr3dTgmCkEvLrvlUV8/0/GZqPhQYG9cbX6GOlqfRj/h4g==}
-    engines: {node: '>=22'}
-
-  '@mark1russell7/rigor-statistics@0.1.29':
-    resolution: {integrity: sha512-Wh91NJIwxIRN3+a5V2bqUkMhdPcjHI+gVZBCnohf12ZegdSTNqGlpqS2WXYmrRVjasF9EBgm1lC8GQNYpBSg7Q==}
     engines: {node: '>=22'}
 
   '@mark1russell7/rigor-statistics@0.2.4':
@@ -616,8 +608,8 @@ packages:
       fast-check:
         optional: true
 
-  '@mark1russell7/site-pages@0.4.8':
-    resolution: {integrity: sha512-uN7SV7VxrsMyH7/cPOUClFOnJhw24S2+qVaMIoNK+7AtJe3FB4l5qN2NowKAYvYgLcDpY4gUBlw9meJ6/Gq2pQ==}
+  '@mark1russell7/site-pages@0.7.0':
+    resolution: {integrity: sha512-nFiaxs1D/IAxj54KUow0AkU35fxWj6iCHAcQ2GG2ISv0yD+YwnOoDHNmO1mV1g+roRV7G5czJNZlzv+3lcT2vg==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -626,8 +618,8 @@ packages:
     engines: {node: '>=22'}
     hasBin: true
 
-  '@mark1russell7/template-cli@0.1.7':
-    resolution: {integrity: sha512-Wy4xa6OgNXyMunSyXOArxmrspLSCuyw1pf1P5X45Uiwe1aWHzn0LJptUYVGUSwT3GTp9FGVDhFMeOnKlapD3Xw==}
+  '@mark1russell7/template-cli@0.1.9':
+    resolution: {integrity: sha512-7ebtLlCmT6KYhbpoI2SZHXCQC6/7Rc660SvKwQvfslseSQrXMRlmBj+1/F5KOCep6aB+LtvGWg+HmTKi6uZjyQ==}
     engines: {node: '>=22.12'}
     hasBin: true
 
@@ -1912,16 +1904,16 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.3
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@mark1russell7/api-report@0.5.6':
+  '@mark1russell7/api-report@0.5.9':
     dependencies:
-      '@mark1russell7/conventions': 0.41.12
+      '@mark1russell7/conventions': 0.43.0
 
   '@mark1russell7/boundaries@0.2.1(@swc/core@1.16.22)(dependency-cruiser@18.7.2)':
     optionalDependencies:
       '@swc/core': 1.16.22
       dependency-cruiser: 18.7.2
 
-  '@mark1russell7/conventions@0.41.12':
+  '@mark1russell7/conventions@0.43.0':
     dependencies:
       yaml: 2.9.1
 
@@ -1930,7 +1922,7 @@ snapshots:
   '@mark1russell7/geo@0.3.1':
     dependencies:
       '@mark1russell7/optional': 1.2.0
-      '@mark1russell7/predicates': 0.1.4
+      '@mark1russell7/predicates': 0.1.5
 
   '@mark1russell7/geo@0.4.4':
     dependencies:
@@ -1938,8 +1930,6 @@ snapshots:
       '@mark1russell7/predicates': 0.1.5
 
   '@mark1russell7/optional@1.2.0': {}
-
-  '@mark1russell7/predicates@0.1.4': {}
 
   '@mark1russell7/predicates@0.1.5': {}
 
@@ -1953,10 +1943,6 @@ snapshots:
 
   '@mark1russell7/rigor-generators@0.1.16': {}
 
-  '@mark1russell7/rigor-statistics@0.1.29':
-    dependencies:
-      '@mark1russell7/rigor-generators': 0.1.16
-
   '@mark1russell7/rigor-statistics@0.2.4':
     dependencies:
       '@mark1russell7/rigor-generators': 0.1.16
@@ -1965,15 +1951,15 @@ snapshots:
     optionalDependencies:
       fast-check: 4.10.2
 
-  '@mark1russell7/site-pages@0.4.8':
+  '@mark1russell7/site-pages@0.7.0':
     dependencies:
-      '@mark1russell7/rigor-statistics': 0.1.29
+      '@mark1russell7/rigor-statistics': 0.2.4
 
   '@mark1russell7/ste-lint@0.3.2':
     dependencies:
       typescript: 6.0.3
 
-  '@mark1russell7/template-cli@0.1.7':
+  '@mark1russell7/template-cli@0.1.9':
     dependencies:
       '@clack/prompts': 1.9.0
 
