@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.4
+
+- The new entry `@mark1russell7/geo/projection` has map projections: `WEB_MERCATOR` (EPSG:3857) and `azimuthalEquidistant(center, ellipsoid?)`, for the area around a center.
+- Each `Projection` has `toPlane`, `fromPlane` and `scale`. The plane is in metres, with x to the east and y to the north. `scale` gives the largest and the smallest scale factors at a point, for a scale bar.
+- The distance and the bearing from the center of `azimuthalEquidistant` are exact, from `geodesicInverse`. Its scale across a geodesic comes from the reduced length of the geodesic.
+- A latitude out of the range of Web Mercator gives the code `latitude-range`. The codes of `GeoErrorCode` do not change.
+- The root entry does not change.
+- PATCH: a new entry before 1.0.0. The change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.5.3
 
 - Fix: `simplifyRegions` and `regionSimplifier` give the same output as the search of each position, also near a pole. Since 0.3.2, the search of a span skips each position whose bound is less than the best angle.

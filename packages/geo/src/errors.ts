@@ -8,7 +8,8 @@
  * The reason of a refusal.
  *
  * - `not-finite`: a number is `NaN` or infinite.
- * - `latitude-range`: a latitude is not from -90 to 90.
+ * - `latitude-range`: a latitude is not from -90 to 90. Or a latitude is out of the range of a projection, for example
+ *   more than `WEB_MERCATOR_MAX_LATITUDE` for Web Mercator.
  * - `longitude-range`: a longitude of a box is not from -180 to 180. Or a longitude of a polygon in a test is not from
  *   -540 to 540 (`MAX_GEOMETRY_LONGITUDE`).
  * - `not-a-point`: a value is not an object with the numbers `lat` and `lon`.
