@@ -1,6 +1,6 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It gives a circle around a point and the buffer of a geometry as GeoJSON polygons. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It gives a circle around a point and the buffer of a geometry as GeoJSON polygons. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946. The entry `@mark1russell7/geo/projection` has map projections to a plane in metres.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
@@ -142,6 +142,19 @@ The section [Geodesics](#geodesics) gives the method and the accuracy.
 | `regionSimplifier(regions, radiusKm?)` | Prepares the shared borders one time, and gives a function that simplifies the regions for a tolerance. Use it for many zoom levels. |
 | `Region` | A `Polygon` or a `MultiPolygon`. |
 
+### Projections
+
+The entry `@mark1russell7/geo/projection` has the map projections. A projection changes a point to a point on a plane in metres, with x to the east and y to the north.
+
+| Name | What it does |
+| --- | --- |
+| `WEB_MERCATOR` | The projection of web maps (EPSG:3857), on the plane of the tiles of OpenStreetMap. |
+| `azimuthalEquidistant(center, ellipsoid?)` | A projection for the area around a center. The distance and the bearing from the center to each point are exact. |
+| `Projection` | `toPlane(point)`, `fromPlane(point)`, `scale(point)` and the `name` for a legend. |
+| `PlanePoint` | A point `{ x, y }` on the plane, in metres. |
+| `ProjectionScale` | The largest and the smallest scale factors at a point. |
+| `WEB_MERCATOR_MAX_LATITUDE`, `WEB_MERCATOR_MAX_METERS` | The limits of Web Mercator: approximately 85.0511 degrees and 20037508.34 m. |
+
 ### Geohashes
 
 | Name | What it does |
@@ -263,6 +276,15 @@ A position of one region on an edge of another region does not join the two regi
 - `geodesicDirect` accepts each finite distance. A negative distance goes in the opposite direction of the bearing.
 - The geodesic functions compute the coefficients of each ellipsoid one time, and keep them while the ellipsoid object stays.
 
+### Projections
+
+- `WEB_MERCATOR` uses the formulas of a sphere with the radius 6378137 m on the coordinates of WGS84, as EPSG:3857 does. Thus it is not conformal on the ellipsoid. At the equator, its scale along a meridian is approximately 1.0067, and along the parallel it is 1.
+- `WEB_MERCATOR.toPlane` refuses a latitude out of `-WEB_MERCATOR_MAX_LATITUDE` to `WEB_MERCATOR_MAX_LATITUDE` with the code `latitude-range`. It normalizes each longitude first.
+- `azimuthalEquidistant` uses `geodesicInverse` and `geodesicDirect`. The distance on the plane from the center is the length of the geodesic, and the direction is its bearing. At the center, north is up.
+- The scale of `azimuthalEquidistant` along a geodesic from the center is 1. Across the geodesic, it is `s / m12`, with the reduced length `m12`. At 20 km from the center, it is less than 1.000002.
+- Each `fromPlane` accepts each finite point of the plane. The longitude of its result is normalized.
+- A map simplifies its regions with `simplifyRegions` first, on the Earth. Then it changes each position with `toPlane`.
+
 ### Exact results
 
 The orientation and segment tests are exact. A test across the antimeridian also moves the point or a polygon by a multiple of 360 degrees.
@@ -338,7 +360,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | Code | The cause |
 | --- | --- |
 | `not-finite` | A number is `NaN` or infinite. |
-| `latitude-range`, `longitude-range` | A latitude is out of -90 to 90, a longitude of a `BBox` is out of -180 to 180, or a longitude of a polygon in a test is out of -540 to 540. A GeoJSON `bbox` and `parseGeoJson` accept each finite longitude. |
+| `latitude-range`, `longitude-range` | A latitude is out of -90 to 90 or out of the range of a projection, a longitude of a `BBox` is out of -180 to 180, or a longitude of a polygon in a test is out of -540 to 540. A GeoJSON `bbox` and `parseGeoJson` accept each finite longitude. |
 | `not-a-point` | A value is not an object with the numbers `lat` and `lon`. |
 | `geojson-type`, `geojson-member` | A GeoJSON object has an unknown type, or a member is missing or incorrect. |
 | `position`, `too-few-positions`, `ring-not-closed` | A position, a line or a ring is incorrect. |

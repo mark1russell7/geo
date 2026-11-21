@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "@mark1russell7/geo",
-  "version": "0.5.3",
-  "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, and geohashes.",
+  "version": "0.5.4",
+  "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, geohashes, and map projections to a plane in metres.",
   "keywords": [
     "geo",
     "geojson",
@@ -12,7 +12,9 @@
     "point-in-polygon",
     "bounding-box",
     "antimeridian",
-    "geohash"
+    "geohash",
+    "projection",
+    "web-mercator"
   ],
   "homepage": "https://github.com/mark1russell7/geo/tree/main/packages/geo#readme",
   "bugs": {
@@ -27,6 +29,11 @@
   "type": "module",
   "sideEffects": false,
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./projection": "./src/projection.ts",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "!dist/.tsbuildinfo"
@@ -43,6 +50,11 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js",
         "default": "./dist/index.js"
+      },
+      "./projection": {
+        "types": "./dist/projection.d.ts",
+        "import": "./dist/projection.js",
+        "default": "./dist/projection.js"
       },
       "./package.json": "./package.json"
     }

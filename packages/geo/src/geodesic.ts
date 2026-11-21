@@ -110,8 +110,12 @@ interface Shape {
   readonly C3x: Float64Array;
 }
 
-/** The sine and the cosine of an angle. */
-interface SinCos {
+/**
+ * The sine and the cosine of an angle.
+ *
+ * @internal
+ */
+export interface SinCos {
   readonly s: number;
   readonly c: number;
 }
@@ -216,8 +220,12 @@ function sinCosQuadrant(d: number, q: number, signOf: number): SinCos {
   return { s: sinx, c: cosx };
 }
 
-/** This function gives the sine and the cosine of an angle in degrees, with an exact reduction to -45 to 45. */
-function sincosd(x: number): SinCos {
+/**
+ * This function gives the sine and the cosine of an angle in degrees, with an exact reduction to -45 to 45.
+ *
+ * @internal
+ */
+export function sincosd(x: number): SinCos {
   const d = x % 360;
   const q = Math.round(d / 90);
   return sinCosQuadrant(d - 90 * q, q, x);
@@ -230,8 +238,12 @@ function sincosde(x: number, t: number): SinCos {
   return sinCosQuadrant(angRound(d - 90 * q + t), q, x + t);
 }
 
-/** This function gives `atan2(y, x)` in degrees, from -180 to 180, with an exact reduction to -45 to 45. */
-function atan2d(yIn: number, xIn: number): number {
+/**
+ * This function gives `atan2(y, x)` in degrees, from -180 to 180, with an exact reduction to -45 to 45.
+ *
+ * @internal
+ */
+export function atan2d(yIn: number, xIn: number): number {
   let y = yIn;
   let x = xIn;
   let q = 0;
@@ -820,16 +832,20 @@ function inverse(shape: Shape, lat1In: number, lon1: number, lat2In: number, lon
   return { s12: 0 + s12x, salp1, calp1, salp2, calp2 };
 }
 
-/** The solution of the direct problem: the end point and the sine and the cosine of the final azimuth. */
+/**
+ * The solution of the direct problem: the end point, the sine and the cosine of the final azimuth, and the reduced length
+ * `m12` in metres. The reduced length is `NaN` when the caller does not ask for it.
+ */
 interface DirectSolution {
   readonly lat2: number;
   readonly lon2: number;
   readonly salp2: number;
   readonly calp2: number;
+  readonly m12: number;
 }
 
 /** This function solves the direct problem for a latitude from -90 to 90 and finite values. */
-function direct(shape: Shape, lat1: number, lon1: number, azi1: number, s12: number): DirectSolution {
+function direct(shape: Shape, lat1: number, lon1: number, azi1: number, s12: number, reduced = false): DirectSolution {
   const alp1 = sincosd(angRound(angNormalize(azi1)));
   const salp1 = alp1.s;
   const calp1 = alp1.c;
@@ -907,12 +923,45 @@ function direct(shape: Shape, lat1: number, lon1: number, azi1: number, s12: num
   const omg12 = Math.atan2(somg2 * comg1 - comg2 * somg1, comg2 * comg1 + somg2 * somg1);
   const lam12 = omg12 + A3c * (sig12 + (sinSeries(ssig2, csig2, C3a) - B31));
   const lon12 = lam12 / DEGREE;
+  let m12 = Number.NaN;
+  if (reduced) {
+    // The values of the line at its two ends, as in GeodesicLine.js: dn = sqrt(1 + k2 sin(sig)^2).
+    const dn1 = Math.sqrt(1 + k2 * sq(ssig1));
+    const dn2 = Math.sqrt(1 + k2 * sq(ssig2));
+    m12 = lengths(eps, sig12, ssig1, csig1, dn1, ssig2, csig2, dn2, "reduced", new Float64Array(7), new Float64Array(7)).m12b * shape.b;
+  }
   return {
     lat2: atan2d(sbet2, shape.f1 * cbet2),
     lon2: angNormalize(angNormalize(lon1) + angNormalize(lon12)),
     salp2,
     calp2,
+    m12,
   };
+}
+
+/**
+ * This function examines an ellipsoid. It refuses a radius or a flattening that is not correct.
+ *
+ * @internal
+ * @throws GeoError - The code is `not-finite` or `radius`.
+ */
+export function checkEllipsoid(ellipsoid: Ellipsoid): void {
+  shapeOf(ellipsoid);
+}
+
+/**
+ * This function gives the reduced length `m12` of a geodesic in metres, from its start point, its bearing and its length.
+ * A change `dα` of the initial bearing in radians moves the end point `m12 dα` metres, at right angles to the geodesic.
+ * On a sphere of the radius `R`, the reduced length is `R sin(s / R)`.
+ *
+ * @internal
+ * @throws GeoError - The code is `not-finite`, `latitude-range` or `radius`.
+ */
+export function geodesicReducedLength(from: LatLon, bearingDegrees: number, meters: number, ellipsoid: Ellipsoid = WGS84): number {
+  checkPoint(from);
+  checkFinite(bearingDegrees, "bearing");
+  checkFinite(meters, "distance");
+  return direct(shapeOf(ellipsoid), from.lat, from.lon, bearingDegrees, meters, true).m12;
 }
 
 function checkFinite(value: number, name: string): void {
