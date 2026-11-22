@@ -15,24 +15,27 @@ DEFAULT_MAX_BUFFER_CELLS: dist/index.d.ts#DEFAULT_MAX_BUFFER_CELLS
 DEFAULT_MAX_GEOHASH_CELLS: dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
 EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
 EARTH_MEAN_RADIUS_METERS: dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
-type Ellipsoid: dist/geodesic.chunk.d.ts#Ellipsoid
+type Ellipsoid: dist/projection.chunk.d.ts#Ellipsoid
 type Feature: dist/index.d.ts#Feature
 type FeatureCollection: dist/index.d.ts#FeatureCollection
 GEOHASH_ALPHABET: dist/index.d.ts#GEOHASH_ALPHABET
-GeoError: dist/geodesic.chunk.d.ts#GeoError
-type GeoErrorCode: dist/geodesic.chunk.d.ts#GeoErrorCode
+GeoError: dist/projection.chunk.d.ts#GeoError
+type GeoErrorCode: dist/projection.chunk.d.ts#GeoErrorCode
 type GeoJson: dist/index.d.ts#GeoJson
 type GeoJsonBBox: dist/index.d.ts#GeoJsonBBox
 type GeoJsonObject: dist/index.d.ts#GeoJsonObject
 type GeoJsonProperties: dist/index.d.ts#GeoJsonProperties
-type GeodesicDirect: dist/geodesic.chunk.d.ts#GeodesicDirect
-type GeodesicInverse: dist/geodesic.chunk.d.ts#GeodesicInverse
+type GeodesicDirect: dist/projection.chunk.d.ts#GeodesicDirect
+type GeodesicInverse: dist/projection.chunk.d.ts#GeodesicInverse
 type GeohashCell: dist/index.d.ts#GeohashCell
 type GeohashDirection: dist/index.d.ts#GeohashDirection
 type GeohashNeighbors: dist/index.d.ts#GeohashNeighbors
 type Geometry: dist/index.d.ts#Geometry
 type GeometryCollection: dist/index.d.ts#GeometryCollection
-type LatLon: dist/geodesic.chunk.d.ts#LatLon
+type LatLon: dist/projection.chunk.d.ts#LatLon
+type LineOptions: dist/index.d.ts#LineOptions
+type LineReference: dist/index.d.ts#LineReference
+type LineSide: dist/index.d.ts#LineSide
 type LineString: dist/index.d.ts#LineString
 MAX_CIRCLE_VERTICES: dist/index.d.ts#MAX_CIRCLE_VERTICES
 MAX_DENSIFY_POSITIONS: dist/index.d.ts#MAX_DENSIFY_POSITIONS
@@ -42,15 +45,16 @@ MAX_GEOMETRY_LONGITUDE: dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
 type MultiLineString: dist/index.d.ts#MultiLineString
 type MultiPoint: dist/index.d.ts#MultiPoint
 type MultiPolygon: dist/index.d.ts#MultiPolygon
+type NearestOnLine: dist/index.d.ts#NearestOnLine
 type Point: dist/index.d.ts#Point
 type PointLocation: dist/index.d.ts#PointLocation
 type PointLocator: dist/index.d.ts#PointLocator
 type Polygon: dist/index.d.ts#Polygon
-type Position: dist/geodesic.chunk.d.ts#Position
+type Position: dist/projection.chunk.d.ts#Position
 type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
 type UnitVector: dist/index.d.ts#UnitVector
-WGS84: dist/geodesic.chunk.d.ts#WGS84
+WGS84: dist/projection.chunk.d.ts#WGS84
 bboxCenter: dist/index.d.ts#bboxCenter
 bboxContains: dist/index.d.ts#bboxContains
 bboxIntersects: dist/index.d.ts#bboxIntersects
@@ -73,22 +77,26 @@ distanceToGeometryKm: dist/index.d.ts#distanceToGeometryKm
 distanceToGeometryMeters: dist/index.d.ts#distanceToGeometryMeters
 followsRightHandRule: dist/index.d.ts#followsRightHandRule
 fromGeoJsonBBox: dist/index.d.ts#fromGeoJsonBBox
-fromPosition: dist/geodesic.chunk.d.ts#fromPosition
+fromPosition: dist/projection.chunk.d.ts#fromPosition
 fromUnitVector: dist/index.d.ts#fromUnitVector
-geodesicDirect: dist/geodesic.chunk.d.ts#geodesicDirect
-geodesicInverse: dist/geodesic.chunk.d.ts#geodesicInverse
+geodesicDirect: dist/projection.chunk.d.ts#geodesicDirect
+geodesicInverse: dist/projection.chunk.d.ts#geodesicInverse
 geohash: dist/index.d.ts#geohash
 geohashNeighbor: dist/index.d.ts#geohashNeighbor
 geohashNeighbors: dist/index.d.ts#geohashNeighbors
 geohashesInBBox: dist/index.d.ts#geohashesInBBox
 initialBearing: dist/index.d.ts#initialBearing
 intermediatePoint: dist/index.d.ts#intermediatePoint
-latLon: dist/geodesic.chunk.d.ts#latLon
+joinLines: dist/index.d.ts#joinLines
+latLon: dist/projection.chunk.d.ts#latLon
+lineReference: dist/index.d.ts#lineReference
 locatePoint: dist/index.d.ts#locatePoint
-normalizeLon: dist/geodesic.chunk.d.ts#normalizeLon
+nearestOnLine: dist/index.d.ts#nearestOnLine
+normalizeLon: dist/projection.chunk.d.ts#normalizeLon
 parseGeoJson: dist/index.d.ts#parseGeoJson
 parseGeometry: dist/index.d.ts#parseGeometry
-parseLatLon: dist/geodesic.chunk.d.ts#parseLatLon
+parseLatLon: dist/projection.chunk.d.ts#parseLatLon
+pointAlongLine: dist/index.d.ts#pointAlongLine
 pointLocator: dist/index.d.ts#pointLocator
 polygonIntersectsBBox: dist/index.d.ts#polygonIntersectsBBox
 polygonsIntersect: dist/index.d.ts#polygonsIntersect
@@ -97,82 +105,20 @@ rewind: dist/index.d.ts#rewind
 ringWinding: dist/index.d.ts#ringWinding
 simplifyRegions: dist/index.d.ts#simplifyRegions
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
-toPosition: dist/geodesic.chunk.d.ts#toPosition
+toPosition: dist/projection.chunk.d.ts#toPosition
 toUnitVector: dist/index.d.ts#toUnitVector
 
 ## ./projection (dist/projection.d.ts): names
 
-PlanePoint: dist/projection.d.ts#PlanePoint
-Projection: dist/projection.d.ts#Projection
-ProjectionScale: dist/projection.d.ts#ProjectionScale
-WEB_MERCATOR: dist/projection.d.ts#WEB_MERCATOR
-WEB_MERCATOR_MAX_LATITUDE: dist/projection.d.ts#WEB_MERCATOR_MAX_LATITUDE
-WEB_MERCATOR_MAX_METERS: dist/projection.d.ts#WEB_MERCATOR_MAX_METERS
-azimuthalEquidistant: dist/projection.d.ts#azimuthalEquidistant
+PlanePoint: dist/projection.chunk.d.ts#PlanePoint
+Projection: dist/projection.chunk.d.ts#Projection
+ProjectionScale: dist/projection.chunk.d.ts#ProjectionScale
+WEB_MERCATOR: dist/projection.chunk.d.ts#WEB_MERCATOR
+WEB_MERCATOR_MAX_LATITUDE: dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_LATITUDE
+WEB_MERCATOR_MAX_METERS: dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_METERS
+azimuthalEquidistant: dist/projection.chunk.d.ts#azimuthalEquidistant
 
 ## Declarations
-
-### dist/geodesic.chunk.d.ts#Ellipsoid
-interface Ellipsoid {
-  readonly equatorialRadiusMeters: number;
-  readonly flattening: number;
-}
-
-### dist/geodesic.chunk.d.ts#GeoError
-declare class GeoError extends RangeError {
-  readonly code: GeoErrorCode;
-  readonly path: string;
-  constructor(code: GeoErrorCode, message: string, path?: string);
-}
-
-### dist/geodesic.chunk.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step";
-
-### dist/geodesic.chunk.d.ts#GeodesicDirect
-interface GeodesicDirect {
-  readonly point: LatLon;
-  readonly finalBearing: number;
-}
-
-### dist/geodesic.chunk.d.ts#GeodesicInverse
-interface GeodesicInverse {
-  readonly meters: number;
-  readonly initialBearing: number;
-  readonly finalBearing: number;
-}
-
-### dist/geodesic.chunk.d.ts#LatLon
-interface LatLon {
-  readonly lat: number;
-  readonly lon: number;
-}
-
-### dist/geodesic.chunk.d.ts#Position
-type Position = readonly [lon: number, lat: number, ...rest: number[]];
-
-### dist/geodesic.chunk.d.ts#WGS84
-declare const WGS84: Ellipsoid;
-
-### dist/geodesic.chunk.d.ts#fromPosition
-declare function fromPosition(position: readonly number[]): LatLon;
-
-### dist/geodesic.chunk.d.ts#geodesicDirect
-declare function geodesicDirect(from: LatLon, bearingDegrees: number, meters: number, ellipsoid?: Ellipsoid): GeodesicDirect;
-
-### dist/geodesic.chunk.d.ts#geodesicInverse
-declare function geodesicInverse(from: LatLon, to: LatLon, ellipsoid?: Ellipsoid): GeodesicInverse;
-
-### dist/geodesic.chunk.d.ts#latLon
-declare function latLon(lat: number, lon: number): LatLon;
-
-### dist/geodesic.chunk.d.ts#normalizeLon
-declare function normalizeLon(lon: number): number;
-
-### dist/geodesic.chunk.d.ts#parseLatLon
-declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
-
-### dist/geodesic.chunk.d.ts#toPosition
-declare function toPosition(point: LatLon): Position;
 
 ### dist/index.d.ts#BBox
 interface BBox {
@@ -268,6 +214,22 @@ interface GeometryCollection extends GeoJsonObject {
   readonly geometries: readonly Geometry[];
 }
 
+### dist/index.d.ts#LineOptions
+interface LineOptions {
+  readonly projection?: Projection;
+}
+
+### dist/index.d.ts#LineReference
+interface LineReference {
+  readonly projection: Projection;
+  readonly lengthMeters: number;
+  readonly nearest: (point: LatLon) => NearestOnLine;
+  readonly pointAt: (alongMeters: number, offsetMeters?: number) => LatLon;
+}
+
+### dist/index.d.ts#LineSide
+type LineSide = -1 | 0 | 1;
+
 ### dist/index.d.ts#LineString
 interface LineString extends GeoJsonObject {
   readonly type: "LineString";
@@ -305,6 +267,14 @@ interface MultiPoint extends GeoJsonObject {
 interface MultiPolygon extends GeoJsonObject {
   readonly type: "MultiPolygon";
   readonly coordinates: readonly (readonly (readonly Position[])[])[];
+}
+
+### dist/index.d.ts#NearestOnLine
+interface NearestOnLine {
+  readonly point: LatLon;
+  readonly meters: number;
+  readonly alongMeters: number;
+  readonly side: LineSide;
 }
 
 ### dist/index.d.ts#Point
@@ -425,14 +395,26 @@ export declare function initialBearing(from: LatLon, to: LatLon): number;
 ### dist/index.d.ts#intermediatePoint
 export declare function intermediatePoint(from: LatLon, to: LatLon, part: number): LatLon;
 
+### dist/index.d.ts#joinLines
+export declare function joinLines(lines: readonly (readonly Position[])[]): Position[][];
+
+### dist/index.d.ts#lineReference
+export declare function lineReference(line: readonly Position[], options?: LineOptions): LineReference;
+
 ### dist/index.d.ts#locatePoint
 export declare function locatePoint(point: LatLon, polygon: Polygon | MultiPolygon): PointLocation;
+
+### dist/index.d.ts#nearestOnLine
+export declare function nearestOnLine(line: readonly Position[], point: LatLon, options?: LineOptions): NearestOnLine;
 
 ### dist/index.d.ts#parseGeoJson
 export declare function parseGeoJson(value: unknown): Result<GeoJson, GeoError>;
 
 ### dist/index.d.ts#parseGeometry
 export declare function parseGeometry(value: unknown): Result<Geometry, GeoError>;
+
+### dist/index.d.ts#pointAlongLine
+export declare function pointAlongLine(line: readonly Position[], alongMeters: number, offsetMeters?: number, options?: LineOptions): LatLon;
 
 ### dist/index.d.ts#pointLocator
 export declare function pointLocator(polygon: Polygon | MultiPolygon): PointLocator;
@@ -461,34 +443,96 @@ export declare function toGeoJsonBBox(box: BBox): GeoJsonBBox;
 ### dist/index.d.ts#toUnitVector
 export declare function toUnitVector(point: LatLon): UnitVector;
 
-### dist/projection.d.ts#PlanePoint
-export interface PlanePoint {
+### dist/projection.chunk.d.ts#Ellipsoid
+interface Ellipsoid {
+  readonly equatorialRadiusMeters: number;
+  readonly flattening: number;
+}
+
+### dist/projection.chunk.d.ts#GeoError
+declare class GeoError extends RangeError {
+  readonly code: GeoErrorCode;
+  readonly path: string;
+  constructor(code: GeoErrorCode, message: string, path?: string);
+}
+
+### dist/projection.chunk.d.ts#GeoErrorCode
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step";
+
+### dist/projection.chunk.d.ts#GeodesicDirect
+interface GeodesicDirect {
+  readonly point: LatLon;
+  readonly finalBearing: number;
+}
+
+### dist/projection.chunk.d.ts#GeodesicInverse
+interface GeodesicInverse {
+  readonly meters: number;
+  readonly initialBearing: number;
+  readonly finalBearing: number;
+}
+
+### dist/projection.chunk.d.ts#LatLon
+interface LatLon {
+  readonly lat: number;
+  readonly lon: number;
+}
+
+### dist/projection.chunk.d.ts#PlanePoint
+interface PlanePoint {
   readonly x: number;
   readonly y: number;
 }
 
-### dist/projection.d.ts#Projection
-export interface Projection {
+### dist/projection.chunk.d.ts#Position
+type Position = readonly [lon: number, lat: number, ...rest: number[]];
+
+### dist/projection.chunk.d.ts#Projection
+interface Projection {
   readonly name: string;
   readonly toPlane: (point: LatLon) => PlanePoint;
   readonly fromPlane: (point: PlanePoint) => LatLon;
   readonly scale: (point: LatLon) => ProjectionScale;
 }
 
-### dist/projection.d.ts#ProjectionScale
-export interface ProjectionScale {
+### dist/projection.chunk.d.ts#ProjectionScale
+interface ProjectionScale {
   readonly max: number;
   readonly min: number;
 }
 
-### dist/projection.d.ts#WEB_MERCATOR
-export declare const WEB_MERCATOR: Projection;
+### dist/projection.chunk.d.ts#WEB_MERCATOR
+declare const WEB_MERCATOR: Projection;
 
-### dist/projection.d.ts#WEB_MERCATOR_MAX_LATITUDE
-export declare const WEB_MERCATOR_MAX_LATITUDE: number;
+### dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_LATITUDE
+declare const WEB_MERCATOR_MAX_LATITUDE: number;
 
-### dist/projection.d.ts#WEB_MERCATOR_MAX_METERS
-export declare const WEB_MERCATOR_MAX_METERS: number;
+### dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_METERS
+declare const WEB_MERCATOR_MAX_METERS: number;
 
-### dist/projection.d.ts#azimuthalEquidistant
-export declare function azimuthalEquidistant(center: LatLon, ellipsoid?: Ellipsoid): Projection;
+### dist/projection.chunk.d.ts#WGS84
+declare const WGS84: Ellipsoid;
+
+### dist/projection.chunk.d.ts#azimuthalEquidistant
+declare function azimuthalEquidistant(center: LatLon, ellipsoid?: Ellipsoid): Projection;
+
+### dist/projection.chunk.d.ts#fromPosition
+declare function fromPosition(position: readonly number[]): LatLon;
+
+### dist/projection.chunk.d.ts#geodesicDirect
+declare function geodesicDirect(from: LatLon, bearingDegrees: number, meters: number, ellipsoid?: Ellipsoid): GeodesicDirect;
+
+### dist/projection.chunk.d.ts#geodesicInverse
+declare function geodesicInverse(from: LatLon, to: LatLon, ellipsoid?: Ellipsoid): GeodesicInverse;
+
+### dist/projection.chunk.d.ts#latLon
+declare function latLon(lat: number, lon: number): LatLon;
+
+### dist/projection.chunk.d.ts#normalizeLon
+declare function normalizeLon(lon: number): number;
+
+### dist/projection.chunk.d.ts#parseLatLon
+declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
+
+### dist/projection.chunk.d.ts#toPosition
+declare function toPosition(point: LatLon): Position;

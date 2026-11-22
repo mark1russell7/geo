@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.5
+
+- `joinLines(lines)` joins lines with a common end into longer lines, for example the parts of one street. The first input line of each result keeps its direction.
+- `lineReference(line, options?)` puts a line on a plane in metres one time. It gives `lengthMeters`, `nearest(point)` and `pointAt(alongMeters, offsetMeters?)`.
+- `nearestOnLine(line, point, options?)` gives the nearest point of a line to a point: the distance, the distance along the line and the side (1 left, -1 right, 0 on the line). The side is exact on the plane, from `orient2dSign` of `@mark1russell7/predicates`.
+- `pointAlongLine(line, alongMeters, offsetMeters?, options?)` gives the point at a distance along a line, moved by an offset to the left or to the right.
+- The default plane is `azimuthalEquidistant` of the entry `/projection` at the first position of the line. `LineOptions` sets a different `projection`.
+- The new types are `LineOptions`, `LineReference`, `LineSide` and `NearestOnLine`. The codes of `GeoErrorCode` do not change.
+- PATCH: new exports before 1.0.0. The change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.5.4
 
 - The new entry `@mark1russell7/geo/projection` has map projections: `WEB_MERCATOR` (EPSG:3857) and `azimuthalEquidistant(center, ellipsoid?)`, for the area around a center.

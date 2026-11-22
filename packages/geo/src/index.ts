@@ -6,6 +6,7 @@
  * It has geohashes and the types of GeoJSON (RFC 7946). It simplifies regions that share borders, and it gives
  * a circle and the buffer of a geometry as polygons, for maps. The README gives the limits of the exact results.
  * For a globe, it gives a point as a unit vector, the points along a great circle, and a geometry with short edges.
+ * For lines, it joins lines at common ends, and it gives the nearest point of a line and a point along a line.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * @packageDocumentation
@@ -66,6 +67,16 @@ export {
 } from "./polygon.ts";
 export { bufferKm, bufferMeters, DEFAULT_MAX_BUFFER_CELLS, type BufferOptions } from "./buffer.ts";
 export { densify, MAX_DENSIFY_POSITIONS } from "./densify.ts";
+export {
+  joinLines,
+  lineReference,
+  nearestOnLine,
+  pointAlongLine,
+  type LineOptions,
+  type LineReference,
+  type LineSide,
+  type NearestOnLine,
+} from "./line.ts";
 export { pointLocator, type PointLocator } from "./locator.ts";
 export {
   circleKm,
