@@ -111,6 +111,19 @@ The section [Geodesics](#geodesics) gives the method and the accuracy.
 | `densify(geometry, maxStep)` | A copy of a geometry with more positions on its edges. No part of an edge is longer than `maxStep` degrees. The section [A globe](#a-globe) gives the rules. |
 | `MAX_DENSIFY_POSITIONS` | The largest number of positions that one call of `densify` adds: 1,000,000. |
 
+### Lines
+
+A line is a list of GeoJSON positions, for example a part of a street. The section [Lines](#lines-1) gives the rules.
+
+| Name | What it does |
+| --- | --- |
+| `joinLines(lines)` | Joins lines with a common end into longer lines, for example the parts of one street. |
+| `lineReference(line, options?)` | Puts a line on a plane in metres one time, for many queries. It gives `lengthMeters`, `nearest(point)` and `pointAt(alongMeters, offsetMeters?)`. |
+| `nearestOnLine(line, point, options?)` | The nearest point of a line to a point, the distance to it, the distance along the line, and the side. |
+| `pointAlongLine(line, alongMeters, offsetMeters?, options?)` | The point at a distance along a line, moved by an offset to the left (positive) or to the right (negative). |
+| `LineOptions` | The `projection` of the plane. The default is `azimuthalEquidistant` at the first position of the line. |
+| `NearestOnLine`, `LineSide`, `LineReference` | The result of `nearest`, the side (1 left, -1 right, 0 on the line), and the result of `lineReference`. |
+
 ### Bounding boxes
 
 | Name | What it does |
@@ -284,6 +297,18 @@ A position of one region on an edge of another region does not join the two regi
 - The scale of `azimuthalEquidistant` along a geodesic from the center is 1. Across the geodesic, it is `s / m12`, with the reduced length `m12`. At 20 km from the center, it is less than 1.000002.
 - Each `fromPlane` accepts each finite point of the plane. The longitude of its result is normalized.
 - A map simplifies its regions with `simplifyRegions` first, on the Earth. Then it changes each position with `toPlane`.
+
+### Lines
+
+- `joinLines` joins two lines when an end of one is equal to an end of the other: the same latitude and the same normalized longitude. At a pole, each longitude is the same end.
+- Each result line starts with the first input line that is not in a result yet, and keeps its direction. The function adds lines at its last end, then at its first end.
+- At an end of three or more lines, the function takes the first line in the input order. The other lines go into other result lines.
+- `lineReference` puts the positions on a plane one time. The default plane is `azimuthalEquidistant` at the first position. Within 20 km of that position, its scale is less than 1.000002.
+- Each length is in the metres of the plane: the distance, the distance along the line, the offset and `lengthMeters`. A different `projection` gives its own metres.
+- The side is for the direction from the first position to the last. A point on the line, or on the line of its nearest segment, has the side 0.
+- `pointAt` gives the first or the last position for a distance out of the range from 0 to the length. At a position of the line, the offset is at right angles to the segment before it.
+- A segment of length 0 has no direction, so the queries skip it. A line of length 0 gives its first position, with no offset and the side 0.
+- To find the point of a house number on a street, measure the known numbers with `nearest`. Then use `pointAt` with the distance along the line and the offset of the houses.
 
 ### Exact results
 
