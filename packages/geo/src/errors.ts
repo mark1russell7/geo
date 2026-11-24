@@ -32,6 +32,8 @@
  * - `vector`: a vector has the length 0, so it has no direction.
  * - `step`: the largest step of `densify` is not more than 0. Or the step is too small: the function adds more than
  *   `MAX_DENSIFY_POSITIONS` positions.
+ * - `travel-mode`: a travel mode is not a name of `TRAVEL_MODES`, or its table is incorrect.
+ * - `route`: a route has no edges, an index that is not an edge of the graph, or two edges that do not join.
  */
 export type GeoErrorCode =
   | "not-finite"
@@ -54,7 +56,9 @@ export type GeoErrorCode =
   | "tolerance"
   | "vertices"
   | "vector"
-  | "step";
+  | "step"
+  | "travel-mode"
+  | "route";
 
 /**
  * The error that each function of this package throws for an incorrect input. It is a `RangeError`, so code that

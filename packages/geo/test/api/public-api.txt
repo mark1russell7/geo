@@ -13,6 +13,7 @@ DEFAULT_CIRCLE_VERTICES: dist/index.d.ts#DEFAULT_CIRCLE_VERTICES
 DEFAULT_GEOHASH_PRECISION: dist/index.d.ts#DEFAULT_GEOHASH_PRECISION
 DEFAULT_MAX_BUFFER_CELLS: dist/index.d.ts#DEFAULT_MAX_BUFFER_CELLS
 DEFAULT_MAX_GEOHASH_CELLS: dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
+DRIVE: dist/index.d.ts#DRIVE
 EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
 EARTH_MEAN_RADIUS_METERS: dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
 type Ellipsoid: dist/projection.chunk.d.ts#Ellipsoid
@@ -32,6 +33,7 @@ type GeohashDirection: dist/index.d.ts#GeohashDirection
 type GeohashNeighbors: dist/index.d.ts#GeohashNeighbors
 type Geometry: dist/index.d.ts#Geometry
 type GeometryCollection: dist/index.d.ts#GeometryCollection
+type ImpliedOneway: dist/index.d.ts#ImpliedOneway
 type LatLon: dist/projection.chunk.d.ts#LatLon
 type LineOptions: dist/index.d.ts#LineOptions
 type LineReference: dist/index.d.ts#LineReference
@@ -45,7 +47,10 @@ MAX_GEOMETRY_LONGITUDE: dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
 type MultiLineString: dist/index.d.ts#MultiLineString
 type MultiPoint: dist/index.d.ts#MultiPoint
 type MultiPolygon: dist/index.d.ts#MultiPolygon
+type NearestNode: dist/index.d.ts#NearestNode
 type NearestOnLine: dist/index.d.ts#NearestOnLine
+ONEWAY_BACKWARD: dist/index.d.ts#ONEWAY_BACKWARD
+ONEWAY_FORWARD: dist/index.d.ts#ONEWAY_FORWARD
 type Point: dist/index.d.ts#Point
 type PointLocation: dist/index.d.ts#PointLocation
 type PointLocator: dist/index.d.ts#PointLocator
@@ -53,8 +58,19 @@ type Polygon: dist/index.d.ts#Polygon
 type Position: dist/projection.chunk.d.ts#Position
 type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
+type RoadEdge: dist/index.d.ts#RoadEdge
+type RoadGraph: dist/index.d.ts#RoadGraph
+type RoadGraphOptions: dist/index.d.ts#RoadGraphOptions
+type RoadNode: dist/index.d.ts#RoadNode
+type RoadSnap: dist/index.d.ts#RoadSnap
+type RouteLine: dist/index.d.ts#RouteLine
+type SnapOptions: dist/index.d.ts#SnapOptions
+TRAVEL_MODES: dist/index.d.ts#TRAVEL_MODES
+type TravelMode: dist/index.d.ts#TravelMode
 type UnitVector: dist/index.d.ts#UnitVector
+WALK: dist/index.d.ts#WALK
 WGS84: dist/projection.chunk.d.ts#WGS84
+type WayAccess: dist/index.d.ts#WayAccess
 areaSquareMeters: dist/index.d.ts#areaSquareMeters
 bboxCenter: dist/index.d.ts#bboxCenter
 bboxContains: dist/index.d.ts#bboxContains
@@ -93,6 +109,7 @@ joinLines: dist/index.d.ts#joinLines
 latLon: dist/projection.chunk.d.ts#latLon
 lineReference: dist/index.d.ts#lineReference
 locatePoint: dist/index.d.ts#locatePoint
+nearestNode: dist/index.d.ts#nearestNode
 nearestOnLine: dist/index.d.ts#nearestOnLine
 normalizeLon: dist/projection.chunk.d.ts#normalizeLon
 overlapAreaSquareMeters: dist/index.d.ts#overlapAreaSquareMeters
@@ -106,10 +123,14 @@ polygonsIntersect: dist/index.d.ts#polygonsIntersect
 regionSimplifier: dist/index.d.ts#regionSimplifier
 rewind: dist/index.d.ts#rewind
 ringWinding: dist/index.d.ts#ringWinding
+roadGraph: dist/index.d.ts#roadGraph
+routeLine: dist/index.d.ts#routeLine
 simplifyRegions: dist/index.d.ts#simplifyRegions
+snapToRoad: dist/index.d.ts#snapToRoad
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
 toPosition: dist/projection.chunk.d.ts#toPosition
 toUnitVector: dist/index.d.ts#toUnitVector
+wayAccess: dist/index.d.ts#wayAccess
 
 ## ./projection (dist/projection.d.ts): names
 
@@ -153,6 +174,9 @@ export declare const DEFAULT_MAX_BUFFER_CELLS = 1e6;
 
 ### dist/index.d.ts#DEFAULT_MAX_GEOHASH_CELLS
 export declare const DEFAULT_MAX_GEOHASH_CELLS = 1e4;
+
+### dist/index.d.ts#DRIVE
+export declare const DRIVE: TravelMode;
 
 ### dist/index.d.ts#EARTH_MEAN_RADIUS_KM
 export declare const EARTH_MEAN_RADIUS_KM = 6371.0088;
@@ -217,6 +241,12 @@ interface GeometryCollection extends GeoJsonObject {
   readonly geometries: readonly Geometry[];
 }
 
+### dist/index.d.ts#ImpliedOneway
+interface ImpliedOneway {
+  readonly tag: string;
+  readonly values: readonly string[];
+}
+
 ### dist/index.d.ts#LineOptions
 interface LineOptions {
   readonly projection?: Projection;
@@ -272,6 +302,12 @@ interface MultiPolygon extends GeoJsonObject {
   readonly coordinates: readonly (readonly (readonly Position[])[])[];
 }
 
+### dist/index.d.ts#NearestNode
+interface NearestNode {
+  readonly node: RoadNode;
+  readonly meters: number;
+}
+
 ### dist/index.d.ts#NearestOnLine
 interface NearestOnLine {
   readonly point: LatLon;
@@ -279,6 +315,12 @@ interface NearestOnLine {
   readonly alongMeters: number;
   readonly side: LineSide;
 }
+
+### dist/index.d.ts#ONEWAY_BACKWARD
+export declare const ONEWAY_BACKWARD: readonly string[];
+
+### dist/index.d.ts#ONEWAY_FORWARD
+export declare const ONEWAY_FORWARD: readonly string[];
 
 ### dist/index.d.ts#Point
 interface Point extends GeoJsonObject {
@@ -304,12 +346,82 @@ type Region = Polygon | MultiPolygon;
 ### dist/index.d.ts#RingWinding
 type RingWinding = "counterclockwise" | "clockwise" | "degenerate";
 
+### dist/index.d.ts#RoadEdge
+interface RoadEdge {
+  readonly from: string;
+  readonly to: string;
+  readonly weight: number;
+  readonly meters: number;
+  readonly line: readonly Position[];
+  readonly feature: number;
+  readonly segment: number;
+}
+
+### dist/index.d.ts#RoadGraph
+interface RoadGraph {
+  readonly mode: string;
+  readonly nodes: ReadonlyMap<string, RoadNode>;
+  readonly edges: readonly RoadEdge[];
+}
+
+### dist/index.d.ts#RoadGraphOptions
+interface RoadGraphOptions {
+  readonly mode: TravelMode | "walk" | "drive";
+  readonly tags?: (feature: Feature) => Readonly<Record<string, unknown>> | null | undefined;
+  readonly vertexKey?: (position: Position, feature: Feature, index: number, part: number) => string;
+}
+
+### dist/index.d.ts#RoadNode
+interface RoadNode {
+  readonly id: string;
+  readonly point: LatLon;
+}
+
+### dist/index.d.ts#RoadSnap
+interface RoadSnap {
+  readonly graph: RoadGraph;
+  readonly node: RoadNode;
+  readonly meters: number;
+  readonly split: boolean;
+}
+
+### dist/index.d.ts#RouteLine
+interface RouteLine {
+  readonly line: LineString;
+  readonly meters: number;
+}
+
+### dist/index.d.ts#SnapOptions
+interface SnapOptions {
+  readonly toleranceMeters?: number;
+  readonly id?: string;
+}
+
+### dist/index.d.ts#TRAVEL_MODES
+export declare const TRAVEL_MODES: Readonly<Record<"walk" | "drive", TravelMode>>;
+
+### dist/index.d.ts#TravelMode
+interface TravelMode {
+  readonly name: string;
+  readonly highways: readonly string[];
+  readonly access: readonly string[];
+  readonly denied: readonly string[];
+  readonly oneway: readonly string[];
+  readonly impliedOneway: readonly ImpliedOneway[];
+}
+
 ### dist/index.d.ts#UnitVector
 interface UnitVector {
   readonly x: number;
   readonly y: number;
   readonly z: number;
 }
+
+### dist/index.d.ts#WALK
+export declare const WALK: TravelMode;
+
+### dist/index.d.ts#WayAccess
+type WayAccess = "closed" | "both" | "forward" | "backward";
 
 ### dist/index.d.ts#areaSquareMeters
 export declare function areaSquareMeters(polygon: Polygon | MultiPolygon, ellipsoid?: Ellipsoid): number;
@@ -413,6 +525,9 @@ export declare function lineReference(line: readonly Position[], options?: LineO
 ### dist/index.d.ts#locatePoint
 export declare function locatePoint(point: LatLon, polygon: Polygon | MultiPolygon): PointLocation;
 
+### dist/index.d.ts#nearestNode
+export declare function nearestNode(graph: RoadGraph, point: LatLon): NearestNode | undefined;
+
 ### dist/index.d.ts#nearestOnLine
 export declare function nearestOnLine(line: readonly Position[], point: LatLon, options?: LineOptions): NearestOnLine;
 
@@ -446,14 +561,26 @@ export declare function rewind<T extends Polygon | MultiPolygon>(polygon: T): T;
 ### dist/index.d.ts#ringWinding
 export declare function ringWinding(ring: readonly Position[]): RingWinding;
 
+### dist/index.d.ts#roadGraph
+export declare function roadGraph(features: readonly Feature[] | FeatureCollection, options: RoadGraphOptions): RoadGraph;
+
+### dist/index.d.ts#routeLine
+export declare function routeLine(graph: RoadGraph, edges: readonly number[]): RouteLine;
+
 ### dist/index.d.ts#simplifyRegions
 export declare function simplifyRegions(regions: readonly Region[], toleranceKm: number, radiusKm?: number): Region[];
+
+### dist/index.d.ts#snapToRoad
+export declare function snapToRoad(graph: RoadGraph, point: LatLon, options?: SnapOptions): RoadSnap | undefined;
 
 ### dist/index.d.ts#toGeoJsonBBox
 export declare function toGeoJsonBBox(box: BBox): GeoJsonBBox;
 
 ### dist/index.d.ts#toUnitVector
 export declare function toUnitVector(point: LatLon): UnitVector;
+
+### dist/index.d.ts#wayAccess
+export declare function wayAccess(tags: Readonly<Record<string, unknown>> | null | undefined, mode: TravelMode | "walk" | "drive"): WayAccess;
 
 ### dist/projection.chunk.d.ts#Ellipsoid
 interface Ellipsoid {
@@ -469,7 +596,7 @@ declare class GeoError extends RangeError {
 }
 
 ### dist/projection.chunk.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step";
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route";
 
 ### dist/projection.chunk.d.ts#GeodesicDirect
 interface GeodesicDirect {

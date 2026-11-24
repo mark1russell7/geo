@@ -124,6 +124,36 @@ A line is a list of GeoJSON positions, for example a part of a street. The secti
 | `LineOptions` | The `projection` of the plane. The default is `azimuthalEquidistant` at the first position of the line. |
 | `NearestOnLine`, `LineSide`, `LineReference` | The result of `nearest`, the side (1 left, -1 right, 0 on the line), and the result of `lineReference`. |
 
+### Roads
+
+A road graph comes from GeoJSON lines, for example the ways of OpenStreetMap. You can search a route on it on your computer, with no network. The section [Roads](#roads-1) gives the rules.
+
+| Name | What it does |
+| --- | --- |
+| `roadGraph(features, { mode, tags?, vertexKey? })` | The nodes and the directed edges of a travel mode. Each edge has `from`, `to`, `weight`, `meters`, `line`, `feature` and `segment`. |
+| `wayAccess(tags, mode)` | The directions of one way for a travel mode: `closed`, `both`, `forward` or `backward`. |
+| `WALK`, `DRIVE`, `TRAVEL_MODES` | The tables of the travel modes: the `highway` values, the access tags, the closed values and the oneway tags. |
+| `ONEWAY_FORWARD`, `ONEWAY_BACKWARD` | The values of a oneway tag for each direction. |
+| `nearestNode(graph, point)` | The nearest node of the graph to a point, and the distance in metres. |
+| `snapToRoad(graph, point, { toleranceMeters?, id? })` | The nearest node, or a new node at the nearest point of an edge. A new node cuts the edge, and the result has a new graph. |
+| `routeLine(graph, edges)` | The GeoJSON `LineString` of a route from the indices of its edges, and its length in metres. |
+| `TravelMode`, `ImpliedOneway`, `WayAccess`, `RoadGraph`, `RoadNode`, `RoadEdge`, `RoadGraphOptions`, `NearestNode`, `RoadSnap`, `SnapOptions`, `RouteLine` | The types of the tables, the graph and the results. |
+
+The edges have the shape of a shortest-path search on directed edges, for example `shortestPath` of `@mark1russell7/collections/graph`. This package does not import that search.
+
+```ts
+import { roadGraph, routeLine, snapToRoad, type Feature } from "@mark1russell7/geo";
+import { shortestPath } from "@mark1russell7/collections/graph";
+
+// The features of the ways, for example from OpenStreetMap, fetched before.
+declare const ways: Feature[];
+const graph = roadGraph(ways, { mode: "walk" });
+const start = snapToRoad(graph, { lat: 0.0002, lon: 0.0005 })!;
+const end = snapToRoad(start.graph, { lat: 0.0011, lon: 0.0019 })!;
+const path = shortestPath(end.graph.edges, start.node.id, end.node.id);
+if (path.kind === "path" && path.edges.length > 0) console.log(routeLine(end.graph, path.edges).meters);
+```
+
 ### Bounding boxes
 
 | Name | What it does |
@@ -326,6 +356,25 @@ An edge is a straight line in longitude and latitude, as for the polygon tests. 
 - A segment of length 0 has no direction, so the queries skip it. A line of length 0 gives its first position, with no offset and the side 0.
 - To find the point of a house number on a street, measure the known numbers with `nearest`. Then use `pointAt` with the distance along the line and the offset of the houses.
 
+### Roads
+
+- `roadGraph` reads each feature with a `LineString` or a `MultiLineString`, and skips each other feature. The tags are in `properties.tags`, or else in `properties`.
+- A node is a position that two or more ways share, a position that one way has two times, or an end of a way. Two lines that cross with no shared position have no junction, as at a bridge.
+- The default key of a node is its latitude and its normalized longitude, with no rounding. Give `vertexKey` to use the identifiers of the OpenStreetMap nodes.
+- An edge is the part of a way between two nodes. Its `meters` is the sum of `distanceMeters` along its line. Its `weight` is `meters`. Make a copy with a different weight for a time.
+- A way in the two directions gives two edges with one `segment` number. A part of a way from a node back to the same node, with no other node, gives no edge.
+- The order of the nodes and of the edges is the order of the input. Thus the same input gives the same graph.
+
+`wayAccess` applies the table of the mode:
+
+- A `highway` value that is not in `highways` closes the way. `WALK` has no motorway and no trunk road. `DRIVE` has no footway, path or steps.
+- The first tag of `access` that the way has decides. A value of `denied` (`no` and `private`) closes the way. Thus `access=private` with `foot=yes` is open for `WALK`.
+- The first tag of `oneway` that the way has decides the direction. `yes`, `true` and `1` give `forward`. `-1` and `reverse` give `backward`. Each other value gives `both`.
+- `DRIVE` reads `oneway`. A roundabout and a motorway with no oneway tag are one-way. `WALK` reads only `oneway:foot`.
+- The values are compared in lower case. Give your own `TravelMode` for a different set of rules, for example a bicycle.
+
+`snapToRoad` measures on the plane of `azimuthalEquidistant` at the point, so each distance from the point is exact on the ellipsoid. A cut gives two edges for each direction of the part. Each new edge keeps its share of the weight. A nearest point within `toleranceMeters` (0.5 by default) of an end goes to that end.
+
 ### Exact results
 
 The orientation and segment tests are exact. A test across the antimeridian also moves the point or a polygon by a multiple of 360 degrees.
@@ -415,6 +464,8 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `tolerance` | The tolerance of a simplification is less than 0. Or the tolerance of a buffer is 0 or less, or it is equal to the distance or more. |
 | `vector` | A vector has the length 0, so it has no direction. |
 | `step` | The largest step of `densify` is not more than 0. Or the step is too small, and the function adds more than `MAX_DENSIFY_POSITIONS` positions. |
+| `travel-mode` | A travel mode is not a name of `TRAVEL_MODES`, or its table is incorrect. |
+| `route` | A route has no edges, an index that is not an edge of the graph, or two edges that do not join. |
 
 ## The differences from @procedures/geo
 
