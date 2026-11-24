@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.11
+
+- `simplifyLines(lines, toleranceKm, radiusKm?)` simplifies lines with the method of Douglas and Peucker. Each line keeps its ends and each position that it shares with a line. A map at a small scale draws its roads with fewer positions.
+
 ## 0.5.10
 
 - A comment in `line.ts` gives the reason and the end of its planar steps, a copy of three functions of layout-contract. The API does not change.

@@ -120,7 +120,7 @@ export {
   distanceToGeometryKm,
   distanceToGeometryMeters,
 } from "./distance.ts";
-export { regionSimplifier, simplifyRegions, type Region } from "./simplify.ts";
+export { regionSimplifier, simplifyLines, simplifyRegions, type Region } from "./simplify.ts";
 export {
   decodeGeohash,
   DEFAULT_GEOHASH_PRECISION,

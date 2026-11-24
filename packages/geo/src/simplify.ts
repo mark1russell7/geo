@@ -28,7 +28,7 @@
 import { classifySegments, orient2dSign } from "@mark1russell7/predicates";
 import { angleBoundToEdge, angleToEdge, scale, viewerAt, type Viewer } from "./distance.ts";
 import { GeoError } from "./errors.ts";
-import { checkGeometry, type MultiPolygon, type Polygon } from "./geojson.ts";
+import { checkGeometry, checkPosition, type MultiPolygon, type Polygon } from "./geojson.ts";
 import { locateInRings } from "@mark1russell7/predicates";
 import { checkGeometryLongitudes } from "./planar.ts";
 import type { Position } from "./point.ts";
@@ -780,4 +780,53 @@ export function simplifyRegions(
 ): Region[] {
   checkTolerance(toleranceKm);
   return regionSimplifier(regions, radiusKm)(toleranceKm);
+}
+
+/**
+ * This function simplifies lines, for example the roads of a map at a small scale, with the method of Douglas and
+ * Peucker. It gives one line for each line of the input, in the same direction. Each position of the result is a
+ * position of the input.
+ *
+ * - Each removed position is at most `toleranceKm` from the result, as `distanceToGeometryKm` measures it.
+ * - Each line keeps its two ends. A position that is in two lines, or two times in one line, stays. Thus lines that
+ *   meet at a position still meet there.
+ * - The function does not examine the crossings. A line of the result can cross a line that the input does not cross.
+ *
+ * @param lines - The lines: each one is a list of two or more positions.
+ * @param toleranceKm - The largest distance in kilometres from a removed position to the result, 0 or more.
+ * @param radiusKm - The radius of the sphere, more than 0. The default is `EARTH_MEAN_RADIUS_KM`.
+ * @throws GeoError - `geojson-member`, `too-few-positions`, `position`, `not-finite`, `tolerance` and `radius`.
+ */
+export function simplifyLines(
+  lines: readonly (readonly Position[])[],
+  toleranceKm: number,
+  radiusKm: number = EARTH_MEAN_RADIUS_KM,
+): Position[][] {
+  checkTolerance(toleranceKm);
+  checkRadius(radiusKm);
+  if (!Array.isArray(lines)) throw new GeoError("geojson-member", "The lines must be an array");
+  const counts = new Map<string, number>();
+  lines.forEach((line, index) => {
+    if (!Array.isArray(line)) throw new GeoError("geojson-member", "A line must be an array of positions", `lines[${index}]`);
+    if (line.length < 2) throw new GeoError("too-few-positions", "A line has two or more positions", `lines[${index}]`);
+    line.forEach((position, k) => {
+      checkPosition(position, `lines[${index}][${k}]`);
+      // A position that repeats the position before it is one occurrence.
+      if (k > 0 && samePosition(position, line[k - 1] as Position)) return;
+      const key = keyOf(position);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    });
+  });
+  const forced = new Uint8Array(0);
+  return lines.map((line) => {
+    const result: Position[] = [line[0] as Position];
+    let start = 0;
+    for (let k = 1; k < line.length; k += 1) {
+      if (k < line.length - 1 && (counts.get(keyOf(line[k] as Position)) ?? 0) < 2) continue;
+      const arc = arcOf(line.slice(start, k + 1));
+      for (const index of keptOf(arc, forced, toleranceKm, radiusKm).slice(1)) result.push(arc.positions[index] as Position);
+      start = k;
+    }
+    return result;
+  });
 }

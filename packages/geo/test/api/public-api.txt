@@ -131,6 +131,7 @@ ringWinding: dist/index.d.ts#ringWinding
 roadGraph: dist/index.d.ts#roadGraph
 routeLine: dist/index.d.ts#routeLine
 routeSteps: dist/index.d.ts#routeSteps
+simplifyLines: dist/index.d.ts#simplifyLines
 simplifyRegions: dist/index.d.ts#simplifyRegions
 snapToRoad: dist/index.d.ts#snapToRoad
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
@@ -608,6 +609,9 @@ export declare function routeLine(graph: RoadGraph, edges: readonly number[]): R
 
 ### dist/index.d.ts#routeSteps
 export declare function routeSteps(graph: RoadGraph, edges: readonly number[], options?: RouteStepsOptions): RouteStep[];
+
+### dist/index.d.ts#simplifyLines
+export declare function simplifyLines(lines: readonly (readonly Position[])[], toleranceKm: number, radiusKm?: number): Position[][];
 
 ### dist/index.d.ts#simplifyRegions
 export declare function simplifyRegions(regions: readonly Region[], toleranceKm: number, radiusKm?: number): Region[];

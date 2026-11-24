@@ -7,7 +7,7 @@ import { GeoError } from "./errors.ts";
 import type { MultiPolygon, Polygon } from "./geojson.ts";
 import type { Position } from "./point.ts";
 import { locatePoint } from "./polygon.ts";
-import { regionSimplifier, simplifyRegions, type Region } from "./simplify.ts";
+import { regionSimplifier, simplifyLines, simplifyRegions, type Region } from "./simplify.ts";
 
 type Ring = readonly Position[];
 
@@ -372,5 +372,37 @@ describe("simplifyRegions", () => {
       }),
       { numRuns: 20 },
     );
+  });
+});
+
+describe("simplifyLines", () => {
+  // A line with a small bend near (0, 0): the bend is about 0.11 km from the straight line.
+  const bent: Position[] = [[0, 0], [0.01, 0.001], [0.02, 0], [0.03, 0.0001], [0.04, 0]];
+
+  it("removes the positions nearer than the tolerance, and keeps the ends", () => {
+    expect(simplifyLines([bent], 0.5)).toEqual([[[0, 0], [0.04, 0]]]);
+    expect(simplifyLines([bent], 0.05)).toEqual([[[0, 0], [0.01, 0.001], [0.02, 0], [0.04, 0]]]);
+    expect(simplifyLines([bent], 0)).toEqual([bent]);
+  });
+
+  it("keeps each removed position within the tolerance of the result", () => {
+    for (const tolerance of [0.005, 0.02, 0.1]) {
+      const [line] = simplifyLines([bent], tolerance);
+      for (const position of bent) {
+        expect(distanceToGeometryKm({ lat: position[1]!, lon: position[0]! }, { type: "LineString", coordinates: line! })).toBeLessThanOrEqual(tolerance + 1e-9);
+      }
+    }
+  });
+
+  it("keeps a position that two lines share, so the lines still meet", () => {
+    const other: Position[] = [[0.03, 0.0001], [0.03, 0.05]];
+    const [first, second] = simplifyLines([bent, other], 0.5);
+    expect(first).toContainEqual([0.03, 0.0001]);
+    expect(second).toEqual(other);
+  });
+
+  it("refuses a line with fewer than two positions and a tolerance less than 0", () => {
+    expect(() => simplifyLines([[[0, 0]]], 1)).toThrow(GeoError);
+    expect(() => simplifyLines([bent], -1)).toThrow(GeoError);
   });
 });
