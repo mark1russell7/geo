@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GeoError } from "./errors.ts";
 import type { Feature, LineString } from "./geojson.ts";
 import type { Position } from "./point.ts";
-import { roadGraph, type RoadGraph } from "./roads.ts";
+import { roadGraph, type RoadEdge, type RoadGraph } from "./roads.ts";
 import { routeSteps, TURN_DEGREES, type RouteStep } from "./steps.ts";
 
 // The coordinates and the roads are made up: a small grid in the ocean near the point (0, 0). A step of 0.001 degrees
@@ -269,6 +269,71 @@ describe("routeSteps", () => {
     expect(routeSteps(graph, edges, { features, minLegMeters: 5 })).toHaveLength(4);
   });
 
+  it("gives a change of 0 for a leg with no direction", () => {
+    // A graph made by hand: the edge 1 has a line of length 0 between two nodes at one position.
+    const edge = (from: string, to: string, line: Position[], feature: number): RoadEdge => ({ from, to, weight: 1, meters: 1, line, feature, segment: feature });
+    const graph: RoadGraph = {
+      mode: "walk",
+      nodes: new Map(),
+      edges: [
+        edge("a", "b", [
+          [0, 0],
+          [0.001, 0],
+        ], 0),
+        edge("b", "c", [
+          [0.001, 0],
+          [0.001, 0],
+        ], 1),
+        edge("c", "d", [
+          [0.001, 0],
+          [0.001, 0.001],
+        ], 2),
+        edge("d", "e", [
+          [0.001, 0.001],
+          [0.002, 0.001],
+        ], 9),
+      ],
+    };
+    const features = [way([], { name: "Main Street" }), way([], { name: "Gap" }), way([], { name: "Oak Avenue" })];
+    const steps = routeSteps(graph, [0, 1, 2, 3], { features });
+    expect(steps.map((step) => [step.turn, step.name, step.bearingChange])).toEqual([
+      ["depart", "Main Street", 0],
+      ["straight", "Gap", 0],
+      ["straight", "Oak Avenue", 0],
+      ["right", "", expect.closeTo(90, 3)],
+      ["arrive", "", 0],
+    ]);
+  });
+
+  it("reads a number tag, and gives an empty name for no tags or a name that is not a string", () => {
+    const features = [
+      way(
+        [
+          [0, 0],
+          [0.001, 0],
+        ],
+        { name: 7, ref: 12 },
+      ),
+      way(
+        [
+          [0.001, 0],
+          [0.001, 0.001],
+        ],
+        { name: "  " },
+      ),
+    ];
+    const graph = roadGraph(features, { mode: "walk" });
+    const edges = path(graph, A, B, N);
+    expect(routeSteps(graph, edges, { features }).map((step) => [step.name, step.ref])).toEqual([
+      ["7", "12"],
+      ["", undefined],
+      ["", undefined],
+    ]);
+    expect(turns(routeSteps(graph, edges, { features, tags: () => null }))).toEqual(["depart ", "arrive "]);
+    const nameOf = (): string => 5 as unknown as string;
+    expect(turns(routeSteps(graph, edges, { features, nameOf }))).toEqual(["depart ", "arrive "]);
+  });
+
   it("refuses an empty route, a bad edge and a bad minLegMeters", () => {
     const graph = roadGraph(cross, { mode: "walk" });
     expect(code(() => routeSteps(graph, []))).toBe("route");
@@ -276,5 +341,6 @@ describe("routeSteps", () => {
     expect(code(() => routeSteps(graph, path(graph, A, B).concat(path(graph, A, B))))).toBe("route");
     expect(code(() => routeSteps(graph, path(graph, A, B), { minLegMeters: -1 }))).toBe("tolerance");
     expect(code(() => routeSteps(graph, path(graph, A, B), { minLegMeters: Number.NaN }))).toBe("tolerance");
+    expect(code(() => routeSteps(graph, path(graph, A, B), { features: {} as never }))).toBe("geojson-member");
   });
 });
