@@ -1,5 +1,5 @@
 /**
- * The area of a polygon on an ellipsoid, and the area of the overlap of two polygons.
+ * The area of a polygon on an ellipsoid, and the area of the common part of two or more polygons.
  *
  * RFC 7946 (section 3.1) says that an edge is a straight line in longitude and latitude. So a polygon is a region of
  * the plane of longitude and latitude, and its area is the area of that region on the ellipsoid. The theorem of Green
@@ -10,13 +10,14 @@
  * the relative error under 1e-9.
  *
  * The overlap uses a fan of signed triangles from one corner of each ring. The sign of a triangle times its region
- * gives the winding number of the ring. So the overlap of two polygons is a signed sum of the overlaps of their
- * triangles, and two triangles overlap in a convex polygon. This sum is exact for each measure, and the area is a
- * measure. Each ring must not cross itself, and the holes must be inside their exterior, as RFC 7946 tells.
+ * gives the winding number of the ring. So the common part of polygons is a signed sum of the common parts of one
+ * triangle of each polygon. The common part of triangles is a convex polygon. This sum is exact for each measure,
+ * and the area is a measure. Each ring must not cross itself, and the holes must be inside their exterior, as RFC 7946 tells.
  *
  * @packageDocumentation
  */
 
+import { GeoError } from "./errors.ts";
 import { checkEllipsoid, WGS84, type Ellipsoid } from "./geodesic.ts";
 import type { MultiPolygon, Polygon } from "./geojson.ts";
 import { overlappingShifts, polygonParts, type Part, type Ring } from "./planar.ts";
@@ -206,42 +207,111 @@ function counterclockwise(t: Triangle): readonly Corner[] {
   return (p[0] - o[0]) * (q[1] - o[1]) - (q[0] - o[0]) * (p[1] - o[1]) > 0 ? [o, p, q] : [o, q, p];
 }
 
-/** This function gives the area of the overlap of two triangles on the ellipsoid. */
-function triangleOverlap(a: Triangle, b: Triangle, F: (lat: number) => number): number {
-  const clip = counterclockwise(a);
-  let ring: readonly Corner[] = counterclockwise(b);
-  for (let i = 0; i < 3 && ring.length >= 3; i += 1) ring = clipLeft(ring, clip[i]!, clip[(i + 1) % 3]!);
-  return ring.length >= 3 ? Math.abs(signedRingArea(ring, F)) : 0;
+/** This function gives the part of a convex counterclockwise ring inside a triangle. The result is convex. */
+function clipToTriangle(ring: readonly Corner[], t: Triangle): readonly Corner[] {
+  const clip = counterclockwise(t);
+  let out = ring;
+  for (let i = 0; i < 3 && out.length >= 3; i += 1) out = clipLeft(out, clip[i]!, clip[(i + 1) % 3]!);
+  return out;
 }
 
-/** This function gives the area of the overlap of two polygons of the plane, with the second moved by `dx` degrees. */
-function partOverlap(a: Part, b: Part, dx: number, F: (lat: number) => number): number {
-  const minX = Math.max(a.minX, b.minX + dx);
-  const maxX = Math.min(a.maxX, b.maxX + dx);
-  const minY = Math.max(a.minY, b.minY);
-  const maxY = Math.min(a.maxY, b.maxY);
-  if (minX > maxX || minY > maxY) return 0;
-  // Only the triangles that meet the common extent can overlap.
-  const meets = (t: Triangle): boolean => t.minX <= maxX && t.maxX >= minX && t.minY <= maxY && t.maxY >= minY;
-  const fanA = fanOf(a, 0).filter(meets);
-  const fanB = fanOf(b, dx).filter(meets);
-  let sum = 0;
-  for (const ta of fanA) {
-    for (const tb of fanB) {
-      if (ta.minX > tb.maxX || tb.minX > ta.maxX || ta.minY > tb.maxY || tb.minY > ta.maxY) continue;
-      sum += ta.weight * tb.weight * triangleOverlap(ta, tb, F);
-    }
+/** An extent in the plane of longitude and latitude. */
+interface Extent {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+}
+
+const meets = (a: Extent, b: Extent): boolean => a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+
+/** This function gives the extent of a ring. */
+function extentOf(ring: readonly Corner[]): Extent {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of ring) {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
   }
-  return sum;
+  return { minX, maxX, minY, maxY };
 }
 
 /**
- * This function gives the area of the overlap of two Polygons or MultiPolygons on an ellipsoid, in square metres. An
- * edge is a straight line in longitude and latitude, as RFC 7946 tells. The polygons can cross the antimeridian: a
- * polygon moved by 360 degrees is the same area of the Earth.
+ * This function gives the signed sum of the areas of the common parts of one triangle of each fan. The common part of
+ * convex regions is convex, so each step clips a convex ring with the next triangle.
+ */
+function fansCommon(fans: readonly (readonly Triangle[])[], F: (lat: number) => number): number {
+  const step = (level: number, ring: readonly Corner[], weight: number): number => {
+    if (level === fans.length) return weight * Math.abs(signedRingArea(ring, F));
+    const extent = extentOf(ring);
+    let sum = 0;
+    for (const t of fans[level]!) {
+      if (!meets(t, extent)) continue;
+      const next = clipToTriangle(ring, t);
+      if (next.length >= 3) sum += step(level + 1, next, weight * t.weight);
+    }
+    return sum;
+  };
+  return fans[0]!.reduce((sum, t) => sum + step(1, counterclockwise(t), t.weight), 0);
+}
+
+/** This function gives the area of the common part of polygons of the plane, each moved by its shift in degrees. */
+function partsCommon(parts: readonly Part[], shifts: readonly number[], F: (lat: number) => number): number {
+  const common: Extent = {
+    minX: Math.max(...parts.map((part, i) => part.minX + shifts[i]!)),
+    maxX: Math.min(...parts.map((part, i) => part.maxX + shifts[i]!)),
+    minY: Math.max(...parts.map((part) => part.minY)),
+    maxY: Math.min(...parts.map((part) => part.maxY)),
+  };
+  if (common.minX > common.maxX || common.minY > common.maxY) return 0;
+  // Only the triangles that meet the common extent can be in the common part.
+  const fans = parts.map((part, i) => fanOf(part, shifts[i]!).filter((t) => meets(t, common)));
+  return fans.some((fan) => fan.length === 0) ? 0 : fansCommon(fans, F);
+}
+
+/**
+ * This function gives the area of the part that all the Polygons and MultiPolygons have in common, on an ellipsoid, in
+ * square metres. An edge is a straight line in longitude and latitude, as RFC 7946 tells. The polygons can cross the
+ * antimeridian: a polygon moved by 360 degrees is the same area of the Earth. For one polygon, the result is its area.
  *
- * The work is in proportion to the product of the numbers of corners in the common extent of the two polygons.
- * The result is not less than 0 and not more than the area of each polygon, to the rounding of the sum.
+ * The work is in proportion to the product of the numbers of corners of the polygons in their common extent. The
+ * result is not less than 0 and not more than the area of each polygon, to the rounding of the sum.
+ *
+ * @param polygons - The polygons. The holes of a polygon must be inside its exterior, and the polygons of a
+ *   MultiPolygon must not overlap.
+ * @param ellipsoid - The ellipsoid. The default is `WGS84`.
+ * @throws GeoError - The list is empty, a geometry is not a valid Polygon or MultiPolygon, or the ellipsoid is not valid.
+ */
+export function commonAreaSquareMeters(polygons: readonly (Polygon | MultiPolygon)[], ellipsoid: Ellipsoid = WGS84): number {
+  checkEllipsoid(ellipsoid);
+  const [first, ...rest] = polygons;
+  if (first === undefined) throw new GeoError("geojson-member", "The list of polygons is empty");
+  if (rest.length === 0) return areaSquareMeters(first, ellipsoid);
+  const F = authalic(ellipsoid);
+  const partLists = polygons.map((polygon) => polygonParts(polygon));
+  let sum = 0;
+  // Each choice of one part of each polygon, and each shift of the later parts that can meet the first part.
+  const choose = (level: number, parts: Part[], shifts: number[]): void => {
+    if (level === partLists.length) {
+      sum += partsCommon(parts, shifts, F);
+      return;
+    }
+    for (const part of partLists[level]!) {
+      const options = level === 0 ? [0] : overlappingShifts(parts[0]!.minX, parts[0]!.maxX, part.minX, part.maxX);
+      for (const shift of options) choose(level + 1, [...parts, part], [...shifts, shift]);
+    }
+  };
+  choose(0, [], []);
+  return Math.max(0, sum);
+}
+
+/**
+ * This function gives the area of the overlap of two Polygons or MultiPolygons on an ellipsoid, in square metres. It
+ * is `commonAreaSquareMeters([a, b], ellipsoid)`.
  *
  * @param a - The first polygon. The holes of a polygon must be inside its exterior, and the polygons of a
  *   MultiPolygon must not overlap.
@@ -250,15 +320,5 @@ function partOverlap(a: Part, b: Part, dx: number, F: (lat: number) => number): 
  * @throws GeoError - A geometry is not a valid Polygon or MultiPolygon, or the ellipsoid is not valid.
  */
 export function overlapAreaSquareMeters(a: Polygon | MultiPolygon, b: Polygon | MultiPolygon, ellipsoid: Ellipsoid = WGS84): number {
-  checkEllipsoid(ellipsoid);
-  const F = authalic(ellipsoid);
-  const partsA = polygonParts(a);
-  const partsB = polygonParts(b);
-  let sum = 0;
-  for (const pa of partsA) {
-    for (const pb of partsB) {
-      for (const dx of overlappingShifts(pa.minX, pa.maxX, pb.minX, pb.maxX)) sum += partOverlap(pa, pb, dx, F);
-    }
-  }
-  return Math.max(0, sum);
+  return commonAreaSquareMeters([a, b], ellipsoid);
 }

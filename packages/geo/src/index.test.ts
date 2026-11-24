@@ -28,6 +28,7 @@ describe("the entry", () => {
         "bufferKm",
         "bufferMeters",
         "centralAngleRadians",
+        "commonAreaSquareMeters",
         "circleKm",
         "circleMeters",
         "decodeGeohash",
