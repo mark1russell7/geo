@@ -7,6 +7,7 @@ describe("the entry", () => {
       [
         "DEFAULT_CIRCLE_VERTICES",
         "DRIVE",
+        "SUNRISE_ALTITUDE_DEG",
         "ONEWAY_BACKWARD",
         "ONEWAY_FORWARD",
         "TRAVEL_MODES",
@@ -15,6 +16,8 @@ describe("the entry", () => {
         "roadGraph",
         "routeLine",
         "routeSteps",
+        "sunDay",
+        "sunPosition",
         "TURN_DEGREES",
         "snapToRoad",
         "wayAccess",

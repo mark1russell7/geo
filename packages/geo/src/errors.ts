@@ -35,6 +35,8 @@
  *   `MAX_DENSIFY_POSITIONS` positions.
  * - `travel-mode`: a travel mode is not a name of `TRAVEL_MODES`, or its table is incorrect.
  * - `route`: a route has no edges, an index that is not an edge of the graph, or two edges that do not join.
+ * - `date`: a date is not a date `YYYY-MM-DD`.
+ * - `altitude`: the altitude of the sun is not a finite number from -90 to 90.
  */
 export type GeoErrorCode =
   | "not-finite"
@@ -59,7 +61,9 @@ export type GeoErrorCode =
   | "vector"
   | "step"
   | "travel-mode"
-  | "route";
+  | "route"
+  | "date"
+  | "altitude";
 
 /**
  * The error that each function of this package throws for an incorrect input. It is a `RangeError`, so code that

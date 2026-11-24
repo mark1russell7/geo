@@ -228,6 +228,19 @@ The entry `@mark1russell7/geo/projection` has the map projections. A projection 
 | `Feature`, `FeatureCollection`, `GeoJson`, `GeoJsonBBox` | The other types of RFC 7946. |
 | `MAX_GEOJSON_DEPTH` | The most levels of nested collections that the parser accepts (32). |
 
+### The sun
+
+| Name | What it does |
+| --- | --- |
+| `sunPosition(at)` | Gives the declination, the right ascension and the equation of time of the sun at an instant in milliseconds. |
+| `sunDay(point, date, options?)` | Gives the sunrise, the solar noon, the sunset and the hours of day at a point on a date `YYYY-MM-DD`. It gives a polar day or a polar night when the sun does not reach the altitude. |
+| `SUNRISE_ALTITUDE_DEG` | The altitude of the center of the sun at sunrise and sunset, -0.833 degree: the refraction and the semidiameter. The option `altitudeDeg` gives another altitude, for example -6 for civil twilight. |
+
+- The place of the sun comes from the low-precision formulas of The Astronomical Almanac, as the Wikipedia page "Position of the Sun" gives them. The precision is approximately 0.01 degree from 1950 to 2050.
+- The sunrise and the sunset come from the hour angle of the page "Sunrise equation". The method takes the declination and the equation of time at the instant of each event.
+- The refraction changes with the air, so a real sunrise can differ by approximately 2 minutes. The functions do not correct for the height of the observer.
+- The date is the date of the mean solar time of the point. Its solar noon is near 12:00 UTC minus the longitude at 15 degrees for each hour.
+
 ## The rules
 
 ### Edges
@@ -489,6 +502,8 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `step` | The largest step of `densify` is not more than 0. Or the step is too small, and the function adds more than `MAX_DENSIFY_POSITIONS` positions. |
 | `travel-mode` | A travel mode is not a name of `TRAVEL_MODES`, or its table is incorrect. |
 | `route` | A route has no edges, an index that is not an edge of the graph, or two edges that do not join. |
+| `date` | A date is not a date `YYYY-MM-DD`. |
+| `altitude` | The altitude of the sun is not a finite number from -90 to 90. |
 
 ## The differences from @procedures/geo
 
