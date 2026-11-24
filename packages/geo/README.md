@@ -143,6 +143,8 @@ A line is a list of GeoJSON positions, for example a part of a street. The secti
 | `pointLocator(polygon)` | Examines a polygon one time, and gives a function that locates each point with the result of `locatePoint`. Use it for many points. |
 | `polygonsIntersect(a, b)` | Gives `true` when two polygons have a common point. |
 | `polygonIntersectsBBox(polygon, box)` | Gives `true` when a polygon and a box have a common point. |
+| `areaSquareMeters(polygon, ellipsoid?)` | Gives the area of a Polygon or a MultiPolygon on the ellipsoid, in square metres. The default ellipsoid is `WGS84`. |
+| `overlapAreaSquareMeters(a, b, ellipsoid?)` | Gives the area of the overlap of two polygons on the ellipsoid, in square metres. Use it for the part of a parcel in a flood zone. |
 | `ringWinding(ring)` | Gives `"counterclockwise"`, `"clockwise"` or `"degenerate"`, from the exact sign of the area. |
 | `followsRightHandRule(polygon)`, `rewind(polygon)` | Examine the right-hand rule of RFC 7946, and give a copy that follows it. |
 | `MAX_GEOMETRY_LONGITUDE` | The largest absolute longitude of a polygon in a test: 540. |
@@ -297,6 +299,18 @@ A position of one region on an edge of another region does not join the two regi
 - The scale of `azimuthalEquidistant` along a geodesic from the center is 1. Across the geodesic, it is `s / m12`, with the reduced length `m12`. At 20 km from the center, it is less than 1.000002.
 - Each `fromPlane` accepts each finite point of the plane. The longitude of its result is normalized.
 - A map simplifies its regions with `simplifyRegions` first, on the Earth. Then it changes each position with `toPlane`.
+
+### Areas
+
+An edge is a straight line in longitude and latitude, as for the polygon tests. So the area of a polygon is the area of its region of that plane on the ellipsoid.
+
+- The theorem of Green changes the area integral into a sum over the edges. Gauss-Legendre quadrature gives the integral of each edge.
+- For an edge of a parcel, the result is exact to the rounding of a double. For an edge of 40 degrees, the relative error is less than 1e-9.
+- The direction of a ring does not change the area. A hole takes its area away from its exterior.
+- `overlapAreaSquareMeters` uses a fan of signed triangles for each ring. Two triangles overlap in a convex polygon, and the signed sum of these areas is the overlap.
+- The work of `overlapAreaSquareMeters` is in proportion to the product of the numbers of corners in the common box of the two polygons.
+- A ring must not cross itself, and each hole must be inside its exterior. The polygons of a MultiPolygon must not overlap. RFC 7946 gives these rules.
+- A polygon can cross the antimeridian. A polygon moved by 360 degrees is the same area of the Earth.
 
 ### Lines
 
