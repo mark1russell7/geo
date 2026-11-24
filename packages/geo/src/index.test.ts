@@ -82,6 +82,7 @@ describe("the entry", () => {
         "regionSimplifier",
         "rewind",
         "ringWinding",
+        "simplifyLines",
         "simplifyRegions",
         "toGeoJsonBBox",
         "toPosition",
