@@ -22,11 +22,11 @@ const box = (west: number, south: number, east: number, north: number): Position
 const reversed = (ring: Position[]): Position[] => [...ring].reverse();
 
 /** The area element of WGS84 for one degree of latitude and one degree of longitude at the latitude `lat`, by M N cos. */
-function element(lat: number): number {
+function element(lat: number, e2: number = E2, a: number = A): number {
   const s = Math.sin(lat * DEGREE);
-  const w = 1 - E2 * s * s;
-  const m = (A * (1 - E2)) / w ** 1.5;
-  const n = A / Math.sqrt(w);
+  const w = 1 - e2 * s * s;
+  const m = (a * (1 - e2)) / w ** 1.5;
+  const n = a / Math.sqrt(w);
   return m * n * Math.cos(lat * DEGREE) * DEGREE * DEGREE;
 }
 
@@ -60,6 +60,13 @@ describe("areaSquareMeters", () => {
     // The triangle under the line lat = 4 lon from lon 0 to lon 10: the edge crosses 40 degrees of latitude.
     const expected = simpson((lon) => simpson(element, 0, 4 * lon, 400), 0, 10, 400);
     expect(relative(areaSquareMeters(polygon([[0, 0], [10, 0], [10, 40]])), expected)).toBeLessThan(1e-9);
+  });
+
+  it("gives the area on a prolate ellipsoid, with a flattening less than 0", () => {
+    const prolate: Ellipsoid = { equatorialRadiusMeters: 6_378_137, flattening: -1 / 300 };
+    const e2 = prolate.flattening * (2 - prolate.flattening);
+    const expected = simpson((lat) => element(lat, e2, prolate.equatorialRadiusMeters), 10, 30);
+    expect(relative(areaSquareMeters(polygon(box(0, 10, 1, 30)), prolate), expected)).toBeLessThan(1e-11);
   });
 
   it("gives the same area for both directions of a ring, and takes the holes away", () => {
