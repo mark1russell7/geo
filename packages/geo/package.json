@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "@mark1russell7/geo",
-  "version": "0.5.7",
-  "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, the area of a polygon and of an overlap, geohashes, lines joined at common ends with the nearest point and a point along a line, and map projections to a plane in metres.",
+  "version": "0.5.8",
+  "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, the area of a polygon and of an overlap, geohashes, lines joined at common ends with the nearest point and a point along a line, map projections to a plane in metres, and road graphs for routes with no network.",
   "keywords": [
     "geo",
     "geojson",
@@ -14,7 +14,10 @@
     "antimeridian",
     "geohash",
     "projection",
-    "web-mercator"
+    "web-mercator",
+    "road-graph",
+    "routing",
+    "openstreetmap"
   ],
   "homepage": "https://github.com/mark1russell7/geo/tree/main/packages/geo#readme",
   "bugs": {

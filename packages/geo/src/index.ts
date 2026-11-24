@@ -10,6 +10,8 @@
  * For lines, it joins lines at common ends, and it gives the nearest point of a line and a point along a line.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
+ * For roads, it makes a graph of a travel mode from GeoJSON lines, connects a point to it, and gives the line of a route.
+ *
  * @packageDocumentation
  */
 
@@ -80,6 +82,29 @@ export {
   type NearestOnLine,
 } from "./line.ts";
 export { pointLocator, type PointLocator } from "./locator.ts";
+export {
+  DRIVE,
+  nearestNode,
+  ONEWAY_BACKWARD,
+  ONEWAY_FORWARD,
+  roadGraph,
+  routeLine,
+  snapToRoad,
+  TRAVEL_MODES,
+  WALK,
+  wayAccess,
+  type ImpliedOneway,
+  type NearestNode,
+  type RoadEdge,
+  type RoadGraph,
+  type RoadGraphOptions,
+  type RoadNode,
+  type RoadSnap,
+  type RouteLine,
+  type SnapOptions,
+  type TravelMode,
+  type WayAccess,
+} from "./roads.ts";
 export {
   circleKm,
   circleMeters,

@@ -6,6 +6,16 @@ describe("the entry", () => {
     expect(Object.keys(entry).sort()).toEqual(
       [
         "DEFAULT_CIRCLE_VERTICES",
+        "DRIVE",
+        "ONEWAY_BACKWARD",
+        "ONEWAY_FORWARD",
+        "TRAVEL_MODES",
+        "WALK",
+        "nearestNode",
+        "roadGraph",
+        "routeLine",
+        "snapToRoad",
+        "wayAccess",
         "DEFAULT_GEOHASH_PRECISION",
         "DEFAULT_MAX_BUFFER_CELLS",
         "DEFAULT_MAX_GEOHASH_CELLS",

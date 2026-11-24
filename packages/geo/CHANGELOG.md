@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.8
+
+- `roadGraph(features, { mode, tags?, vertexKey? })` makes a road graph from GeoJSON lines, for example the ways of OpenStreetMap. A node is a shared position or an end of a way. Each directed edge has its length in metres and its line.
+- `wayAccess(tags, mode)` gives the directions of a way. The tables `WALK` and `DRIVE` hold the `highway` values, the access tags and the oneway tags. A caller can give its own `TravelMode`.
+- `nearestNode(graph, point)` gives the nearest node. `snapToRoad(graph, point, options?)` gives the nearest node or cuts the nearest edge, and gives a new graph.
+- `routeLine(graph, edges)` gives the GeoJSON line of a route and its length.
+- The edges have `from`, `to` and `weight`, the shape of `shortestPath` of `@mark1russell7/collections/graph`. The package does not import it.
+- `GeoErrorCode` gets the codes `travel-mode` and `route`.
+- PATCH: new exports before 1.0.0. The change adds functions, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.5.5
 
 - `joinLines(lines)` joins lines with a common end into longer lines, for example the parts of one street. The first input line of each result keeps its direction.
