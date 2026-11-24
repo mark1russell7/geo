@@ -226,7 +226,13 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function defaultTags(feature: Feature): Readonly<Record<string, unknown>> | null {
+/**
+ * This function gives the default tags of a feature: the object `properties.tags` when the feature has it, else
+ * `properties`. `roadGraph` and `routeSteps` use it.
+ *
+ * @internal
+ */
+export function defaultTags(feature: Feature): Readonly<Record<string, unknown>> | null {
   const properties = feature.properties;
   if (!isRecord(properties)) return null;
   return isRecord(properties["tags"]) ? properties["tags"] : properties;
@@ -528,19 +534,32 @@ function toPosition(point: LatLon): Position {
  * @throws GeoError - The code is `route` for no edges, an index that is not an edge, or two edges that do not join.
  */
 export function routeLine(graph: RoadGraph, edges: readonly number[]): RouteLine {
-  if (!Array.isArray(edges) || edges.length === 0) throw new GeoError("route", "A route has one edge or more");
   const coordinates: Position[] = [];
   let meters = 0;
-  let previous: RoadEdge | undefined;
+  routeEdges(graph, edges).forEach((edge, k) => {
+    coordinates.push(...(k === 0 ? edge.line : edge.line.slice(1)));
+    meters += edge.meters;
+  });
+  return { line: { type: "LineString", coordinates }, meters };
+}
+
+/**
+ * This function gives the edges of a route, from their indices in `graph.edges`. `routeLine` and `routeSteps` use it.
+ *
+ * @throws GeoError - The code is `route` for no edges, an index that is not an edge, or two edges that do not join.
+ * @internal
+ */
+export function routeEdges(graph: RoadGraph, edges: readonly number[]): RoadEdge[] {
+  if (!Array.isArray(edges) || edges.length === 0) throw new GeoError("route", "A route has one edge or more");
+  const list: RoadEdge[] = [];
   edges.forEach((index, k) => {
     const edge = Number.isInteger(index) ? graph.edges[index] : undefined;
     if (edge === undefined) throw new GeoError("route", `The route has the edge ${index}, but the graph has no edge with that index`, `[${k}]`);
+    const previous = list.at(-1);
     if (previous !== undefined && previous.to !== edge.from) {
       throw new GeoError("route", `The edge ${index} starts at "${edge.from}", not at the end "${previous.to}" of the edge before it`, `[${k}]`);
     }
-    coordinates.push(...(previous === undefined ? edge.line : edge.line.slice(1)));
-    meters += edge.meters;
-    previous = edge;
+    list.push(edge);
   });
-  return { line: { type: "LineString", coordinates }, meters };
+  return list;
 }

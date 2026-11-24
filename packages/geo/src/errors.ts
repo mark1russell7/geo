@@ -28,6 +28,7 @@
  * - `radius`: the radius of a sphere or of a circle, or the distance of a buffer, is not more than 0. Or the equatorial radius of an ellipsoid is
  *   not more than 0, or its polar radius is not a finite number more than 0.
  * - `tolerance`: a tolerance is less than 0. Or the tolerance of a buffer is not more than 0 or not less than its distance.
+ *   Or `minLegMeters` of `routeSteps` is not a finite number from 0.
  * - `vertices`: the number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`.
  * - `vector`: a vector has the length 0, so it has no direction.
  * - `step`: the largest step of `densify` is not more than 0. Or the step is too small: the function adds more than

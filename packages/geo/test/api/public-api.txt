@@ -64,9 +64,14 @@ type RoadGraphOptions: dist/index.d.ts#RoadGraphOptions
 type RoadNode: dist/index.d.ts#RoadNode
 type RoadSnap: dist/index.d.ts#RoadSnap
 type RouteLine: dist/index.d.ts#RouteLine
+type RouteStep: dist/index.d.ts#RouteStep
+type RouteStepsOptions: dist/index.d.ts#RouteStepsOptions
+type RouteTurn: dist/index.d.ts#RouteTurn
 type SnapOptions: dist/index.d.ts#SnapOptions
 TRAVEL_MODES: dist/index.d.ts#TRAVEL_MODES
+TURN_DEGREES: dist/index.d.ts#TURN_DEGREES
 type TravelMode: dist/index.d.ts#TravelMode
+type TurnDegrees: dist/index.d.ts#TurnDegrees
 type UnitVector: dist/index.d.ts#UnitVector
 WALK: dist/index.d.ts#WALK
 WGS84: dist/projection.chunk.d.ts#WGS84
@@ -125,6 +130,7 @@ rewind: dist/index.d.ts#rewind
 ringWinding: dist/index.d.ts#ringWinding
 roadGraph: dist/index.d.ts#roadGraph
 routeLine: dist/index.d.ts#routeLine
+routeSteps: dist/index.d.ts#routeSteps
 simplifyRegions: dist/index.d.ts#simplifyRegions
 snapToRoad: dist/index.d.ts#snapToRoad
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
@@ -391,6 +397,28 @@ interface RouteLine {
   readonly meters: number;
 }
 
+### dist/index.d.ts#RouteStep
+interface RouteStep {
+  readonly turn: RouteTurn;
+  readonly bearingChange: number;
+  readonly name: string;
+  readonly ref?: string;
+  readonly meters: number;
+  readonly startIndex: number;
+  readonly endIndex: number;
+}
+
+### dist/index.d.ts#RouteStepsOptions
+interface RouteStepsOptions {
+  readonly features?: readonly Feature[] | FeatureCollection;
+  readonly tags?: (feature: Feature) => Readonly<Record<string, unknown>> | null | undefined;
+  readonly nameOf?: (feature: Feature, index: number) => string;
+  readonly minLegMeters?: number;
+}
+
+### dist/index.d.ts#RouteTurn
+type RouteTurn = "depart" | "straight" | "slight-left" | "left" | "sharp-left" | "slight-right" | "right" | "sharp-right" | "u-turn" | "arrive";
+
 ### dist/index.d.ts#SnapOptions
 interface SnapOptions {
   readonly toleranceMeters?: number;
@@ -400,6 +428,9 @@ interface SnapOptions {
 ### dist/index.d.ts#TRAVEL_MODES
 export declare const TRAVEL_MODES: Readonly<Record<"walk" | "drive", TravelMode>>;
 
+### dist/index.d.ts#TURN_DEGREES
+export declare const TURN_DEGREES: TurnDegrees;
+
 ### dist/index.d.ts#TravelMode
 interface TravelMode {
   readonly name: string;
@@ -408,6 +439,14 @@ interface TravelMode {
   readonly denied: readonly string[];
   readonly oneway: readonly string[];
   readonly impliedOneway: readonly ImpliedOneway[];
+}
+
+### dist/index.d.ts#TurnDegrees
+interface TurnDegrees {
+  readonly straight: number;
+  readonly slight: number;
+  readonly turn: number;
+  readonly sharp: number;
 }
 
 ### dist/index.d.ts#UnitVector
@@ -566,6 +605,9 @@ export declare function roadGraph(features: readonly Feature[] | FeatureCollecti
 
 ### dist/index.d.ts#routeLine
 export declare function routeLine(graph: RoadGraph, edges: readonly number[]): RouteLine;
+
+### dist/index.d.ts#routeSteps
+export declare function routeSteps(graph: RoadGraph, edges: readonly number[], options?: RouteStepsOptions): RouteStep[];
 
 ### dist/index.d.ts#simplifyRegions
 export declare function simplifyRegions(regions: readonly Region[], toleranceKm: number, radiusKm?: number): Region[];
