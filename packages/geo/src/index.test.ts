@@ -14,6 +14,8 @@ describe("the entry", () => {
         "nearestNode",
         "roadGraph",
         "routeLine",
+        "routeSteps",
+        "TURN_DEGREES",
         "snapToRoad",
         "wayAccess",
         "DEFAULT_GEOHASH_PRECISION",

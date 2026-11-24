@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.9
+
+- `routeSteps(graph, edges, options?)` gives the steps of a route for a route on paper. Each leg has `turn`, `bearingChange`, `name`, `ref`, `meters`, `startIndex` and `endIndex`. The last step is `arrive`, with 0 metres.
+- Consecutive edges with the same road name make one leg. The default name is the tag `name`, then `ref`, then an empty name. `nameOf(feature, index)` gives a different name. The option `features` gives the features of the graph.
+- The turn comes from the change of the bearing from the last segment of the leg before to the first segment of the leg, from `initialBearing`. `TURN_DEGREES` holds the limits: straight below 20 degrees, slight below 60, normal below 120, sharp below 170, and a U-turn from 170.
+- A change of name with no real turn gives a new leg with the turn `straight`.
+- `minLegMeters` (default 0, off) joins a short leg to its two neighbors when they have the same name.
+- The new types are `RouteStep`, `RouteStepsOptions`, `RouteTurn` and `TurnDegrees`. The codes of `GeoErrorCode` do not change. `routeSteps` uses `route`, `tolerance` and `geojson-member`.
+- PATCH: new exports before 1.0.0. The change adds a function, and it changes no function. Thus the version is a PATCH change (before 1.0.0, a new feature is a PATCH change).
+
 ## 0.5.8
 
 - `roadGraph(features, { mode, tags?, vertexKey? })` makes a road graph from GeoJSON lines, for example the ways of OpenStreetMap. A node is a shared position or an end of a way. Each directed edge has its length in metres and its line.

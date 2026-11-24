@@ -11,6 +11,7 @@
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * For roads, it makes a graph of a travel mode from GeoJSON lines, connects a point to it, and gives the line of a route.
+ * It also gives the steps of a route: a leg for each road, the turn at its start, and the arrival.
  *
  * @packageDocumentation
  */
@@ -105,6 +106,7 @@ export {
   type TravelMode,
   type WayAccess,
 } from "./roads.ts";
+export { routeSteps, TURN_DEGREES, type RouteStep, type RouteStepsOptions, type RouteTurn, type TurnDegrees } from "./steps.ts";
 export {
   circleKm,
   circleMeters,

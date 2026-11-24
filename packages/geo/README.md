@@ -137,12 +137,14 @@ A road graph comes from GeoJSON lines, for example the ways of OpenStreetMap. Yo
 | `nearestNode(graph, point)` | The nearest node of the graph to a point, and the distance in metres. |
 | `snapToRoad(graph, point, { toleranceMeters?, id? })` | The nearest node, or a new node at the nearest point of an edge. A new node cuts the edge, and the result has a new graph. |
 | `routeLine(graph, edges)` | The GeoJSON `LineString` of a route from the indices of its edges, and its length in metres. |
-| `TravelMode`, `ImpliedOneway`, `WayAccess`, `RoadGraph`, `RoadNode`, `RoadEdge`, `RoadGraphOptions`, `NearestNode`, `RoadSnap`, `SnapOptions`, `RouteLine` | The types of the tables, the graph and the results. |
+| `routeSteps(graph, edges, { features?, tags?, nameOf?, minLegMeters? })` | The steps of a route for a route on paper: a leg for each road with its turn and length, and then the arrival. |
+| `TURN_DEGREES` | The limits of the turns in degrees: straight below 20, slight below 60, normal below 120, sharp below 170. A larger change is a U-turn. |
+| `TravelMode`, `ImpliedOneway`, `WayAccess`, `RoadGraph`, `RoadNode`, `RoadEdge`, `RoadGraphOptions`, `NearestNode`, `RoadSnap`, `SnapOptions`, `RouteLine`, `RouteStep`, `RouteStepsOptions`, `RouteTurn`, `TurnDegrees` | The types of the tables, the graph and the results. |
 
 The edges have the shape of a shortest-path search on directed edges, for example `shortestPath` of `@mark1russell7/collections/graph`. This package does not import that search.
 
 ```ts
-import { roadGraph, routeLine, snapToRoad, type Feature } from "@mark1russell7/geo";
+import { roadGraph, routeLine, routeSteps, snapToRoad, type Feature } from "@mark1russell7/geo";
 import { shortestPath } from "@mark1russell7/collections/graph";
 
 // The features of the ways, for example from OpenStreetMap, fetched before.
@@ -151,7 +153,12 @@ const graph = roadGraph(ways, { mode: "walk" });
 const start = snapToRoad(graph, { lat: 0.0002, lon: 0.0005 })!;
 const end = snapToRoad(start.graph, { lat: 0.0011, lon: 0.0019 })!;
 const path = shortestPath(end.graph.edges, start.node.id, end.node.id);
-if (path.kind === "path" && path.edges.length > 0) console.log(routeLine(end.graph, path.edges).meters);
+if (path.kind === "path" && path.edges.length > 0) {
+  console.log(routeLine(end.graph, path.edges).meters);
+  for (const step of routeSteps(end.graph, path.edges, { features: ways })) {
+    console.log(step.turn, step.name || "unnamed road", Math.round(step.meters));
+  }
+}
 ```
 
 ### Bounding boxes
@@ -375,6 +382,20 @@ An edge is a straight line in longitude and latitude, as for the polygon tests. 
 
 `snapToRoad` measures on the plane of `azimuthalEquidistant` at the point, so each distance from the point is exact on the ellipsoid. A cut gives two edges for each direction of the part. Each new edge keeps its share of the weight. A nearest point within `toleranceMeters` (0.5 by default) of an end goes to that end.
 
+`routeSteps` makes the steps of a route:
+
+- Give the features of the graph in `features`. The field `feature` of each edge is an index into them. With no features, each road has an empty name.
+- Consecutive edges with the same road name make one leg. The default name is the tag `name`, then the tag `ref`, then an empty name. `nameOf` gives a different name.
+- A change of name makes a new leg, also on a straight road. Then the turn is `straight`. A turn on a road with one name makes no new leg.
+- The turn comes from the change of the bearing from the last segment of the leg before to the first segment of the leg. `initialBearing` gives the two bearings.
+- `bearingChange` is from -180 to less than 180 degrees. A negative value is a turn to the left. Use it for your own rule.
+- `TURN_DEGREES` gives the turn from the absolute change. A change below 20 is `straight`, and below 60 is `slight-left` or `slight-right`.
+- A change below 120 is `left` or `right`, and below 170 is `sharp-left` or `sharp-right`. A larger change is `u-turn`.
+- A segment of length 0 has no direction, so the function skips it. A leg with no direction gives a change of 0.
+- The first leg has the turn `depart`. The last step has the turn `arrive`, 0 metres and the index of the last edge.
+- `startIndex` and `endIndex` are indices into the edge list of the route. The two limits are in the leg.
+- `minLegMeters` is 0 by default, so no leg joins. A leg shorter than it joins its two neighbors when they have the same name. The first and the last legs do not join.
+
 ### Exact results
 
 The orientation and segment tests are exact. A test across the antimeridian also moves the point or a polygon by a multiple of 360 degrees.
@@ -461,7 +482,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `max-cells` | The value of `maxCells` is `NaN` or less than 0, or less than 1 for a buffer. |
 | `radius` | The radius of the sphere or of a circle, or the distance of a buffer, is not more than 0. Or the equatorial radius of an ellipsoid is not more than 0, or its polar radius is not a finite number more than 0. |
 | `vertices` | The number of the vertices of a circle is not an integer from 3 to `MAX_CIRCLE_VERTICES`. |
-| `tolerance` | The tolerance of a simplification is less than 0. Or the tolerance of a buffer is 0 or less, or it is equal to the distance or more. |
+| `tolerance` | The tolerance of a simplification is less than 0. Or the tolerance of a buffer is 0 or less, or it is equal to the distance or more. Or `minLegMeters` of `routeSteps` is not a finite number from 0. |
 | `vector` | A vector has the length 0, so it has no direction. |
 | `step` | The largest step of `densify` is not more than 0. Or the step is too small, and the function adds more than `MAX_DENSIFY_POSITIONS` positions. |
 | `travel-mode` | A travel mode is not a name of `TRAVEL_MODES`, or its table is incorrect. |
