@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.10
+
+- A comment in `line.ts` gives the reason and the end of its planar steps, a copy of three functions of layout-contract. The API does not change.
+
 ## 0.5.9
 
 - `routeSteps(graph, edges, options?)` gives the steps of a route for a route on paper. Each leg has `turn`, `bearingChange`, `name`, `ref`, `meters`, `startIndex` and `endIndex`. The last step is `arrive`, with 0 metres.
