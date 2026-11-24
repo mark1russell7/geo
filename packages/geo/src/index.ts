@@ -74,10 +74,13 @@ export { bufferKm, bufferMeters, DEFAULT_MAX_BUFFER_CELLS, type BufferOptions } 
 export { densify, MAX_DENSIFY_POSITIONS } from "./densify.ts";
 export {
   joinLines,
+  lengthNearLines,
   lineReference,
   nearestOnLine,
   pointAlongLine,
+  type LengthNearLines,
   type LineOptions,
+  type LinePart,
   type LineReference,
   type LineSide,
   type NearestOnLine,

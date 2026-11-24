@@ -65,6 +65,7 @@ describe("the entry", () => {
         "geohashesInBBox",
         "initialBearing",
         "joinLines",
+        "lengthNearLines",
         "lineReference",
         "nearestOnLine",
         "intermediatePoint",

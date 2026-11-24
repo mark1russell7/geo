@@ -120,9 +120,11 @@ A line is a list of GeoJSON positions, for example a part of a street. The secti
 | `joinLines(lines)` | Joins lines with a common end into longer lines, for example the parts of one street. |
 | `lineReference(line, options?)` | Puts a line on a plane in metres one time, for many queries. It gives `lengthMeters`, `nearest(point)` and `pointAt(alongMeters, offsetMeters?)`. |
 | `nearestOnLine(line, point, options?)` | The nearest point of a line to a point, the distance to it, the distance along the line, and the side. |
+| `lengthNearLines(line, others, withinMeters, options?)` | The length of the parts of a line within a distance of other lines, and the parts as distances along the line. For example, the frontage of a parcel along the roads. The measure is exact on the plane, with no sampling. |
 | `pointAlongLine(line, alongMeters, offsetMeters?, options?)` | The point at a distance along a line, moved by an offset to the left (positive) or to the right (negative). |
 | `LineOptions` | The `projection` of the plane. The default is `azimuthalEquidistant` at the first position of the line. |
 | `NearestOnLine`, `LineSide`, `LineReference` | The result of `nearest`, the side (1 left, -1 right, 0 on the line), and the result of `lineReference`. |
+| `LengthNearLines`, `LinePart` | The result of `lengthNearLines` (`meters`, `lengthMeters`, `parts`), and a part of a line from `fromMeters` to `toMeters`. |
 
 ### Roads
 
