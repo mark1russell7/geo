@@ -3,9 +3,9 @@ import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
 import { GeoError } from "./errors.ts";
 import { geodesicInverse } from "./geodesic.ts";
-import { joinLines, lineReference, nearestOnLine, pointAlongLine } from "./line.ts";
+import { joinLines, lengthNearLines, lineReference, nearestOnLine, pointAlongLine } from "./line.ts";
 import type { LatLon, Position } from "./point.ts";
-import { WEB_MERCATOR } from "./projection.ts";
+import { WEB_MERCATOR, type Projection } from "./projection.ts";
 
 // The coordinates are made up: short lines in the ocean near the point (0, 0), and lines at random places.
 
@@ -250,5 +250,117 @@ describe("nearestOnLine and pointAlongLine", () => {
     expect(pointAlongLine(line, 100, -3)).toEqual(lineReference(line).pointAt(100, -3));
     expect(pointAlongLine(line, 100)).toEqual(lineReference(line).pointAt(100));
     expect(nearestOnLine(line, point, { projection: WEB_MERCATOR })).toEqual(lineReference(line, { projection: WEB_MERCATOR }).nearest(point));
+  });
+});
+
+// A flat plane for the tests of lengthNearLines: x is the longitude and y is the latitude, with no change. So each
+// length is in the units of the made-up coordinates, and a test can give an exact answer.
+const FLAT: Projection = Object.freeze({
+  name: "Flat test plane",
+  toPlane: (point: LatLon) => ({ x: point.lon, y: point.lat }),
+  fromPlane: (point: { x: number; y: number }) => ({ lat: point.y, lon: point.x }),
+  scale: () => ({ max: 1, min: 1 }),
+});
+
+/** The distance from a point to a segment, on the flat plane. */
+function segmentDistance(px: number, py: number, a: Position, b: Position): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const squared = dx * dx + dy * dy;
+  const t = squared === 0 ? 0 : Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / squared));
+  return Math.hypot(px - (a[0] + t * dx), py - (a[1] + t * dy));
+}
+
+describe("lengthNearLines", () => {
+  it("gives the frontage of a square along a road: one side and a part of the two sides next to it", () => {
+    const square: Position[] = [[0, 0], [50, 0], [50, 50], [0, 50], [0, 0]];
+    const road: Position[] = [[-20, -5], [70, -5]];
+    const near = lengthNearLines(square, [road], 10, { projection: FLAT });
+    expect(near.lengthMeters).toBe(200);
+    expect(near.meters).toBeCloseTo(60, 9);
+    expect(near.parts).toHaveLength(2);
+    expect(near.parts[0]!.fromMeters).toBeCloseTo(0, 9);
+    expect(near.parts[0]!.toMeters).toBeCloseTo(55, 9);
+    expect(near.parts[1]!.fromMeters).toBeCloseTo(195, 9);
+    expect(near.parts[1]!.toMeters).toBeCloseTo(200, 9);
+  });
+
+  it("gives the part on another line for the distance 0", () => {
+    const near = lengthNearLines([[0, 0], [10, 0]], [[[5, 0], [20, 0]]], 0, { projection: FLAT });
+    expect(near.meters).toBeCloseTo(5, 9);
+    expect(near.parts).toEqual([{ fromMeters: 5, toMeters: 10 }]);
+  });
+
+  it("gives the crossing of a road at right angles, and the round end of a road", () => {
+    const line: Position[] = [[0, 0], [50, 0]];
+    expect(lengthNearLines(line, [[[25, -10], [25, 10]]], 3, { projection: FLAT }).meters).toBeCloseTo(6, 9);
+    // A road that ends 4 from the line: the near set at its end is a disk, so the part is 2 * sqrt(5^2 - 4^2) = 6.
+    expect(lengthNearLines(line, [[[25, 4], [25, 30]]], 5, { projection: FLAT }).meters).toBeCloseTo(6, 9);
+    // A road of length 0 is a disk.
+    expect(lengthNearLines(line, [[[25, 4], [25, 4]]], 5, { projection: FLAT }).meters).toBeCloseTo(6, 9);
+  });
+
+  it("joins the parts of two roads that overlap, and gives 0 with no road", () => {
+    const line: Position[] = [[0, 0], [50, 0]];
+    const near = lengthNearLines(line, [[[0, 1], [20, 1]], [[15, -1], [30, -1]]], 2, { projection: FLAT });
+    expect(near.parts).toHaveLength(1);
+    expect(near.meters).toBeCloseTo(30 + Math.sqrt(3), 9);
+    expect(lengthNearLines(line, [], 10, { projection: FLAT })).toEqual({ meters: 0, lengthMeters: 50, parts: [] });
+  });
+
+  it("is equal to a dense sample of the line, for random lines", () => {
+    const position = fc.tuple(uniformDouble({ min: -40, max: 40 }), uniformDouble({ min: -40, max: 40 })) as fc.Arbitrary<Position>;
+    const polyline = fc.array(position, { minLength: 2, maxLength: 5 });
+    fc.assert(
+      fc.property(polyline, fc.array(polyline, { minLength: 1, maxLength: 3 }), uniformDouble({ min: 0.5, max: 15 }), (line, others, within) => {
+        const near = lengthNearLines(line, others, within, { projection: FLAT });
+        const steps = 2000;
+        let sampled = 0;
+        let crossings = 2;
+        for (let index = 1; index < line.length; index += 1) {
+          const a = line[index - 1] as Position;
+          const b = line[index] as Position;
+          const length = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          for (let step = 0; step < steps; step += 1) {
+            const t = (step + 0.5) / steps;
+            const x = a[0] + t * (b[0] - a[0]);
+            const y = a[1] + t * (b[1] - a[1]);
+            const inside = others.some((other) => other.slice(1).some((end, k) => segmentDistance(x, y, other[k] as Position, end) <= within));
+            if (inside) sampled += length / steps;
+          }
+          crossings += 2;
+        }
+        const step = near.lengthMeters / steps;
+        const segments = others.reduce((sum, other) => sum + other.length, 0);
+        expect(Math.abs(near.meters - sampled)).toBeLessThanOrEqual(step * crossings * segments + 1e-9);
+        expect(near.meters).toBeLessThanOrEqual(near.lengthMeters + 1e-9);
+        near.parts.forEach((part, index) => {
+          expect(part.toMeters).toBeGreaterThanOrEqual(part.fromMeters);
+          if (index > 0) expect(part.fromMeters).toBeGreaterThan(near.parts[index - 1]!.toMeters);
+        });
+      }),
+      { numRuns: 60 },
+    );
+  });
+
+  it("measures on the plane of the line by default, for a road 10 m from a street", () => {
+    const lat = 44.5;
+    const street: Position[] = [[-71.002, lat], [-71, lat]];
+    // 10 m to the north is 10 / 111,130 degrees of latitude, approximately.
+    const road: Position[] = [[-71.003, lat + 10 / 111_130], [-70.999, lat + 10 / 111_130]];
+    const near = lengthNearLines(street, [road], 15);
+    const length = geodesicInverse({ lat, lon: -71.002 }, { lat, lon: -71 }).meters;
+    expect(near.lengthMeters / length).toBeCloseTo(1, 4);
+    expect(near.meters).toBeCloseTo(near.lengthMeters, 6);
+    expect(lengthNearLines(street, [road], 5).meters).toBe(0);
+  });
+
+  it("refuses a negative distance, a distance that is not finite, and a line with one position", () => {
+    const line: Position[] = [[0, 0], [1, 0]];
+    expect(code(() => lengthNearLines(line, [], -1))).toBe("tolerance");
+    expect(code(() => lengthNearLines(line, [], Number.NaN))).toBe("not-finite");
+    expect(code(() => lengthNearLines(line, [[[0, 1]]], 1))).toBe("too-few-positions");
+    expect(code(() => lengthNearLines([[0, 0]], [], 1))).toBe("too-few-positions");
+    expect(code(() => lengthNearLines(line, "x" as never, 1))).toBe("geojson-member");
   });
 });

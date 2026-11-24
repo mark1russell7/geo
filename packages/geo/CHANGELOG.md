@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.12
+
+- `lengthNearLines(line, others, withinMeters, options?)` gives the length of the parts of a line within a distance of other lines, and the parts as distances along the line. For example, the frontage of a parcel along the roads, or the length of a path along a river.
+- The near set of a segment of another line is a capsule (a rectangle and two disks). A segment of the line crosses each capsule on one interval, from a closed form. Thus the measure has no step size and no sampling error on its plane.
+- The new types are `LengthNearLines` and `LinePart`. A negative distance gives the code `tolerance`.
+- PATCH: new exports before 1.0.0. The change adds a function, and it changes no function.
+
 ## 0.5.11
 
 - `simplifyLines(lines, toleranceKm, radiusKm?)` simplifies lines with the method of Douglas and Peucker. Each line keeps its ends and each position that it shares with a line. A map at a small scale draws its roads with fewer positions.

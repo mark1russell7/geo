@@ -35,7 +35,9 @@ type Geometry: dist/index.d.ts#Geometry
 type GeometryCollection: dist/index.d.ts#GeometryCollection
 type ImpliedOneway: dist/index.d.ts#ImpliedOneway
 type LatLon: dist/projection.chunk.d.ts#LatLon
+type LengthNearLines: dist/index.d.ts#LengthNearLines
 type LineOptions: dist/index.d.ts#LineOptions
+type LinePart: dist/index.d.ts#LinePart
 type LineReference: dist/index.d.ts#LineReference
 type LineSide: dist/index.d.ts#LineSide
 type LineString: dist/index.d.ts#LineString
@@ -112,6 +114,7 @@ initialBearing: dist/index.d.ts#initialBearing
 intermediatePoint: dist/index.d.ts#intermediatePoint
 joinLines: dist/index.d.ts#joinLines
 latLon: dist/projection.chunk.d.ts#latLon
+lengthNearLines: dist/index.d.ts#lengthNearLines
 lineReference: dist/index.d.ts#lineReference
 locatePoint: dist/index.d.ts#locatePoint
 nearestNode: dist/index.d.ts#nearestNode
@@ -254,9 +257,22 @@ interface ImpliedOneway {
   readonly values: readonly string[];
 }
 
+### dist/index.d.ts#LengthNearLines
+interface LengthNearLines {
+  readonly meters: number;
+  readonly lengthMeters: number;
+  readonly parts: readonly LinePart[];
+}
+
 ### dist/index.d.ts#LineOptions
 interface LineOptions {
   readonly projection?: Projection;
+}
+
+### dist/index.d.ts#LinePart
+interface LinePart {
+  readonly fromMeters: number;
+  readonly toMeters: number;
 }
 
 ### dist/index.d.ts#LineReference
@@ -558,6 +574,9 @@ export declare function intermediatePoint(from: LatLon, to: LatLon, part: number
 
 ### dist/index.d.ts#joinLines
 export declare function joinLines(lines: readonly (readonly Position[])[]): Position[][];
+
+### dist/index.d.ts#lengthNearLines
+export declare function lengthNearLines(line: readonly Position[], others: readonly (readonly Position[])[], withinMeters: number, options?: LineOptions): LengthNearLines;
 
 ### dist/index.d.ts#lineReference
 export declare function lineReference(line: readonly Position[], options?: LineOptions): LineReference;
