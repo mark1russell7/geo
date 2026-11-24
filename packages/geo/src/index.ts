@@ -8,6 +8,7 @@
  * a circle and the buffer of a geometry as polygons, for maps. The README gives the limits of the exact results.
  * For a globe, it gives a point as a unit vector, the points along a great circle, and a geometry with short edges.
  * For lines, it joins lines at common ends, and it gives the nearest point of a line and a point along a line.
+ * It gives the place of the sun at an instant, and the sunrise and the sunset at a point on a date.
  * The functions are pure, and each refuses an incorrect input with a `GeoError`.
  *
  * For roads, it makes a graph of a travel mode from GeoJSON lines, connects a point to it, and gives the line of a route.
@@ -17,6 +18,7 @@
  */
 
 export { GeoError, type GeoErrorCode } from "./errors.ts";
+export { SUNRISE_ALTITUDE_DEG, sunDay, sunPosition, type SunDay, type SunDayOptions, type SunPosition } from "./sun.ts";
 export {
   fromPosition,
   latLon,

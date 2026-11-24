@@ -69,7 +69,11 @@ type RouteLine: dist/index.d.ts#RouteLine
 type RouteStep: dist/index.d.ts#RouteStep
 type RouteStepsOptions: dist/index.d.ts#RouteStepsOptions
 type RouteTurn: dist/index.d.ts#RouteTurn
+SUNRISE_ALTITUDE_DEG: dist/index.d.ts#SUNRISE_ALTITUDE_DEG
 type SnapOptions: dist/index.d.ts#SnapOptions
+type SunDay: dist/index.d.ts#SunDay
+type SunDayOptions: dist/index.d.ts#SunDayOptions
+type SunPosition: dist/index.d.ts#SunPosition
 TRAVEL_MODES: dist/index.d.ts#TRAVEL_MODES
 TURN_DEGREES: dist/index.d.ts#TURN_DEGREES
 type TravelMode: dist/index.d.ts#TravelMode
@@ -137,6 +141,8 @@ routeSteps: dist/index.d.ts#routeSteps
 simplifyLines: dist/index.d.ts#simplifyLines
 simplifyRegions: dist/index.d.ts#simplifyRegions
 snapToRoad: dist/index.d.ts#snapToRoad
+sunDay: dist/index.d.ts#sunDay
+sunPosition: dist/index.d.ts#sunPosition
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
 toPosition: dist/projection.chunk.d.ts#toPosition
 toUnitVector: dist/index.d.ts#toUnitVector
@@ -436,10 +442,42 @@ interface RouteStepsOptions {
 ### dist/index.d.ts#RouteTurn
 type RouteTurn = "depart" | "straight" | "slight-left" | "left" | "sharp-left" | "slight-right" | "right" | "sharp-right" | "u-turn" | "arrive";
 
+### dist/index.d.ts#SUNRISE_ALTITUDE_DEG
+export declare const SUNRISE_ALTITUDE_DEG = -.833;
+
 ### dist/index.d.ts#SnapOptions
 interface SnapOptions {
   readonly toleranceMeters?: number;
   readonly id?: string;
+}
+
+### dist/index.d.ts#SunDay
+type SunDay = {
+  readonly kind: "rise-set";
+  readonly rise: number;
+  readonly noon: number;
+  readonly set: number;
+  readonly daylightHours: number;
+} | {
+  readonly kind: "polar-day";
+  readonly noon: number;
+  readonly daylightHours: 24;
+} | {
+  readonly kind: "polar-night";
+  readonly noon: number;
+  readonly daylightHours: 0;
+};
+
+### dist/index.d.ts#SunDayOptions
+interface SunDayOptions {
+  readonly altitudeDeg?: number | undefined;
+}
+
+### dist/index.d.ts#SunPosition
+interface SunPosition {
+  readonly declinationDeg: number;
+  readonly rightAscensionDeg: number;
+  readonly equationOfTimeMin: number;
 }
 
 ### dist/index.d.ts#TRAVEL_MODES
@@ -638,6 +676,12 @@ export declare function simplifyRegions(regions: readonly Region[], toleranceKm:
 ### dist/index.d.ts#snapToRoad
 export declare function snapToRoad(graph: RoadGraph, point: LatLon, options?: SnapOptions): RoadSnap | undefined;
 
+### dist/index.d.ts#sunDay
+export declare function sunDay(point: LatLon, date: string, options?: SunDayOptions): SunDay;
+
+### dist/index.d.ts#sunPosition
+export declare function sunPosition(at: number): SunPosition;
+
 ### dist/index.d.ts#toGeoJsonBBox
 export declare function toGeoJsonBBox(box: BBox): GeoJsonBBox;
 
@@ -661,7 +705,7 @@ declare class GeoError extends RangeError {
 }
 
 ### dist/projection.chunk.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route";
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route" | "date" | "altitude";
 
 ### dist/projection.chunk.d.ts#GeodesicDirect
 interface GeodesicDirect {
