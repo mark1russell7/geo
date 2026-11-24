@@ -9,6 +9,14 @@
  * @packageDocumentation
  */
 
+// A stated shortcut, a decision of the maintainer on 2026-11-24. The planar steps of this module (`joinLines`, and the
+// nearest point and the point along a line in `lineReference`) are a copy of `chainPolylines`, `locateOnPolyline` and
+// `pointAlongPolyline` of `@mark1russell7/layout-contract`, the home of points on a plane.
+// - The reason: layout-contract adds 5 dependencies to this base package (layout-contract, typeset, strategy-space,
+//   rigor-generators and rigor-statistics).
+// - The end: when those three functions are in a package or an entry that installs with no strategy and no text
+//   dependencies (the item layout-contract-lean-geometry). Then this module uses them and deletes its own steps.
+
 import { orient2dSign } from "@mark1russell7/predicates";
 import { GeoError } from "./errors.ts";
 import { checkPosition } from "./geojson.ts";
