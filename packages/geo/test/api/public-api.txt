@@ -66,6 +66,7 @@ bufferMeters: dist/index.d.ts#bufferMeters
 centralAngleRadians: dist/index.d.ts#centralAngleRadians
 circleKm: dist/index.d.ts#circleKm
 circleMeters: dist/index.d.ts#circleMeters
+commonAreaSquareMeters: dist/index.d.ts#commonAreaSquareMeters
 decodeGeohash: dist/index.d.ts#decodeGeohash
 densify: dist/index.d.ts#densify
 destinationKm: dist/index.d.ts#destinationKm
@@ -342,6 +343,9 @@ export declare function circleKm(center: LatLon, distance: number, options?: Cir
 
 ### dist/index.d.ts#circleMeters
 export declare function circleMeters(center: LatLon, distance: number, options?: CircleOptions, radiusMeters?: number): Polygon | MultiPolygon;
+
+### dist/index.d.ts#commonAreaSquareMeters
+export declare function commonAreaSquareMeters(polygons: readonly (Polygon | MultiPolygon)[], ellipsoid?: Ellipsoid): number;
 
 ### dist/index.d.ts#decodeGeohash
 export declare function decodeGeohash(hash: string): GeohashCell;

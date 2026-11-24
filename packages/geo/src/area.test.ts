@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { uniformDouble } from "@mark1russell7/rigor-testkit/arbitrary";
 import { describe, expect, it } from "vitest";
-import { areaSquareMeters, overlapAreaSquareMeters } from "./area.ts";
+import { areaSquareMeters, commonAreaSquareMeters, overlapAreaSquareMeters } from "./area.ts";
 import { GeoError } from "./errors.ts";
 import { WGS84, type Ellipsoid } from "./geodesic.ts";
 import type { MultiPolygon, Polygon } from "./geojson.ts";
@@ -163,5 +163,60 @@ describe("overlapAreaSquareMeters", () => {
         expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1e-9 * Math.max(1, areaSquareMeters(polygon(box(0, 0, 1, 1)))));
       }),
     );
+  });
+});
+
+describe("commonAreaSquareMeters", () => {
+  const boxPolygon = (west: number, south: number, east: number, north: number): Polygon => polygon(box(west, south, east, north));
+
+  it("gives the area of one polygon, and refuses an empty list", () => {
+    const one = boxPolygon(-71.01, 44, -71, 44.01);
+    expect(commonAreaSquareMeters([one])).toBe(areaSquareMeters(one));
+    expect(() => commonAreaSquareMeters([])).toThrow(GeoError);
+  });
+
+  it("gives the common box of three boxes, and 0 when two of them are apart", () => {
+    const a = boxPolygon(0, 0, 0.6, 0.6);
+    const b = boxPolygon(0.2, 0.1, 1, 1);
+    const c = boxPolygon(0.1, 0.3, 0.5, 0.9);
+    expect(relative(commonAreaSquareMeters([a, b, c]), areaSquareMeters(boxPolygon(0.2, 0.3, 0.5, 0.6)))).toBeLessThan(1e-9);
+    expect(commonAreaSquareMeters([a, b, boxPolygon(0.7, 0, 0.9, 0.05)])).toBe(0);
+  });
+
+  it("gives the area of the union of two polygons in a third by inclusion and exclusion", () => {
+    // A parcel, a flood zone and a wetland with a hole. The flood zone and the wetland overlap in the parcel.
+    const parcel = boxPolygon(0, 0, 1, 1);
+    const flood = boxPolygon(-1, -1, 0.5, 0.6);
+    const wetland = polygon(box(0.3, 0.4, 2, 0.8), box(0.6, 0.5, 0.7, 0.7));
+    const union = overlapAreaSquareMeters(parcel, flood) + overlapAreaSquareMeters(parcel, wetland) - commonAreaSquareMeters([parcel, flood, wetland]);
+    // The same union as boxes that do not overlap, less the hole.
+    const expected =
+      areaSquareMeters(boxPolygon(0, 0, 0.5, 0.6)) + areaSquareMeters(boxPolygon(0.5, 0.4, 1, 0.8)) + areaSquareMeters(boxPolygon(0.3, 0.6, 0.5, 0.8)) - areaSquareMeters(boxPolygon(0.6, 0.5, 0.7, 0.7));
+    expect(relative(union, expected)).toBeLessThan(1e-9);
+  });
+
+  it("agrees with the common box of random boxes, and does not depend on the order", () => {
+    const span = fc.tuple(uniformDouble({ min: 0, max: 1 }), uniformDouble({ min: 0, max: 1 })).map(([u, v]) => [Math.min(u, v), Math.max(u, v)] as const);
+    const boxArb = fc.tuple(span, span);
+    fc.assert(
+      fc.property(boxArb, boxArb, boxArb, (...boxes) => {
+        const west = Math.max(...boxes.map(([[w]]) => w));
+        const east = Math.min(...boxes.map(([[, e]]) => e));
+        const south = Math.max(...boxes.map(([, [s]]) => s));
+        const north = Math.min(...boxes.map(([, [, n]]) => n));
+        const expected = west < east && south < north ? areaSquareMeters(boxPolygon(west, south, east, north)) : 0;
+        const polygons = boxes.map(([[w, e], [s, n]]) => boxPolygon(w, s, e, n));
+        const tolerance = 1e-9 * areaSquareMeters(boxPolygon(0, 0, 1, 1));
+        expect(Math.abs(commonAreaSquareMeters(polygons) - expected)).toBeLessThanOrEqual(tolerance);
+        expect(Math.abs(commonAreaSquareMeters([...polygons].reverse()) - expected)).toBeLessThanOrEqual(tolerance);
+      }),
+    );
+  });
+
+  it("finds the common part across the antimeridian", () => {
+    const east = boxPolygon(179.99, 0, 180.01, 0.01);
+    const west = boxPolygon(-180.01, 0, -179.99, 0.01);
+    const half = boxPolygon(-180, 0, -179.99, 0.01);
+    expect(relative(commonAreaSquareMeters([east, west, half]), areaSquareMeters(half))).toBeLessThan(1e-9);
   });
 });
