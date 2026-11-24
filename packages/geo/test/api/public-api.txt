@@ -55,6 +55,7 @@ type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
 type UnitVector: dist/index.d.ts#UnitVector
 WGS84: dist/projection.chunk.d.ts#WGS84
+areaSquareMeters: dist/index.d.ts#areaSquareMeters
 bboxCenter: dist/index.d.ts#bboxCenter
 bboxContains: dist/index.d.ts#bboxContains
 bboxIntersects: dist/index.d.ts#bboxIntersects
@@ -93,6 +94,7 @@ lineReference: dist/index.d.ts#lineReference
 locatePoint: dist/index.d.ts#locatePoint
 nearestOnLine: dist/index.d.ts#nearestOnLine
 normalizeLon: dist/projection.chunk.d.ts#normalizeLon
+overlapAreaSquareMeters: dist/index.d.ts#overlapAreaSquareMeters
 parseGeoJson: dist/index.d.ts#parseGeoJson
 parseGeometry: dist/index.d.ts#parseGeometry
 parseLatLon: dist/projection.chunk.d.ts#parseLatLon
@@ -308,6 +310,9 @@ interface UnitVector {
   readonly z: number;
 }
 
+### dist/index.d.ts#areaSquareMeters
+export declare function areaSquareMeters(polygon: Polygon | MultiPolygon, ellipsoid?: Ellipsoid): number;
+
 ### dist/index.d.ts#bboxCenter
 export declare function bboxCenter(box: BBox): LatLon;
 
@@ -406,6 +411,9 @@ export declare function locatePoint(point: LatLon, polygon: Polygon | MultiPolyg
 
 ### dist/index.d.ts#nearestOnLine
 export declare function nearestOnLine(line: readonly Position[], point: LatLon, options?: LineOptions): NearestOnLine;
+
+### dist/index.d.ts#overlapAreaSquareMeters
+export declare function overlapAreaSquareMeters(a: Polygon | MultiPolygon, b: Polygon | MultiPolygon, ellipsoid?: Ellipsoid): number;
 
 ### dist/index.d.ts#parseGeoJson
 export declare function parseGeoJson(value: unknown): Result<GeoJson, GeoError>;
