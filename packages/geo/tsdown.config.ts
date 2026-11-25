@@ -1,8 +1,8 @@
 import { defineConfig } from "tsdown";
 
-// The build for npm: two ES module entries (the root and /projection) and their declarations in dist. The dependencies stay external.
+// The build for npm: three ES module entries (the root, /projection and /shapefile) and their declarations in dist. The dependencies stay external.
 export default defineConfig({
-  entry: { index: "src/index.ts", projection: "src/projection.ts" },
+  entry: { index: "src/index.ts", projection: "src/projection.ts", shapefile: "src/shapefile.ts" },
   format: "esm",
   platform: "neutral",
   dts: true,

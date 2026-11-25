@@ -1,6 +1,6 @@
 # @mark1russell7/geo
 
-Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It gives a circle around a point and the buffer of a geometry as GeoJSON polygons. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946. The entry `@mark1russell7/geo/projection` has map projections to a plane in metres.
+Places on the Earth, as plain functions. The package has points on WGS84, great-circle distances, bearings and destinations, geodesics on the WGS84 ellipsoid, and bounding boxes that can cross the antimeridian. It gives the distance from a point to a GeoJSON geometry. It gives a circle around a point and the buffer of a geometry as GeoJSON polygons. It also has point-in-polygon and overlap tests for GeoJSON on exact predicates, geohashes, and the GeoJSON types of RFC 7946. The entry `@mark1russell7/geo/projection` has map projections to a plane in metres. The entry `@mark1russell7/geo/shapefile` reads the shapes and the attributes of a shapefile from its bytes.
 
 - The functions are pure. They read no files, no network and no clock.
 - Each angle is in degrees, in and out. A point is `{ lat, lon }`, and a GeoJSON position is `[lon, lat]`.
