@@ -2,8 +2,8 @@
  * Shapefiles, as the ESRI Shapefile Technical Description (1998) gives them: the `.shp` file of the shapes and the
  * `.dbf` file (dBASE III) of their attributes.
  *
- * - Each function reads bytes and does no I/O. A caller with a large file reads the header, then reads the file in
- *   chunks: `shpRecordBytes` gives the length of the record at an offset, so the caller knows how many bytes to read.
+ * - Each function reads bytes and does no I/O. A caller reads a large file in chunks, after its header.
+ * - `shpRecordBytes` gives the length of the record at an offset. Thus the caller knows how many bytes to read.
  * - `readDbfRecord` reads one record at a known index, because each `.dbf` record has the same length. Thus a caller
  *   reads only the attributes of the shapes that it keeps.
  * - `shapeGeometry` gives a GeoJSON geometry of a record. The readers take the Z and M variants, and they keep only
@@ -15,7 +15,8 @@
  */
 
 import { GeoError } from "./errors.ts";
-import type { LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, Position } from "./geojson.ts";
+import type { LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon } from "./geojson.ts";
+import type { Position } from "./point.ts";
 import { rewind, ringWinding } from "./polygon.ts";
 
 /** The length of the header of a `.shp` file and of a `.shx` file, in bytes. */
@@ -129,7 +130,7 @@ export function readShpHeader(bytes: Uint8Array): ShpHeader {
 /**
  * This function gives the length of the `.shp` record at `offset`, with its 8-byte header, in bytes. It gives `null`
  * when the 8 bytes of the record header are not all in `bytes`. A caller that reads in chunks reads this many bytes
- * from `offset` before it calls `readShpRecord`.
+ * from `offset` before it uses `readShpRecord`.
  */
 export function shpRecordBytes(bytes: Uint8Array, offset: number): number | null {
   if (offset < 0 || offset + SHP_RECORD_HEADER_BYTES > bytes.length) return null;
@@ -137,8 +138,8 @@ export function shpRecordBytes(bytes: Uint8Array, offset: number): number | null
 }
 
 /**
- * This function reads the `.shp` record at `offset`. It throws a `GeoError` with the code `shapefile` when the record
- * is not all in `bytes`, or when its counts do not agree with its length.
+ * This function reads the `.shp` record at `offset`. It throws a `GeoError` with the code `shapefile` in two cases.
+ * The record is not all in `bytes`, or its counts do not agree with its length.
  */
 export function readShpRecord(bytes: Uint8Array, offset: number): ShpRecord {
   const length = shpRecordBytes(bytes, offset);
@@ -196,8 +197,8 @@ export function readShpRecord(bytes: Uint8Array, offset: number): ShpRecord {
 /**
  * This function gives the GeoJSON geometry of a record, or `null` for a null shape or a shape with no part.
  *
- * - A polygon ring that turns clockwise starts a polygon, and a ring that turns counterclockwise is a hole of the
- *   polygon before it, as the specification gives them. A hole before each outer ring starts its own polygon.
+ * - A polygon ring that turns clockwise starts a polygon, as the specification gives it.
+ * - A ring that turns counterclockwise is a hole of the polygon before it. A hole before each outer ring starts its own polygon.
  * - The polygons follow the right-hand rule of RFC 7946, as `rewind` gives it.
  */
 export function shapeGeometry(record: ShpRecord): Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon | null {
@@ -241,7 +242,7 @@ export function readDbfHeader(bytes: Uint8Array): DbfHeader {
   let offset = 1;
   for (let at = 32; at + 32 <= headerBytes && bytes[at] !== 0x0d; at += 32) {
     const length = bytes[at + 16] ?? 0;
-    fields.push({ name: latin1(bytes, at, at + 11).replace(/\0.*$/s, ""), type: String.fromCharCode(bytes[at + 11] ?? 0x43), length, decimals: bytes[at + 17] ?? 0, offset });
+    fields.push({ name: beforeNul(latin1(bytes, at, at + 11)), type: String.fromCharCode(bytes[at + 11] ?? 0x43), length, decimals: bytes[at + 17] ?? 0, offset });
     offset += length;
   }
   if (offset > recordBytes) throw new GeoError("shapefile", `the fields need ${offset} bytes in each record, and a record has ${recordBytes}`);
@@ -282,8 +283,21 @@ function dbfValue(type: string, text: string): DbfValue {
     case "D":
       return /^\d{8}$/.test(value) ? `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}` : null;
     default:
-      return text.replace(/[\s\0]+$/, "");
+      return trimEnd(text);
   }
+}
+
+/** This function removes the spaces and the NUL bytes at the end of a text, with no regular expression. */
+function trimEnd(text: string): string {
+  let end = text.length;
+  while (end > 0 && text.charCodeAt(end - 1) <= 0x20) end--;
+  return text.slice(0, end);
+}
+
+/** This function gives the text before the first NUL byte. */
+function beforeNul(text: string): string {
+  const at = text.indexOf(" ");
+  return at < 0 ? text : text.slice(0, at);
 }
 
 function latin1(bytes: Uint8Array, from: number, to: number): string {

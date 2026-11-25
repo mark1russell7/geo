@@ -17,49 +17,49 @@ DRIVE: dist/index.d.ts#DRIVE
 EARTH_MEAN_RADIUS_KM: dist/index.d.ts#EARTH_MEAN_RADIUS_KM
 EARTH_MEAN_RADIUS_METERS: dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
 type Ellipsoid: dist/projection.chunk.d.ts#Ellipsoid
-type Feature: dist/index.d.ts#Feature
-type FeatureCollection: dist/index.d.ts#FeatureCollection
+type Feature: dist/geojson.chunk.d.ts#Feature
+type FeatureCollection: dist/geojson.chunk.d.ts#FeatureCollection
 GEOHASH_ALPHABET: dist/index.d.ts#GEOHASH_ALPHABET
-GeoError: dist/projection.chunk.d.ts#GeoError
-type GeoErrorCode: dist/projection.chunk.d.ts#GeoErrorCode
-type GeoJson: dist/index.d.ts#GeoJson
-type GeoJsonBBox: dist/index.d.ts#GeoJsonBBox
-type GeoJsonObject: dist/index.d.ts#GeoJsonObject
-type GeoJsonProperties: dist/index.d.ts#GeoJsonProperties
+GeoError: dist/point.chunk.d.ts#GeoError
+type GeoErrorCode: dist/point.chunk.d.ts#GeoErrorCode
+type GeoJson: dist/geojson.chunk.d.ts#GeoJson
+type GeoJsonBBox: dist/geojson.chunk.d.ts#GeoJsonBBox
+type GeoJsonObject: dist/geojson.chunk.d.ts#GeoJsonObject
+type GeoJsonProperties: dist/geojson.chunk.d.ts#GeoJsonProperties
 type GeodesicDirect: dist/projection.chunk.d.ts#GeodesicDirect
 type GeodesicInverse: dist/projection.chunk.d.ts#GeodesicInverse
 type GeohashCell: dist/index.d.ts#GeohashCell
 type GeohashDirection: dist/index.d.ts#GeohashDirection
 type GeohashNeighbors: dist/index.d.ts#GeohashNeighbors
-type Geometry: dist/index.d.ts#Geometry
-type GeometryCollection: dist/index.d.ts#GeometryCollection
+type Geometry: dist/geojson.chunk.d.ts#Geometry
+type GeometryCollection: dist/geojson.chunk.d.ts#GeometryCollection
 type GridAxis: dist/index.d.ts#GridAxis
 type GridRegionOptions: dist/index.d.ts#GridRegionOptions
 type ImpliedOneway: dist/index.d.ts#ImpliedOneway
-type LatLon: dist/projection.chunk.d.ts#LatLon
+type LatLon: dist/point.chunk.d.ts#LatLon
 type LengthNearLines: dist/index.d.ts#LengthNearLines
 type LineOptions: dist/index.d.ts#LineOptions
 type LinePart: dist/index.d.ts#LinePart
 type LineReference: dist/index.d.ts#LineReference
 type LineSide: dist/index.d.ts#LineSide
-type LineString: dist/index.d.ts#LineString
+type LineString: dist/geojson.chunk.d.ts#LineString
 MAX_CIRCLE_VERTICES: dist/index.d.ts#MAX_CIRCLE_VERTICES
 MAX_DENSIFY_POSITIONS: dist/index.d.ts#MAX_DENSIFY_POSITIONS
 MAX_GEOHASH_PRECISION: dist/index.d.ts#MAX_GEOHASH_PRECISION
-MAX_GEOJSON_DEPTH: dist/index.d.ts#MAX_GEOJSON_DEPTH
+MAX_GEOJSON_DEPTH: dist/geojson.chunk.d.ts#MAX_GEOJSON_DEPTH
 MAX_GEOMETRY_LONGITUDE: dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
-type MultiLineString: dist/index.d.ts#MultiLineString
-type MultiPoint: dist/index.d.ts#MultiPoint
-type MultiPolygon: dist/index.d.ts#MultiPolygon
+type MultiLineString: dist/geojson.chunk.d.ts#MultiLineString
+type MultiPoint: dist/geojson.chunk.d.ts#MultiPoint
+type MultiPolygon: dist/geojson.chunk.d.ts#MultiPolygon
 type NearestNode: dist/index.d.ts#NearestNode
 type NearestOnLine: dist/index.d.ts#NearestOnLine
 ONEWAY_BACKWARD: dist/index.d.ts#ONEWAY_BACKWARD
 ONEWAY_FORWARD: dist/index.d.ts#ONEWAY_FORWARD
-type Point: dist/index.d.ts#Point
+type Point: dist/geojson.chunk.d.ts#Point
 type PointLocation: dist/index.d.ts#PointLocation
 type PointLocator: dist/index.d.ts#PointLocator
-type Polygon: dist/index.d.ts#Polygon
-type Position: dist/projection.chunk.d.ts#Position
+type Polygon: dist/geojson.chunk.d.ts#Polygon
+type Position: dist/point.chunk.d.ts#Position
 type Region: dist/index.d.ts#Region
 type RingWinding: dist/index.d.ts#RingWinding
 type RoadEdge: dist/index.d.ts#RoadEdge
@@ -112,7 +112,7 @@ distanceToGeometryKm: dist/index.d.ts#distanceToGeometryKm
 distanceToGeometryMeters: dist/index.d.ts#distanceToGeometryMeters
 followsRightHandRule: dist/index.d.ts#followsRightHandRule
 fromGeoJsonBBox: dist/index.d.ts#fromGeoJsonBBox
-fromPosition: dist/projection.chunk.d.ts#fromPosition
+fromPosition: dist/point.chunk.d.ts#fromPosition
 fromUnitVector: dist/index.d.ts#fromUnitVector
 geodesicDirect: dist/projection.chunk.d.ts#geodesicDirect
 geodesicInverse: dist/projection.chunk.d.ts#geodesicInverse
@@ -124,17 +124,17 @@ gridRegion: dist/index.d.ts#gridRegion
 initialBearing: dist/index.d.ts#initialBearing
 intermediatePoint: dist/index.d.ts#intermediatePoint
 joinLines: dist/index.d.ts#joinLines
-latLon: dist/projection.chunk.d.ts#latLon
+latLon: dist/point.chunk.d.ts#latLon
 lengthNearLines: dist/index.d.ts#lengthNearLines
 lineReference: dist/index.d.ts#lineReference
 locatePoint: dist/index.d.ts#locatePoint
 nearestNode: dist/index.d.ts#nearestNode
 nearestOnLine: dist/index.d.ts#nearestOnLine
-normalizeLon: dist/projection.chunk.d.ts#normalizeLon
+normalizeLon: dist/point.chunk.d.ts#normalizeLon
 overlapAreaSquareMeters: dist/index.d.ts#overlapAreaSquareMeters
-parseGeoJson: dist/index.d.ts#parseGeoJson
-parseGeometry: dist/index.d.ts#parseGeometry
-parseLatLon: dist/projection.chunk.d.ts#parseLatLon
+parseGeoJson: dist/geojson.chunk.d.ts#parseGeoJson
+parseGeometry: dist/geojson.chunk.d.ts#parseGeometry
+parseLatLon: dist/point.chunk.d.ts#parseLatLon
 pointAlongLine: dist/index.d.ts#pointAlongLine
 pointLocator: dist/index.d.ts#pointLocator
 polygonIntersectsBBox: dist/index.d.ts#polygonIntersectsBBox
@@ -151,7 +151,7 @@ snapToRoad: dist/index.d.ts#snapToRoad
 sunDay: dist/index.d.ts#sunDay
 sunPosition: dist/index.d.ts#sunPosition
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
-toPosition: dist/projection.chunk.d.ts#toPosition
+toPosition: dist/point.chunk.d.ts#toPosition
 toUnitVector: dist/index.d.ts#toUnitVector
 usState: dist/index.d.ts#usState
 wayAccess: dist/index.d.ts#wayAccess
@@ -166,7 +166,112 @@ WEB_MERCATOR_MAX_LATITUDE: dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_LATITUDE
 WEB_MERCATOR_MAX_METERS: dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_METERS
 azimuthalEquidistant: dist/projection.chunk.d.ts#azimuthalEquidistant
 
+## ./shapefile (dist/shapefile.d.ts): names
+
+DbfField: dist/shapefile.d.ts#DbfField
+DbfHeader: dist/shapefile.d.ts#DbfHeader
+DbfValue: dist/shapefile.d.ts#DbfValue
+SHAPE_TYPES: dist/shapefile.d.ts#SHAPE_TYPES
+SHP_HEADER_BYTES: dist/shapefile.d.ts#SHP_HEADER_BYTES
+SHP_RECORD_HEADER_BYTES: dist/shapefile.d.ts#SHP_RECORD_HEADER_BYTES
+ShapeBox: dist/shapefile.d.ts#ShapeBox
+ShapeKind: dist/shapefile.d.ts#ShapeKind
+ShpHeader: dist/shapefile.d.ts#ShpHeader
+ShpRecord: dist/shapefile.d.ts#ShpRecord
+dbfRecordOffset: dist/shapefile.d.ts#dbfRecordOffset
+readDbfHeader: dist/shapefile.d.ts#readDbfHeader
+readDbfRecord: dist/shapefile.d.ts#readDbfRecord
+readShpHeader: dist/shapefile.d.ts#readShpHeader
+readShpRecord: dist/shapefile.d.ts#readShpRecord
+shapeGeometry: dist/shapefile.d.ts#shapeGeometry
+shapeKind: dist/shapefile.d.ts#shapeKind
+shpRecordBytes: dist/shapefile.d.ts#shpRecordBytes
+
 ## Declarations
+
+### dist/geojson.chunk.d.ts#Feature
+interface Feature<G extends Geometry | null = Geometry | null, P extends GeoJsonProperties = GeoJsonProperties> extends GeoJsonObject {
+  readonly type: "Feature";
+  readonly geometry: G;
+  readonly properties: P;
+  readonly id?: string | number;
+}
+
+### dist/geojson.chunk.d.ts#FeatureCollection
+interface FeatureCollection<F extends Feature = Feature> extends GeoJsonObject {
+  readonly type: "FeatureCollection";
+  readonly features: readonly F[];
+}
+
+### dist/geojson.chunk.d.ts#GeoJson
+type GeoJson = Geometry | Feature | FeatureCollection;
+
+### dist/geojson.chunk.d.ts#GeoJsonBBox
+type GeoJsonBBox = readonly [west: number, south: number, east: number, north: number] | readonly [west: number, south: number, low: number, east: number, north: number, high: number];
+
+### dist/geojson.chunk.d.ts#GeoJsonObject
+interface GeoJsonObject {
+  readonly bbox?: GeoJsonBBox;
+}
+
+### dist/geojson.chunk.d.ts#GeoJsonProperties
+type GeoJsonProperties = {
+  readonly [name: string]: unknown;
+} | null;
+
+### dist/geojson.chunk.d.ts#Geometry
+type Geometry = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon | GeometryCollection;
+
+### dist/geojson.chunk.d.ts#GeometryCollection
+interface GeometryCollection extends GeoJsonObject {
+  readonly type: "GeometryCollection";
+  readonly geometries: readonly Geometry[];
+}
+
+### dist/geojson.chunk.d.ts#LineString
+interface LineString extends GeoJsonObject {
+  readonly type: "LineString";
+  readonly coordinates: readonly Position[];
+}
+
+### dist/geojson.chunk.d.ts#MAX_GEOJSON_DEPTH
+declare const MAX_GEOJSON_DEPTH = 32;
+
+### dist/geojson.chunk.d.ts#MultiLineString
+interface MultiLineString extends GeoJsonObject {
+  readonly type: "MultiLineString";
+  readonly coordinates: readonly (readonly Position[])[];
+}
+
+### dist/geojson.chunk.d.ts#MultiPoint
+interface MultiPoint extends GeoJsonObject {
+  readonly type: "MultiPoint";
+  readonly coordinates: readonly Position[];
+}
+
+### dist/geojson.chunk.d.ts#MultiPolygon
+interface MultiPolygon extends GeoJsonObject {
+  readonly type: "MultiPolygon";
+  readonly coordinates: readonly (readonly (readonly Position[])[])[];
+}
+
+### dist/geojson.chunk.d.ts#Point
+interface Point extends GeoJsonObject {
+  readonly type: "Point";
+  readonly coordinates: Position;
+}
+
+### dist/geojson.chunk.d.ts#Polygon
+interface Polygon extends GeoJsonObject {
+  readonly type: "Polygon";
+  readonly coordinates: readonly (readonly Position[])[];
+}
+
+### dist/geojson.chunk.d.ts#parseGeoJson
+declare function parseGeoJson(value: unknown): Result<GeoJson, GeoError>;
+
+### dist/geojson.chunk.d.ts#parseGeometry
+declare function parseGeometry(value: unknown): Result<Geometry, GeoError>;
 
 ### dist/index.d.ts#BBox
 interface BBox {
@@ -208,38 +313,8 @@ export declare const EARTH_MEAN_RADIUS_KM = 6371.0088;
 ### dist/index.d.ts#EARTH_MEAN_RADIUS_METERS
 export declare const EARTH_MEAN_RADIUS_METERS = 6371008.8;
 
-### dist/index.d.ts#Feature
-interface Feature<G extends Geometry | null = Geometry | null, P extends GeoJsonProperties = GeoJsonProperties> extends GeoJsonObject {
-  readonly type: "Feature";
-  readonly geometry: G;
-  readonly properties: P;
-  readonly id?: string | number;
-}
-
-### dist/index.d.ts#FeatureCollection
-interface FeatureCollection<F extends Feature = Feature> extends GeoJsonObject {
-  readonly type: "FeatureCollection";
-  readonly features: readonly F[];
-}
-
 ### dist/index.d.ts#GEOHASH_ALPHABET
 export declare const GEOHASH_ALPHABET = "0123456789bcdefghjkmnpqrstuvwxyz";
-
-### dist/index.d.ts#GeoJson
-type GeoJson = Geometry | Feature | FeatureCollection;
-
-### dist/index.d.ts#GeoJsonBBox
-type GeoJsonBBox = readonly [west: number, south: number, east: number, north: number] | readonly [west: number, south: number, low: number, east: number, north: number, high: number];
-
-### dist/index.d.ts#GeoJsonObject
-interface GeoJsonObject {
-  readonly bbox?: GeoJsonBBox;
-}
-
-### dist/index.d.ts#GeoJsonProperties
-type GeoJsonProperties = {
-  readonly [name: string]: unknown;
-} | null;
 
 ### dist/index.d.ts#GeohashCell
 interface GeohashCell {
@@ -255,15 +330,6 @@ type GeohashDirection = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
 
 ### dist/index.d.ts#GeohashNeighbors
 type GeohashNeighbors = { readonly [direction in GeohashDirection]: string | undefined; };
-
-### dist/index.d.ts#Geometry
-type Geometry = Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon | GeometryCollection;
-
-### dist/index.d.ts#GeometryCollection
-interface GeometryCollection extends GeoJsonObject {
-  readonly type: "GeometryCollection";
-  readonly geometries: readonly Geometry[];
-}
 
 ### dist/index.d.ts#GridAxis
 interface GridAxis {
@@ -313,12 +379,6 @@ interface LineReference {
 ### dist/index.d.ts#LineSide
 type LineSide = -1 | 0 | 1;
 
-### dist/index.d.ts#LineString
-interface LineString extends GeoJsonObject {
-  readonly type: "LineString";
-  readonly coordinates: readonly Position[];
-}
-
 ### dist/index.d.ts#MAX_CIRCLE_VERTICES
 export declare const MAX_CIRCLE_VERTICES = 65536;
 
@@ -328,29 +388,8 @@ export declare const MAX_DENSIFY_POSITIONS = 1e6;
 ### dist/index.d.ts#MAX_GEOHASH_PRECISION
 export declare const MAX_GEOHASH_PRECISION = 12;
 
-### dist/index.d.ts#MAX_GEOJSON_DEPTH
-export declare const MAX_GEOJSON_DEPTH = 32;
-
 ### dist/index.d.ts#MAX_GEOMETRY_LONGITUDE
 export declare const MAX_GEOMETRY_LONGITUDE = 540;
-
-### dist/index.d.ts#MultiLineString
-interface MultiLineString extends GeoJsonObject {
-  readonly type: "MultiLineString";
-  readonly coordinates: readonly (readonly Position[])[];
-}
-
-### dist/index.d.ts#MultiPoint
-interface MultiPoint extends GeoJsonObject {
-  readonly type: "MultiPoint";
-  readonly coordinates: readonly Position[];
-}
-
-### dist/index.d.ts#MultiPolygon
-interface MultiPolygon extends GeoJsonObject {
-  readonly type: "MultiPolygon";
-  readonly coordinates: readonly (readonly (readonly Position[])[])[];
-}
 
 ### dist/index.d.ts#NearestNode
 interface NearestNode {
@@ -372,23 +411,11 @@ export declare const ONEWAY_BACKWARD: readonly string[];
 ### dist/index.d.ts#ONEWAY_FORWARD
 export declare const ONEWAY_FORWARD: readonly string[];
 
-### dist/index.d.ts#Point
-interface Point extends GeoJsonObject {
-  readonly type: "Point";
-  readonly coordinates: Position;
-}
-
 ### dist/index.d.ts#PointLocation
 type PointLocation = "inside" | "boundary" | "outside";
 
 ### dist/index.d.ts#PointLocator
 type PointLocator = (point: LatLon) => PointLocation;
-
-### dist/index.d.ts#Polygon
-interface Polygon extends GeoJsonObject {
-  readonly type: "Polygon";
-  readonly coordinates: readonly (readonly Position[])[];
-}
 
 ### dist/index.d.ts#Region
 type Region = Polygon | MultiPolygon;
@@ -676,12 +703,6 @@ export declare function nearestOnLine(line: readonly Position[], point: LatLon, 
 ### dist/index.d.ts#overlapAreaSquareMeters
 export declare function overlapAreaSquareMeters(a: Polygon | MultiPolygon, b: Polygon | MultiPolygon, ellipsoid?: Ellipsoid): number;
 
-### dist/index.d.ts#parseGeoJson
-export declare function parseGeoJson(value: unknown): Result<GeoJson, GeoError>;
-
-### dist/index.d.ts#parseGeometry
-export declare function parseGeometry(value: unknown): Result<Geometry, GeoError>;
-
 ### dist/index.d.ts#pointAlongLine
 export declare function pointAlongLine(line: readonly Position[], alongMeters: number, offsetMeters?: number, options?: LineOptions): LatLon;
 
@@ -739,21 +760,45 @@ export declare function usState(code: string): UsState | undefined;
 ### dist/index.d.ts#wayAccess
 export declare function wayAccess(tags: Readonly<Record<string, unknown>> | null | undefined, mode: TravelMode | "walk" | "drive"): WayAccess;
 
-### dist/projection.chunk.d.ts#Ellipsoid
-interface Ellipsoid {
-  readonly equatorialRadiusMeters: number;
-  readonly flattening: number;
-}
-
-### dist/projection.chunk.d.ts#GeoError
+### dist/point.chunk.d.ts#GeoError
 declare class GeoError extends RangeError {
   readonly code: GeoErrorCode;
   readonly path: string;
   constructor(code: GeoErrorCode, message: string, path?: string);
 }
 
-### dist/projection.chunk.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route" | "date" | "altitude";
+### dist/point.chunk.d.ts#GeoErrorCode
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route" | "date" | "altitude" | "shapefile";
+
+### dist/point.chunk.d.ts#LatLon
+interface LatLon {
+  readonly lat: number;
+  readonly lon: number;
+}
+
+### dist/point.chunk.d.ts#Position
+type Position = readonly [lon: number, lat: number, ...rest: number[]];
+
+### dist/point.chunk.d.ts#fromPosition
+declare function fromPosition(position: readonly number[]): LatLon;
+
+### dist/point.chunk.d.ts#latLon
+declare function latLon(lat: number, lon: number): LatLon;
+
+### dist/point.chunk.d.ts#normalizeLon
+declare function normalizeLon(lon: number): number;
+
+### dist/point.chunk.d.ts#parseLatLon
+declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
+
+### dist/point.chunk.d.ts#toPosition
+declare function toPosition(point: LatLon): Position;
+
+### dist/projection.chunk.d.ts#Ellipsoid
+interface Ellipsoid {
+  readonly equatorialRadiusMeters: number;
+  readonly flattening: number;
+}
 
 ### dist/projection.chunk.d.ts#GeodesicDirect
 interface GeodesicDirect {
@@ -768,20 +813,11 @@ interface GeodesicInverse {
   readonly finalBearing: number;
 }
 
-### dist/projection.chunk.d.ts#LatLon
-interface LatLon {
-  readonly lat: number;
-  readonly lon: number;
-}
-
 ### dist/projection.chunk.d.ts#PlanePoint
 interface PlanePoint {
   readonly x: number;
   readonly y: number;
 }
-
-### dist/projection.chunk.d.ts#Position
-type Position = readonly [lon: number, lat: number, ...rest: number[]];
 
 ### dist/projection.chunk.d.ts#Projection
 interface Projection {
@@ -812,23 +848,96 @@ declare const WGS84: Ellipsoid;
 ### dist/projection.chunk.d.ts#azimuthalEquidistant
 declare function azimuthalEquidistant(center: LatLon, ellipsoid?: Ellipsoid): Projection;
 
-### dist/projection.chunk.d.ts#fromPosition
-declare function fromPosition(position: readonly number[]): LatLon;
-
 ### dist/projection.chunk.d.ts#geodesicDirect
 declare function geodesicDirect(from: LatLon, bearingDegrees: number, meters: number, ellipsoid?: Ellipsoid): GeodesicDirect;
 
 ### dist/projection.chunk.d.ts#geodesicInverse
 declare function geodesicInverse(from: LatLon, to: LatLon, ellipsoid?: Ellipsoid): GeodesicInverse;
 
-### dist/projection.chunk.d.ts#latLon
-declare function latLon(lat: number, lon: number): LatLon;
+### dist/shapefile.d.ts#DbfField
+export interface DbfField {
+  readonly name: string;
+  readonly type: string;
+  readonly length: number;
+  readonly decimals: number;
+  readonly offset: number;
+}
 
-### dist/projection.chunk.d.ts#normalizeLon
-declare function normalizeLon(lon: number): number;
+### dist/shapefile.d.ts#DbfHeader
+export interface DbfHeader {
+  readonly records: number;
+  readonly headerBytes: number;
+  readonly recordBytes: number;
+  readonly fields: readonly DbfField[];
+}
 
-### dist/projection.chunk.d.ts#parseLatLon
-declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
+### dist/shapefile.d.ts#DbfValue
+export type DbfValue = string | number | boolean | null;
 
-### dist/projection.chunk.d.ts#toPosition
-declare function toPosition(point: LatLon): Position;
+### dist/shapefile.d.ts#SHAPE_TYPES
+export declare const SHAPE_TYPES: {
+  readonly null: 0;
+  readonly point: 1;
+  readonly polyline: 3;
+  readonly polygon: 5;
+  readonly multipoint: 8;
+  readonly pointZ: 11;
+  readonly polylineZ: 13;
+  readonly polygonZ: 15;
+  readonly multipointZ: 18;
+  readonly pointM: 21;
+  readonly polylineM: 23;
+  readonly polygonM: 25;
+  readonly multipointM: 28;
+};
+
+### dist/shapefile.d.ts#SHP_HEADER_BYTES
+export declare const SHP_HEADER_BYTES = 100;
+
+### dist/shapefile.d.ts#SHP_RECORD_HEADER_BYTES
+export declare const SHP_RECORD_HEADER_BYTES = 8;
+
+### dist/shapefile.d.ts#ShapeBox
+export type ShapeBox = readonly [number, number, number, number];
+
+### dist/shapefile.d.ts#ShapeKind
+export type ShapeKind = "null" | "point" | "polyline" | "polygon" | "multipoint";
+
+### dist/shapefile.d.ts#ShpHeader
+export interface ShpHeader {
+  readonly shapeType: number;
+  readonly fileBytes: number;
+  readonly bbox: ShapeBox;
+}
+
+### dist/shapefile.d.ts#ShpRecord
+export interface ShpRecord {
+  readonly number: number;
+  readonly shapeType: number;
+  readonly bbox: ShapeBox | null;
+  readonly parts: readonly (readonly Position[])[];
+}
+
+### dist/shapefile.d.ts#dbfRecordOffset
+export declare function dbfRecordOffset(header: DbfHeader, index: number): number;
+
+### dist/shapefile.d.ts#readDbfHeader
+export declare function readDbfHeader(bytes: Uint8Array): DbfHeader;
+
+### dist/shapefile.d.ts#readDbfRecord
+export declare function readDbfRecord(bytes: Uint8Array, header: DbfHeader, offset: number): Readonly<Record<string, DbfValue>> | null;
+
+### dist/shapefile.d.ts#readShpHeader
+export declare function readShpHeader(bytes: Uint8Array): ShpHeader;
+
+### dist/shapefile.d.ts#readShpRecord
+export declare function readShpRecord(bytes: Uint8Array, offset: number): ShpRecord;
+
+### dist/shapefile.d.ts#shapeGeometry
+export declare function shapeGeometry(record: ShpRecord): Point | MultiPoint | LineString | MultiLineString | Polygon | MultiPolygon | null;
+
+### dist/shapefile.d.ts#shapeKind
+export declare function shapeKind(shapeType: number): ShapeKind;
+
+### dist/shapefile.d.ts#shpRecordBytes
+export declare function shpRecordBytes(bytes: Uint8Array, offset: number): number | null;
