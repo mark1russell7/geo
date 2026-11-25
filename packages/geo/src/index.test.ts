@@ -66,6 +66,7 @@ describe("the entry", () => {
         "geohashNeighbor",
         "geohashNeighbors",
         "geohashesInBBox",
+        "gridRegion",
         "initialBearing",
         "joinLines",
         "lengthNearLines",

@@ -33,6 +33,8 @@ type GeohashDirection: dist/index.d.ts#GeohashDirection
 type GeohashNeighbors: dist/index.d.ts#GeohashNeighbors
 type Geometry: dist/index.d.ts#Geometry
 type GeometryCollection: dist/index.d.ts#GeometryCollection
+type GridAxis: dist/index.d.ts#GridAxis
+type GridRegionOptions: dist/index.d.ts#GridRegionOptions
 type ImpliedOneway: dist/index.d.ts#ImpliedOneway
 type LatLon: dist/projection.chunk.d.ts#LatLon
 type LengthNearLines: dist/index.d.ts#LengthNearLines
@@ -79,6 +81,7 @@ TURN_DEGREES: dist/index.d.ts#TURN_DEGREES
 type TravelMode: dist/index.d.ts#TravelMode
 type TurnDegrees: dist/index.d.ts#TurnDegrees
 type UnitVector: dist/index.d.ts#UnitVector
+type ValueGrid: dist/index.d.ts#ValueGrid
 WALK: dist/index.d.ts#WALK
 WGS84: dist/projection.chunk.d.ts#WGS84
 type WayAccess: dist/index.d.ts#WayAccess
@@ -114,6 +117,7 @@ geohash: dist/index.d.ts#geohash
 geohashNeighbor: dist/index.d.ts#geohashNeighbor
 geohashNeighbors: dist/index.d.ts#geohashNeighbors
 geohashesInBBox: dist/index.d.ts#geohashesInBBox
+gridRegion: dist/index.d.ts#gridRegion
 initialBearing: dist/index.d.ts#initialBearing
 intermediatePoint: dist/index.d.ts#intermediatePoint
 joinLines: dist/index.d.ts#joinLines
@@ -255,6 +259,19 @@ type Geometry = Point | MultiPoint | LineString | MultiLineString | Polygon | Mu
 interface GeometryCollection extends GeoJsonObject {
   readonly type: "GeometryCollection";
   readonly geometries: readonly Geometry[];
+}
+
+### dist/index.d.ts#GridAxis
+interface GridAxis {
+  readonly start: number;
+  readonly stop: number;
+  readonly num: number;
+}
+
+### dist/index.d.ts#GridRegionOptions
+interface GridRegionOptions {
+  readonly toleranceKm?: number;
+  readonly radiusKm?: number;
 }
 
 ### dist/index.d.ts#ImpliedOneway
@@ -511,6 +528,13 @@ interface UnitVector {
   readonly z: number;
 }
 
+### dist/index.d.ts#ValueGrid
+interface ValueGrid {
+  readonly x: GridAxis;
+  readonly y: GridAxis;
+  readonly values: ArrayLike<number | null>;
+}
+
 ### dist/index.d.ts#WALK
 export declare const WALK: TravelMode;
 
@@ -603,6 +627,9 @@ export declare function geohashNeighbors(hash: string): GeohashNeighbors;
 
 ### dist/index.d.ts#geohashesInBBox
 export declare function geohashesInBBox(box: BBox, precision: number, maxCells?: number): readonly string[];
+
+### dist/index.d.ts#gridRegion
+export declare function gridRegion(grid: ValueGrid, level: number, options?: GridRegionOptions): Polygon | MultiPolygon;
 
 ### dist/index.d.ts#initialBearing
 export declare function initialBearing(from: LatLon, to: LatLon): number;

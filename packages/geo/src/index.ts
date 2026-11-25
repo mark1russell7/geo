@@ -5,7 +5,7 @@
  * It gives the area of a polygon and the area of the common part of two or more polygons on an ellipsoid.
  *
  * It has geohashes and the types of GeoJSON (RFC 7946). It simplifies regions that share borders, and it gives
- * a circle and the buffer of a geometry as polygons, for maps. The README gives the limits of the exact results.
+ * a circle and the buffer of a geometry as polygons, for maps. It gives the region of a grid of values at a level. The README gives the limits of the exact results.
  * For a globe, it gives a point as a unit vector, the points along a great circle, and a geometry with short edges.
  * For lines, it joins lines at common ends, and it gives the nearest point of a line and a point along a line.
  * It gives the place of the sun at an instant, and the sunrise and the sunset at a point on a date.
@@ -74,6 +74,7 @@ export {
 export { areaSquareMeters, commonAreaSquareMeters, overlapAreaSquareMeters } from "./area.ts";
 export { bufferKm, bufferMeters, DEFAULT_MAX_BUFFER_CELLS, type BufferOptions } from "./buffer.ts";
 export { densify, MAX_DENSIFY_POSITIONS } from "./densify.ts";
+export { gridRegion, type GridAxis, type GridRegionOptions, type ValueGrid } from "./grid.ts";
 export {
   joinLines,
   lengthNearLines,
