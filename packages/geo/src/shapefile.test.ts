@@ -53,6 +53,21 @@ function pointRecord(number: number, x: number, y: number): Uint8Array {
   return bytes;
 }
 
+function multipointRecord(number: number, points: readonly (readonly [number, number])[]): Uint8Array {
+  const content = 40 + points.length * 16;
+  const bytes = new Uint8Array(8 + content);
+  const view = new DataView(bytes.buffer);
+  view.setInt32(0, number, false);
+  view.setInt32(4, content / 2, false);
+  view.setInt32(8, 8, true);
+  view.setInt32(44, points.length, true);
+  points.forEach((p, i) => {
+    view.setFloat64(48 + i * 16, p[0], true);
+    view.setFloat64(56 + i * 16, p[1], true);
+  });
+  return bytes;
+}
+
 function nullRecord(number: number): Uint8Array {
   const bytes = new Uint8Array(12);
   const view = new DataView(bytes.buffer);
@@ -151,6 +166,24 @@ describe("readShpRecord", () => {
     expect(() => readShpRecord(record, 0)).toThrow(/index out of its points/);
   });
 
+  it("reads a multipoint and a polyline", () => {
+    const multi = readShpRecord(multipointRecord(4, [[-71, 43], [-70, 44]]), 0);
+    expect(multi.parts).toEqual([[[-71, 43], [-70, 44]]]);
+    expect(shapeGeometry(multi)).toEqual({ type: "MultiPoint", coordinates: [[-71, 43], [-70, 44]] });
+    const line: Ring = [[-72, 43], [-71, 44]];
+    expect(shapeGeometry(readShpRecord(polygonRecord(5, [line], 3), 0))).toEqual({ type: "LineString", coordinates: line });
+    expect(shapeGeometry(readShpRecord(polygonRecord(6, [line, line], 13), 0))?.type).toBe("MultiLineString");
+  });
+
+  it("refuses a record that is shorter than its counts", () => {
+    const record = multipointRecord(4, [[-71, 43]]);
+    new DataView(record.buffer).setInt32(44, 5, true);
+    expect(() => readShpRecord(record, 0)).toThrow(/shorter than its counts/);
+    const polygon = polygonRecord(1, [outer]);
+    new DataView(polygon.buffer).setInt32(48, 50, true);
+    expect(() => readShpRecord(polygon, 0)).toThrow(/shorter than its counts/);
+  });
+
   it("reads a point", () => {
     expect(readShpRecord(pointRecord(7, -71.5, 43.5), 0)).toEqual({ number: 7, shapeType: 1, bbox: [-71.5, 43.5, -71.5, 43.5], parts: [[[-71.5, 43.5]]] });
   });
@@ -169,6 +202,13 @@ describe("shapeGeometry", () => {
   it("makes a multipolygon of two outer rings", () => {
     const other: Ring = [[-70, 43], [-70, 44], [-69, 44], [-69, 43], [-70, 43]];
     expect(shapeGeometry(readShpRecord(polygonRecord(1, [outer, other]), 0))?.type).toBe("MultiPolygon");
+  });
+
+  it("starts a polygon with a counterclockwise ring when no polygon is before it", () => {
+    const geometry = shapeGeometry(readShpRecord(polygonRecord(1, [hole, outer]), 0));
+    expect(geometry?.type).toBe("MultiPolygon");
+    expect(shapeGeometry({ number: 1, shapeType: 5, bbox: null, parts: [[]] })).toBeNull();
+    expect(shapeGeometry({ number: 1, shapeType: 0, bbox: null, parts: [[[0, 0]]] })).toBeNull();
   });
 
   it("gives a point for a point record, and null for a null record", () => {
@@ -205,6 +245,25 @@ describe("readDbfRecord", () => {
     expect(readDbfRecord(bytes, header, dbfRecordOffset(header, 0))).toEqual({ name: "Hilltop", speed: 5, open: true, since: "2026-06-30" });
     expect(readDbfRecord(bytes, header, dbfRecordOffset(header, 1))).toBeNull();
     expect(readDbfRecord(bytes, header, dbfRecordOffset(header, 2))).toEqual({ name: "", speed: null, open: null, since: null });
+  });
+
+  it("reads overflow and text in a number as null, F and N as false, and another type as text", () => {
+    const other = dbf(
+      [["count", "N", 4, 0], ["ratio", "F", 4, 0], ["open", "L", 1, 0], ["memo", "M", 6, 0]],
+      [
+        [false, ["****", "abc", "N", "12    "]],
+        [false, ["7", "0.5", "f", "x     "]],
+      ],
+    );
+    const h = readDbfHeader(other);
+    expect(readDbfRecord(other, h, dbfRecordOffset(h, 0))).toEqual({ count: null, ratio: null, open: false, memo: "12" });
+    expect(readDbfRecord(other, h, dbfRecordOffset(h, 1))).toEqual({ count: 7, ratio: 0.5, open: false, memo: "x" });
+  });
+
+  it("refuses fields that are longer than a record", () => {
+    const bytes2 = dbf([["name", "C", 10, 0]], [[false, ["a"]]]);
+    new DataView(bytes2.buffer).setUint16(10, 4, true);
+    expect(() => readDbfHeader(bytes2)).toThrow(/need 11 bytes/);
   });
 
   it("refuses a record past the end of the input, and a header longer than the input", () => {

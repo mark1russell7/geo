@@ -178,12 +178,11 @@ export function readShpRecord(bytes: Uint8Array, offset: number): ShpRecord {
       const pointCount = view.getInt32(at + 40, true);
       const pointsAt = at + 44 + partCount * 4;
       need(pointsAt + pointCount * 16);
-      const starts: number[] = [];
-      for (let i = 0; i < partCount; i++) starts.push(view.getInt32(at + 44 + i * 4, true));
+      const startOf = (i: number): number => view.getInt32(at + 44 + i * 4, true);
       const parts: Position[][] = [];
       for (let i = 0; i < partCount; i++) {
-        const from = starts[i] ?? 0;
-        const to = i + 1 < partCount ? (starts[i + 1] ?? pointCount) : pointCount;
+        const from = startOf(i);
+        const to = i + 1 < partCount ? startOf(i + 1) : pointCount;
         if (from < 0 || to > pointCount || from > to) throw new GeoError("shapefile", `the part ${i} of the record ${number} has an index out of its points`);
         const part: Position[] = [];
         for (let p = from; p < to; p++) part.push(position(pointsAt + p * 16));
@@ -208,11 +207,11 @@ export function shapeGeometry(record: ShpRecord): Point | MultiPoint | LineStrin
     case "null":
       return null;
     case "point":
-      return { type: "Point", coordinates: parts[0]?.[0] ?? [0, 0] };
+      return { type: "Point", coordinates: (parts[0] as readonly Position[])[0] as Position };
     case "multipoint":
-      return { type: "MultiPoint", coordinates: parts[0] ?? [] };
+      return { type: "MultiPoint", coordinates: parts[0] as readonly Position[] };
     case "polyline":
-      return parts.length === 1 ? { type: "LineString", coordinates: parts[0] ?? [] } : { type: "MultiLineString", coordinates: parts };
+      return parts.length === 1 ? { type: "LineString", coordinates: parts[0] as readonly Position[] } : { type: "MultiLineString", coordinates: parts };
     case "polygon": {
       const polygons: (readonly Position[])[][] = [];
       for (const ring of parts) {
@@ -221,7 +220,7 @@ export function shapeGeometry(record: ShpRecord): Point | MultiPoint | LineStrin
         else polygons.push([ring]);
       }
       const geometry: Polygon | MultiPolygon =
-        polygons.length === 1 ? { type: "Polygon", coordinates: polygons[0] ?? [] } : { type: "MultiPolygon", coordinates: polygons };
+        polygons.length === 1 ? { type: "Polygon", coordinates: polygons[0] as (readonly Position[])[] } : { type: "MultiPolygon", coordinates: polygons };
       return rewind(geometry);
     }
   }
@@ -240,9 +239,9 @@ export function readDbfHeader(bytes: Uint8Array): DbfHeader {
   if (bytes.length < headerBytes) throw new GeoError("shapefile", `the header of the dbf file has ${headerBytes} bytes, and the input has ${bytes.length}`);
   const fields: DbfField[] = [];
   let offset = 1;
-  for (let at = 32; at + 32 <= headerBytes && bytes[at] !== 0x0d; at += 32) {
-    const length = bytes[at + 16] ?? 0;
-    fields.push({ name: beforeNul(latin1(bytes, at, at + 11)), type: String.fromCharCode(bytes[at + 11] ?? 0x43), length, decimals: bytes[at + 17] ?? 0, offset });
+  for (let at = 32; at + 32 <= headerBytes && view.getUint8(at) !== 0x0d; at += 32) {
+    const length = view.getUint8(at + 16);
+    fields.push({ name: beforeNul(latin1(bytes, at, at + 11)), type: String.fromCharCode(view.getUint8(at + 11)), length, decimals: view.getUint8(at + 17), offset });
     offset += length;
   }
   if (offset > recordBytes) throw new GeoError("shapefile", `the fields need ${offset} bytes in each record, and a record has ${recordBytes}`);
@@ -296,14 +295,12 @@ function trimEnd(text: string): string {
 
 /** This function gives the text before the first NUL byte. */
 function beforeNul(text: string): string {
-  const at = text.indexOf(" ");
+  const at = text.indexOf("\u0000");
   return at < 0 ? text : text.slice(0, at);
 }
 
 function latin1(bytes: Uint8Array, from: number, to: number): string {
-  let text = "";
-  for (let i = from; i < to; i++) text += String.fromCharCode(bytes[i] ?? 0);
-  return text;
+  return String.fromCharCode(...bytes.subarray(from, to));
 }
 
 function viewOf(bytes: Uint8Array): DataView {
