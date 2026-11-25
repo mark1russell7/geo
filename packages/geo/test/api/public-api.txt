@@ -78,7 +78,10 @@ TRAVEL_MODES: dist/index.d.ts#TRAVEL_MODES
 TURN_DEGREES: dist/index.d.ts#TURN_DEGREES
 type TravelMode: dist/index.d.ts#TravelMode
 type TurnDegrees: dist/index.d.ts#TurnDegrees
+US_STATES: dist/index.d.ts#US_STATES
 type UnitVector: dist/index.d.ts#UnitVector
+type UsState: dist/index.d.ts#UsState
+type UsStateKind: dist/index.d.ts#UsStateKind
 WALK: dist/index.d.ts#WALK
 WGS84: dist/projection.chunk.d.ts#WGS84
 type WayAccess: dist/index.d.ts#WayAccess
@@ -146,6 +149,7 @@ sunPosition: dist/index.d.ts#sunPosition
 toGeoJsonBBox: dist/index.d.ts#toGeoJsonBBox
 toPosition: dist/projection.chunk.d.ts#toPosition
 toUnitVector: dist/index.d.ts#toUnitVector
+usState: dist/index.d.ts#usState
 wayAccess: dist/index.d.ts#wayAccess
 
 ## ./projection (dist/projection.d.ts): names
@@ -504,12 +508,26 @@ interface TurnDegrees {
   readonly sharp: number;
 }
 
+### dist/index.d.ts#US_STATES
+export declare const US_STATES: readonly UsState[];
+
 ### dist/index.d.ts#UnitVector
 interface UnitVector {
   readonly x: number;
   readonly y: number;
   readonly z: number;
 }
+
+### dist/index.d.ts#UsState
+interface UsState {
+  readonly fips: string;
+  readonly usps: string;
+  readonly name: string;
+  readonly kind: UsStateKind;
+}
+
+### dist/index.d.ts#UsStateKind
+type UsStateKind = "state" | "district" | "territory";
 
 ### dist/index.d.ts#WALK
 export declare const WALK: TravelMode;
@@ -687,6 +705,9 @@ export declare function toGeoJsonBBox(box: BBox): GeoJsonBBox;
 
 ### dist/index.d.ts#toUnitVector
 export declare function toUnitVector(point: LatLon): UnitVector;
+
+### dist/index.d.ts#usState
+export declare function usState(code: string): UsState | undefined;
 
 ### dist/index.d.ts#wayAccess
 export declare function wayAccess(tags: Readonly<Record<string, unknown>> | null | undefined, mode: TravelMode | "walk" | "drive"): WayAccess;
