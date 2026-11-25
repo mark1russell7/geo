@@ -14,6 +14,8 @@
  * For roads, it makes a graph of a travel mode from GeoJSON lines, connects a point to it, and gives the line of a route.
  * It also gives the steps of a route: a leg for each road, the turn at its start, and the arrival.
  *
+ * It has the states and the territories of the United States, with their FIPS codes, postal codes and names.
+ *
  * @packageDocumentation
  */
 
@@ -160,3 +162,4 @@ export {
   type Point,
   type Polygon,
 } from "./geojson.ts";
+export { US_STATES, usState, type UsState, type UsStateKind } from "./us-states.ts";

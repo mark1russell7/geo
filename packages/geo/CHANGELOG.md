@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.14
+## 0.5.15
 
 - `gridRegion(grid, level, options?)` gives the region of a regular grid of values where each value is at the level or more, as a polygon. An example is the area of a level of the shaking on the intensity grid of an earthquake.
 - The grid is an axis of CoverageJSON for each of longitude and latitude, and the values row by row. A point with no value is not in the region. The region stops at the edge of the grid.
