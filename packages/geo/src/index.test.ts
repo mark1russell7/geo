@@ -91,6 +91,8 @@ describe("the entry", () => {
         "toGeoJsonBBox",
         "toPosition",
         "toUnitVector",
+        "US_STATES",
+        "usState",
       ].sort(),
     );
   });
