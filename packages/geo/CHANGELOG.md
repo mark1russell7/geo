@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.16
+
+- The new entry `@mark1russell7/geo/shapefile` reads shapefiles: `readShpHeader`, `shpRecordBytes`, `readShpRecord`, `shapeGeometry`, `readDbfHeader`, `dbfRecordOffset` and `readDbfRecord`.
+- Each function reads bytes and does no I/O. A caller reads a large file in chunks, and it reads only the dbf records of the shapes that it keeps.
+- The readers take the Z and M variants of each shape type, and keep x and y. The new error code is `shapefile`.
+- PATCH: a new entry before 1.0.0. The change adds functions, and it changes no function.
+
 ## 0.5.15
 
 - `gridRegion(grid, level, options?)` gives the region of a regular grid of values where each value is at the level or more, as a polygon. An example is the area of a level of the shaking on the intensity grid of an earthquake.

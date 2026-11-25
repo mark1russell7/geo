@@ -37,6 +37,7 @@
  * - `route`: a route has no edges, an index that is not an edge of the graph, or two edges that do not join.
  * - `date`: a date is not a date `YYYY-MM-DD`.
  * - `altitude`: the altitude of the sun is not a finite number from -90 to 90.
+ * - `shapefile`: the bytes of a shapefile or of a dbf file are too short, or a header or a record is not correct.
  */
 export type GeoErrorCode =
   | "not-finite"
@@ -63,7 +64,8 @@ export type GeoErrorCode =
   | "travel-mode"
   | "route"
   | "date"
-  | "altitude";
+  | "altitude"
+  | "shapefile";
 
 /**
  * The error that each function of this package throws for an incorrect input. It is a `RangeError`, so code that

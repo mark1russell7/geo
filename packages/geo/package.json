@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "@mark1russell7/geo",
-  "version": "0.5.15",
-  "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, the area of a polygon and of an overlap, geohashes, lines joined at common ends with the nearest point and a point along a line, map projections to a plane in metres, and road graphs for routes with no network.",
+  "version": "0.5.16",
+  "description": "Places on the Earth: WGS84 points, great-circle distance and bearing, boxes across the antimeridian, point-in-polygon and overlap for GeoJSON on exact predicates, the area of a polygon and of an overlap, geohashes, lines joined at common ends with the nearest point and a point along a line, map projections to a plane in metres, readers of shapefiles and dbf files, and road graphs for routes with no network.",
   "keywords": [
     "geo",
     "geojson",
@@ -17,7 +17,8 @@
     "web-mercator",
     "road-graph",
     "routing",
-    "openstreetmap"
+    "openstreetmap",
+    "shapefile"
   ],
   "homepage": "https://github.com/mark1russell7/geo/tree/main/packages/geo#readme",
   "bugs": {
@@ -35,6 +36,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./projection": "./src/projection.ts",
+    "./shapefile": "./src/shapefile.ts",
     "./package.json": "./package.json"
   },
   "files": [
@@ -58,6 +60,11 @@
         "types": "./dist/projection.d.ts",
         "import": "./dist/projection.js",
         "default": "./dist/projection.js"
+      },
+      "./shapefile": {
+        "types": "./dist/shapefile.d.ts",
+        "import": "./dist/shapefile.js",
+        "default": "./dist/shapefile.js"
       },
       "./package.json": "./package.json"
     }
