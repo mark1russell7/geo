@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.15
+
+- `gridRegion(grid, level, options?)` gives the region of a regular grid of values where each value is at the level or more, as a polygon. An example is the area of a level of the shaking on the intensity grid of an earthquake.
+- The grid is an axis of CoverageJSON for each of longitude and latitude, and the values row by row. A point with no value is not in the region. The region stops at the edge of the grid.
+- The option `toleranceKm` simplifies the rings. The simplification keeps each position on the edge of the grid.
+- `bufferKm` and `gridRegion` use one tracer of marching squares, in the internal module `contour.ts`. The buffer does not change.
+- The new types are `GridAxis`, `GridRegionOptions` and `ValueGrid`.
+- PATCH: a new export before 1.0.0. The change adds a function, and it changes no function.
+
 ## 0.5.12
 
 - `lengthNearLines(line, others, withinMeters, options?)` gives the length of the parts of a line within a distance of other lines, and the parts as distances along the line. For example, the frontage of a parcel along the roads, or the length of a path along a river.
