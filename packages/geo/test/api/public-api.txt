@@ -71,7 +71,9 @@ type RouteLine: dist/index.d.ts#RouteLine
 type RouteStep: dist/index.d.ts#RouteStep
 type RouteStepsOptions: dist/index.d.ts#RouteStepsOptions
 type RouteTurn: dist/index.d.ts#RouteTurn
+SIMPLIFY_STEP_WORK: dist/index.d.ts#SIMPLIFY_STEP_WORK
 SUNRISE_ALTITUDE_DEG: dist/index.d.ts#SUNRISE_ALTITUDE_DEG
+type SimplifySteps: dist/index.d.ts#SimplifySteps
 type SnapOptions: dist/index.d.ts#SnapOptions
 type SunDay: dist/index.d.ts#SunDay
 type SunDayOptions: dist/index.d.ts#SunDayOptions
@@ -147,6 +149,7 @@ routeLine: dist/index.d.ts#routeLine
 routeSteps: dist/index.d.ts#routeSteps
 simplifyLines: dist/index.d.ts#simplifyLines
 simplifyRegions: dist/index.d.ts#simplifyRegions
+simplifyRegionsSteps: dist/index.d.ts#simplifyRegionsSteps
 snapToRoad: dist/index.d.ts#snapToRoad
 sunDay: dist/index.d.ts#sunDay
 sunPosition: dist/index.d.ts#sunPosition
@@ -505,8 +508,14 @@ interface RouteStepsOptions {
 ### dist/index.d.ts#RouteTurn
 type RouteTurn = "depart" | "straight" | "slight-left" | "left" | "sharp-left" | "slight-right" | "right" | "sharp-right" | "u-turn" | "arrive";
 
+### dist/index.d.ts#SIMPLIFY_STEP_WORK
+export declare const SIMPLIFY_STEP_WORK = 4096;
+
 ### dist/index.d.ts#SUNRISE_ALTITUDE_DEG
 export declare const SUNRISE_ALTITUDE_DEG = -.833;
+
+### dist/index.d.ts#SimplifySteps
+type SimplifySteps<T> = Generator<undefined, T, undefined>;
 
 ### dist/index.d.ts#SnapOptions
 interface SnapOptions {
@@ -753,6 +762,9 @@ export declare function simplifyLines(lines: readonly (readonly Position[])[], t
 
 ### dist/index.d.ts#simplifyRegions
 export declare function simplifyRegions(regions: readonly Region[], toleranceKm: number, radiusKm?: number): Region[];
+
+### dist/index.d.ts#simplifyRegionsSteps
+export declare function simplifyRegionsSteps(regions: readonly Region[], toleranceKm: number, radiusKm?: number): SimplifySteps<Region[]>;
 
 ### dist/index.d.ts#snapToRoad
 export declare function snapToRoad(graph: RoadGraph, point: LatLon, options?: SnapOptions): RoadSnap | undefined;

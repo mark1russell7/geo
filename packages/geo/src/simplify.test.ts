@@ -7,7 +7,7 @@ import { GeoError } from "./errors.ts";
 import type { MultiPolygon, Polygon } from "./geojson.ts";
 import type { Position } from "./point.ts";
 import { locatePoint } from "./polygon.ts";
-import { regionSimplifier, simplifyLines, simplifyRegions, type Region } from "./simplify.ts";
+import { regionSimplifier, SIMPLIFY_STEP_WORK, simplifyLines, simplifyRegions, simplifyRegionsSteps, type Region } from "./simplify.ts";
 
 type Ring = readonly Position[];
 
@@ -372,6 +372,57 @@ describe("simplifyRegions", () => {
       }),
       { numRuns: 20 },
     );
+  });
+});
+
+describe("simplifyRegionsSteps", () => {
+  // This function runs the steps to the end. It gives the result and the count of the steps.
+  const run = (regions: readonly Region[], toleranceKm: number): { result: Region[]; steps: number } => {
+    const steps = simplifyRegionsSteps(regions, toleranceKm);
+    for (let count = 0; ; count += 1) {
+      const next = steps.next();
+      if (next.done === true) return { result: next.value, steps: count };
+    }
+  };
+
+  it("gives the result of simplifyRegions for generated maps", () => {
+    fc.assert(
+      fc.property(noise, fc.integer({ min: 1, max: 3 }), fc.integer({ min: 1, max: 3 }), uniformDouble({ min: 0, max: 6 }), (values, columns, rows, toleranceKm) => {
+        const { regions } = tiling(values, columns, rows);
+        expect(run(regions, toleranceKm).result).toEqual(simplifyRegions(regions, toleranceKm));
+      }),
+      { numRuns: 40 },
+    );
+  });
+
+  it("cuts a large map into many steps, and two runs of steps can alternate", () => {
+    const noiseOf = (seed: number): number[] => Array.from({ length: 256 }, (_, index) => Math.sin(seed * 97 + index * 12.9898) % 1);
+    const large = tiling(noiseOf(1), 12, 12).regions;
+    const other = tiling(noiseOf(2), 6, 6, [3, 3]).regions;
+    const positions = large.reduce((sum, region) => sum + JSON.stringify(region).split("],[").length, 0);
+    const { result, steps } = run(large, 0.5);
+    expect(result).toEqual(simplifyRegions(large, 0.5));
+    // Each step does approximately SIMPLIFY_STEP_WORK of work, so a map of many positions gives many steps.
+    expect(steps).toBeGreaterThanOrEqual(Math.floor(positions / SIMPLIFY_STEP_WORK));
+    expect(steps).toBeGreaterThan(4);
+    // The steps keep their state in the generator. Thus two simplifications can share one event loop.
+    const first = simplifyRegionsSteps(large, 0.5);
+    const second = simplifyRegionsSteps(other, 1);
+    let a = first.next();
+    let b = second.next();
+    while (a.done !== true || b.done !== true) {
+      if (a.done !== true) a = first.next();
+      if (b.done !== true) b = second.next();
+    }
+    expect(a.value).toEqual(simplifyRegions(large, 0.5));
+    expect(b.value).toEqual(simplifyRegions(other, 1));
+  });
+
+  it("examines the input before it gives the steps", () => {
+    const square: Polygon = { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] };
+    expect(() => simplifyRegionsSteps([square], -1)).toThrow(GeoError);
+    expect(() => simplifyRegionsSteps([square], 1, 0)).toThrow(GeoError);
+    expect(() => simplifyRegionsSteps([{ type: "Point", coordinates: [0, 0] } as unknown as Region], 1)).toThrow(GeoError);
   });
 });
 

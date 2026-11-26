@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.18
+
+- `simplifyRegionsSteps(regions, toleranceKm, radiusKm?)` gives the steps of `simplifyRegions` as a generator, with the same result. Each step does approximately `SIMPLIFY_STEP_WORK` of work.
+- A server gives its event loop a turn between two steps. Thus a large map does not stop the answers to its probes.
+- `simplifyRegions` and `regionSimplifier` do the same steps to the end. Thus the two forms have one code path. The bench of `simplifyRegions` holds the speed.
+- PATCH: new exports before 1.0.0. The change adds functions, and it changes no result.
+
 ## 0.5.17
 
 - The entry `@mark1russell7/geo/projection` has two conformal projections on an ellipsoid, from a definition as data: `transverseMercator` and `lambertConformalConic` (EPSG method 9802). `conformalProjection` gives the projection of each kind.
