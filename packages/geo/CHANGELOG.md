@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.19
+
+- The steps of `simplifyRegionsSteps` count the work of the tests of the topology: each pair of edges in a cell of the grid, and each position of a lobe in each test of a kept position.
+- A step ends inside a large cell or a long lobe. Before this change, one dense cell or one long lobe made one step of some seconds.
+- PATCH: a fix. The results do not change.
+
 ## 0.5.18
 
 - `simplifyRegionsSteps(regions, toleranceKm, radiusKm?)` gives the steps of `simplifyRegions` as a generator, with the same result. Each step does approximately `SIMPLIFY_STEP_WORK` of work.

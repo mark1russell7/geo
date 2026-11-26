@@ -87,7 +87,8 @@ export type SimplifySteps<T> = Generator<undefined, T, undefined>;
 
 /**
  * The work of one step of a simplification, as a count of positions or of pairs of edges. A step ends after the region,
- * the arc or the cell that gets its work to this count. Thus one large region, arc or cell can make a step longer.
+ * the arc or the test that gets its work to this count. The tests of the topology count each pair of edges and each
+ * position of a lobe. Thus a large cell or a long lobe does not make a step longer. One large region or arc can.
  */
 export const SIMPLIFY_STEP_WORK = 4_096;
 
@@ -598,11 +599,11 @@ class Grid {
     }
   }
 
-  /** This function gives each id in the cells of the box to `visit`. An id in two cells comes two times. */
-  visit(minX: number, minY: number, maxX: number, maxY: number, visit: (id: number) => boolean): void {
+  /** This function gives each id in the cells of the box. An id in two cells comes two times. */
+  *each(minX: number, minY: number, maxX: number, maxY: number): Generator<number, void, undefined> {
     for (let row = this.row(minY); row <= this.row(maxY); row += 1) {
       for (let column = this.column(minX); column <= this.column(maxX); column += 1) {
-        for (const id of this.cells.get(row * this.#side + column) ?? []) if (visit(id)) return;
+        yield* this.cells.get(row * this.#side + column) ?? [];
       }
     }
   }
@@ -680,12 +681,14 @@ function* badEdges(selection: Selection, edges: Edges): SimplifySteps<Set<number
   const vertices = new Grid(minX, minY, maxX, maxY, count);
   points.forEach(([x, y], id) => vertices.add(id, x, y, x, y));
   for (const [cell, ids] of grid.cells) {
-    work += 1 + (ids.length * (ids.length - 1)) / 2;
-    if (work >= SIMPLIFY_STEP_WORK) {
-      work = 0;
-      yield;
-    }
+    work += 1;
     for (let s = 0; s < ids.length; s += 1) {
+      // A cell can hold many edges. The work counts each pair, thus a step ends inside a large cell.
+      work += ids.length - s - 1;
+      if (work >= SIMPLIFY_STEP_WORK) {
+        work = 0;
+        yield;
+      }
       for (let t = s + 1; t < ids.length; t += 1) {
         const first = ids[s] as number;
         const second = ids[t] as number;
@@ -727,13 +730,20 @@ function* badEdges(selection: Selection, edges: Edges): SimplifySteps<Set<number
       highX = Math.max(highX, x);
       highY = Math.max(highY, y);
     }
-    vertices.visit(lowX, lowY, highX, highY, (other) => {
+    for (const other of vertices.each(lowX, lowY, highX, highY)) {
+      work += 1;
       const [x, y] = points[other] as Position;
-      if (x < lowX || x > highX || y < lowY || y > highY) return false;
-      if (locateInRings([lobe], x, y) !== "inside") return false;
+      if (x < lowX || x > highX || y < lowY || y > highY) continue;
+      // The test of one position reads each position of the lobe. Many kept positions in the box of a long lobe are much work.
+      work += lobe.length;
+      if (work >= SIMPLIFY_STEP_WORK) {
+        work = 0;
+        yield;
+      }
+      if (locateInRings([lobe], x, y) !== "inside") continue;
       bad.add(edge);
-      return true;
-    });
+      break;
+    }
   }
   return bad;
 }

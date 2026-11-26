@@ -418,6 +418,18 @@ describe("simplifyRegionsSteps", () => {
     expect(b.value).toEqual(simplifyRegions(other, 1));
   });
 
+  it("ends a step inside one cell of many edges", () => {
+    // A dense zigzag in a small corner of a large box puts all its edges in one cell of the grid of the tests.
+    const count = 1_500;
+    const zigzag = Array.from({ length: count }, (_, index): Position => [(index * 0.01) / count, index % 2 === 0 ? 0 : 0.0005]);
+    const region: Polygon = { type: "Polygon", coordinates: [[...zigzag, [10, 10], [-1, 10], [0, 0]]] };
+    const { result, steps } = run([region], 0);
+    expect(result).toEqual(simplifyRegions([region], 0));
+    // The tests of that cell examine each pair of its edges. A step ends after the edge that gets its pairs past
+    // SIMPLIFY_STEP_WORK, thus a step examines less than two times SIMPLIFY_STEP_WORK pairs.
+    expect(steps).toBeGreaterThanOrEqual(Math.floor((count * (count - 1)) / 2 / (2 * SIMPLIFY_STEP_WORK)));
+  });
+
   it("examines the input before it gives the steps", () => {
     const square: Polygon = { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] };
     expect(() => simplifyRegionsSteps([square], -1)).toThrow(GeoError);
