@@ -2,7 +2,7 @@
  * Two conformal projections on an ellipsoid: the Transverse Mercator and the Lambert Conformal Conic with two standard
  * parallels. A projection of each kind comes from a definition as data, for example a zone of the State Plane system.
  *
- * - The Transverse Mercator uses the series of Krüger in the third flattening `n`, to the order 6, as Karney (2011)
+ * - The Transverse Mercator uses the series of Krüger in `n`, the third flattening of the ellipsoid, to the order 6, as Karney (2011)
  *   gives them. Within approximately 3900 km of the central meridian, the error is less than 1 mm.
  * - The Lambert Conformal Conic uses the closed formulas of the EPSG guidance note 7-2 (method 9802). The inverse finds
  *   the latitude by a fixed-point iteration.
@@ -97,7 +97,7 @@ function latitudeTan(tauPrime: number, e: number): number {
   return tau;
 }
 
-/** The coefficients of the series of Krüger for the third flattening `n` (Karney 2011, equations 35 and 36). */
+/** The coefficients of the series of Krüger in `n`, the third flattening of the ellipsoid (Karney 2011, equations 35 and 36). */
 function krugerSeries(n: number): { readonly alpha: readonly number[]; readonly beta: readonly number[]; readonly rectifying: number } {
   const n2 = n * n;
   const n3 = n2 * n;
