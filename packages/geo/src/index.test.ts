@@ -89,6 +89,8 @@ describe("the entry", () => {
         "ringWinding",
         "simplifyLines",
         "simplifyRegions",
+        "simplifyRegionsSteps",
+        "SIMPLIFY_STEP_WORK",
         "toGeoJsonBBox",
         "toPosition",
         "toUnitVector",

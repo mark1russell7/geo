@@ -195,6 +195,7 @@ if (path.kind === "path" && path.edges.length > 0) {
 | --- | --- |
 | `simplifyRegions(regions, toleranceKm, radiusKm?)` | Simplifies Polygons and MultiPolygons that share borders, for a map. Shared borders stay shared, so no gap and no overlap opens. |
 | `regionSimplifier(regions, radiusKm?)` | Prepares the shared borders one time, and gives a function that simplifies the regions for a tolerance. Use it for many zoom levels. |
+| `simplifyRegionsSteps(regions, toleranceKm, radiusKm?)` | Gives the steps of `simplifyRegions` as a generator, with the same result. Each step does approximately `SIMPLIFY_STEP_WORK` of work. A server gives its event loop a turn between two steps. |
 | `Region` | A `Polygon` or a `MultiPolygon`. |
 
 ### Projections
@@ -361,7 +362,7 @@ A position of one region on an edge of another region does not join the two regi
 - The scale of `azimuthalEquidistant` along a geodesic from the center is 1. Across the geodesic, it is `s / m12`, with the reduced length `m12`. At 20 km from the center, it is less than 1.000002.
 - Each `fromPlane` accepts each finite point of the plane. The longitude of its result is normalized.
 - A map simplifies its regions with `simplifyRegions` first, on the Earth. Then it changes each position with `toPlane`.
-- `transverseMercator` uses the series of Krüger to the order 6 in the third flattening (Karney 2011). Within approximately 3900 km of the central meridian, the error is less than 1 mm.
+- `transverseMercator` uses the series of Krï¿½ger to the order 6 in the third flattening (Karney 2011). Within approximately 3900 km of the central meridian, the error is less than 1 mm.
 - `lambertConformalConic` uses the formulas of the EPSG guidance note 7-2. Its inverse finds the latitude by iteration. The scale is 1 on each standard parallel.
 - The two conformal projections give one scale factor at a point: `min` is equal to `max`.
 - The tests use the worked examples of the EPSG guidance note 7-2 and of the Ordnance Survey to 1 cm or less.

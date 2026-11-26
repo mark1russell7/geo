@@ -79,6 +79,33 @@ interface Topology {
   readonly regions: readonly TopologyRegion[];
 }
 
+/**
+ * The steps of a simplification. Each `yield` ends one step of bounded work, and the return value is the result. A caller
+ * can stop between two steps, and it can continue later. The functions with no steps do all the steps at one time.
+ */
+export type SimplifySteps<T> = Generator<undefined, T, undefined>;
+
+/**
+ * The work of one step of a simplification, as a count of positions or of pairs of edges. A step ends after the region,
+ * the arc or the cell that gets its work to this count. Thus one large region, arc or cell can make a step longer.
+ */
+export const SIMPLIFY_STEP_WORK = 4_096;
+
+/** This function does the steps to the end and gives the result. */
+function finish<T>(steps: SimplifySteps<T>): T {
+  for (;;) {
+    const next = steps.next();
+    if (next.done === true) return next.value;
+  }
+}
+
+/** This function gives the count of the positions of the rings of a region. */
+const positionCount = (polygons: readonly (readonly (readonly Position[])[])[]): number => {
+  let count = 0;
+  for (const rings of polygons) for (const ring of rings) count += ring.length;
+  return count;
+};
+
 const keyOf = (position: Position): string => `${position[0]},${position[1]}`;
 
 const samePosition = (a: Position, b: Position): boolean => a[0] === b[0] && a[1] === b[1];
@@ -319,6 +346,12 @@ function rightOf(arc: Arc, node: number): number {
  * simplification keeps it.
  */
 function topologyOf(regions: readonly Region[], fixed?: (position: Position) => boolean): Topology {
+  return finish(topologySteps(regions, fixed));
+}
+
+/** This function gives the steps of `topologyOf`. */
+function* topologySteps(regions: readonly Region[], fixed?: (position: Position) => boolean): SimplifySteps<Topology> {
+  let work = 0;
   const opened = regions.map((region) => polygonsOf(region).map((rings) => rings.map(openRing)));
   // Each different position gets an id. Most positions have a longitude of their own, so the map by longitude finds
   // them with no key. The map by key holds the other positions. A map finds 0 for -0, as `===` does.
@@ -350,6 +383,11 @@ function topologyOf(regions: readonly Region[], fixed?: (position: Position) => 
     const ringIds = new Int32Array(ring.length);
     for (let index = 0; index < ring.length; index += 1) ringIds[index] = idOf(ring[index] as Position);
     if (hasThreeDifferent(ringIds)) keyed.set(ring, ringIds);
+    work += ring.length;
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
   }
   const junctions = findJunctions([...keyed.values()], lats.length);
   for (const id of fixedIds) junctions[id] = 1;
@@ -387,7 +425,7 @@ function topologyOf(regions: readonly Region[], fixed?: (position: Position) => 
     }
     return canonical ? index : ~index;
   };
-  const topologyRegions = regions.map((region, regionIndex): TopologyRegion => ({
+  const regionOf = (region: Region, regionIndex: number): TopologyRegion => ({
     type: region.type,
     polygons: polygonsOf(region).map((rings, polygonIndex) =>
       rings.map((ring, ringIndex): TopologyRing => {
@@ -398,7 +436,16 @@ function topologyOf(regions: readonly Region[], fixed?: (position: Position) => 
         return { arcs: refs, first: open[0] as Position };
       }),
     ),
-  }));
+  });
+  const topologyRegions: TopologyRegion[] = [];
+  for (const [regionIndex, region] of regions.entries()) {
+    topologyRegions.push(regionOf(region, regionIndex));
+    work += positionCount(opened[regionIndex] ?? []);
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
+  }
   return { arcs, regions: topologyRegions };
 }
 
@@ -469,11 +516,16 @@ function refresh(selection: Selection, arc: number): void {
 }
 
 /** This function keeps more positions until each ring has 3 or more different positions. */
-function keepRingsOpen(selection: Selection): void {
+function* keepRingsOpen(selection: Selection): SimplifySteps<void> {
   const { topology, kept } = selection;
+  let work = 0;
   for (const region of topology.regions) {
     for (const ring of region.polygons.flat()) {
       if (!("arcs" in ring)) continue;
+      if (work >= SIMPLIFY_STEP_WORK) {
+        work = 0;
+        yield;
+      }
       for (;;) {
         const keys = new Set<string>();
         let bestArc = -1;
@@ -493,6 +545,7 @@ function keepRingsOpen(selection: Selection): void {
             }
           }
         }
+        work += keys.size;
         if (keys.size >= 3 || bestNode < 0) break;
         force(selection, bestArc, bestNode);
         refresh(selection, bestArc);
@@ -596,7 +649,8 @@ function edgesFit(a: Position, b: Position, c: Position, d: Position): boolean {
  * - An edge that removes positions, with a kept position inside its lobe. The lobe is the ring of the removed
  *   positions and the edge. A kept position inside it went to the other side of the arc.
  */
-function badEdges(selection: Selection, edges: Edges): Set<number> {
+function* badEdges(selection: Selection, edges: Edges): SimplifySteps<Set<number>> {
+  let work = 0;
   const count = edges.arc.length;
   const bad = new Set<number>();
   // The kept positions: the two ends of each edge. A junction comes more than one time.
@@ -617,10 +671,20 @@ function badEdges(selection: Selection, edges: Edges): Set<number> {
     const a = edges.a[edge] as Position;
     const b = edges.b[edge] as Position;
     grid.add(edge, Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1]));
+    work += 1;
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
   }
   const vertices = new Grid(minX, minY, maxX, maxY, count);
   points.forEach(([x, y], id) => vertices.add(id, x, y, x, y));
   for (const [cell, ids] of grid.cells) {
+    work += 1 + (ids.length * (ids.length - 1)) / 2;
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
     for (let s = 0; s < ids.length; s += 1) {
       for (let t = s + 1; t < ids.length; t += 1) {
         const first = ids[s] as number;
@@ -648,6 +712,11 @@ function badEdges(selection: Selection, edges: Edges): Set<number> {
     if (to - from < 2) continue;
     const positions = (selection.topology.arcs[edges.arc[edge] as number] as Arc).positions;
     const lobe = [...positions.slice(from, to + 1), positions[from] as Position];
+    work += lobe.length;
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
     let lowX = Number.POSITIVE_INFINITY;
     let lowY = Number.POSITIVE_INFINITY;
     let highX = Number.NEGATIVE_INFINITY;
@@ -670,17 +739,26 @@ function badEdges(selection: Selection, edges: Edges): Set<number> {
 }
 
 /** This function keeps more positions until no edge breaks the topology, or until no edge can change. */
-function repair(selection: Selection): void {
+function* repair(selection: Selection): SimplifySteps<void> {
   for (;;) {
     const edges = edgesOf(selection);
+    yield;
     const changed = new Set<number>();
-    for (const edge of badEdges(selection, edges)) {
+    for (const edge of yield* badEdges(selection, edges)) {
       const arc = edges.arc[edge] as number;
       const node = spanNode(selection.topology.arcs[arc] as Arc, edges.from[edge] as number, edges.to[edge] as number);
       if (node >= 0 && force(selection, arc, node)) changed.add(arc);
     }
     if (changed.size === 0) return;
-    for (const arc of changed) refresh(selection, arc);
+    let work = 0;
+    for (const arc of changed) {
+      refresh(selection, arc);
+      work += (selection.topology.arcs[arc] as Arc).positions.length;
+      if (work >= SIMPLIFY_STEP_WORK) {
+        work = 0;
+        yield;
+      }
+    }
   }
 }
 
@@ -704,17 +782,40 @@ function ringOf(selection: Selection, ring: TopologyRing): Position[] {
 }
 
 function simplifyTopology(topology: Topology, toleranceKm: number, radiusKm: number): Region[] {
+  return finish(topologySimplifySteps(topology, toleranceKm, radiusKm));
+}
+
+/** This function gives the steps of `simplifyTopology`. */
+function* topologySimplifySteps(topology: Topology, toleranceKm: number, radiusKm: number): SimplifySteps<Region[]> {
+  let work = 0;
   const forced = topology.arcs.map((arc) => new Uint8Array(arc.positions.length));
-  const kept = topology.arcs.map((arc, index) => keptOf(arc, forced[index] as Uint8Array, toleranceKm, radiusKm));
+  const kept: number[][] = [];
+  for (const [index, arc] of topology.arcs.entries()) {
+    kept.push(keptOf(arc, forced[index] as Uint8Array, toleranceKm, radiusKm));
+    work += arc.positions.length;
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
+  }
   const selection: Selection = { topology, toleranceKm, radiusKm, forced, kept };
-  keepRingsOpen(selection);
-  repair(selection);
-  return topology.regions.map((region): Region => {
+  yield* keepRingsOpen(selection);
+  yield* repair(selection);
+  const regions: Region[] = [];
+  for (const region of topology.regions) {
     const polygons = region.polygons.map((rings) => rings.map((ring) => ringOf(selection, ring)));
-    return region.type === "Polygon"
-      ? { type: "Polygon", coordinates: polygons[0] ?? [] }
-      : { type: "MultiPolygon", coordinates: polygons };
-  });
+    regions.push(
+      region.type === "Polygon"
+        ? { type: "Polygon", coordinates: polygons[0] ?? [] }
+        : { type: "MultiPolygon", coordinates: polygons },
+    );
+    work += positionCount(polygons);
+    if (work >= SIMPLIFY_STEP_WORK) {
+      work = 0;
+      yield;
+    }
+  }
+  return regions;
 }
 
 /**
@@ -780,6 +881,35 @@ export function simplifyRegions(
 ): Region[] {
   checkTolerance(toleranceKm);
   return regionSimplifier(regions, radiusKm)(toleranceKm);
+}
+
+/**
+ * This function gives the steps of `simplifyRegions`, with the same rules and the same result. Each step does
+ * approximately `SIMPLIFY_STEP_WORK` of work. Thus a caller can give the event loop a turn between two steps. The
+ * function examines the input before it gives the steps. The steps keep the positions of the input, so do not change
+ * the input before the last step.
+ *
+ * @param regions - The Polygons and MultiPolygons. Regions that share a border must have equal positions on it.
+ * @param toleranceKm - The largest distance in kilometres from a removed position to the result, 0 or more.
+ * @param radiusKm - The radius of the sphere, more than 0. The default is `EARTH_MEAN_RADIUS_KM`.
+ * @returns The steps. The return value of the last step is the list of simplified regions.
+ * @throws GeoError - The codes of `simplifyRegions`.
+ */
+export function simplifyRegionsSteps(
+  regions: readonly Region[],
+  toleranceKm: number,
+  radiusKm: number = EARTH_MEAN_RADIUS_KM,
+): SimplifySteps<Region[]> {
+  checkTolerance(toleranceKm);
+  checkRadius(radiusKm);
+  checkRegions(regions);
+  return stepsOf(regions, toleranceKm, radiusKm);
+}
+
+/** This function gives the steps of the topology and of the simplification of examined regions. */
+function* stepsOf(regions: readonly Region[], toleranceKm: number, radiusKm: number): SimplifySteps<Region[]> {
+  const topology = yield* topologySteps(regions);
+  return yield* topologySimplifySteps(topology, toleranceKm, radiusKm);
 }
 
 /**

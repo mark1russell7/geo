@@ -128,7 +128,15 @@ export {
   distanceToGeometryKm,
   distanceToGeometryMeters,
 } from "./distance.ts";
-export { regionSimplifier, simplifyLines, simplifyRegions, type Region } from "./simplify.ts";
+export {
+  regionSimplifier,
+  SIMPLIFY_STEP_WORK,
+  simplifyLines,
+  simplifyRegions,
+  simplifyRegionsSteps,
+  type Region,
+  type SimplifySteps,
+} from "./simplify.ts";
 export {
   decodeGeohash,
   DEFAULT_GEOHASH_PRECISION,
