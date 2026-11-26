@@ -37,6 +37,8 @@
  * - `route`: a route has no edges, an index that is not an edge of the graph, or two edges that do not join.
  * - `date`: a date is not a date `YYYY-MM-DD`.
  * - `altitude`: the altitude of the sun is not a finite number from -90 to 90.
+ * - `projection`: a projection definition is not correct, for example a scale factor that is not more than 0, or two
+ *   standard parallels that give no cone. Or a point has no finite point on the plane of the projection.
  * - `shapefile`: the bytes of a shapefile or of a dbf file are too short, or a header or a record is not correct.
  */
 export type GeoErrorCode =
@@ -65,7 +67,8 @@ export type GeoErrorCode =
   | "route"
   | "date"
   | "altitude"
-  | "shapefile";
+  | "shapefile"
+  | "projection";
 
 /**
  * The error that each function of this package throws for an incorrect input. It is a `RangeError`, so code that

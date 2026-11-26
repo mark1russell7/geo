@@ -209,6 +209,15 @@ The entry `@mark1russell7/geo/projection` has the map projections. A projection 
 | `PlanePoint` | A point `{ x, y }` on the plane, in metres. |
 | `ProjectionScale` | The largest and the smallest scale factors at a point. |
 | `WEB_MERCATOR_MAX_LATITUDE`, `WEB_MERCATOR_MAX_METERS` | The limits of Web Mercator: approximately 85.0511 degrees and 20037508.34 m. |
+| `transverseMercator(definition)` | The Transverse Mercator of a definition as data: the origin, the central meridian, the scale factor and the false values. |
+| `lambertConformalConic(definition)` | The Lambert Conformal Conic with two standard parallels (EPSG method 9802) of a definition as data. |
+| `conformalProjection(definition)` | The projection of a `ConformalDefinition`: one of the two kinds above. |
+| `GRS80` | The ellipsoid of GRS 1980 and NAD83. It is the default ellipsoid of the two conformal projections. |
+| `STATE_PLANE_ZONES`, `statePlaneZone(fips)` | The zones of the State Plane Coordinate System of 1983 as data, and the zone of a FIPS zone code. The list has New York, Vermont, New Hampshire and Maine. |
+| `statePlaneProjection(zone)` | The projection of a zone, with its plane in metres. |
+| `fromStatePlane(zone, point, unit?)`, `toStatePlane(zone, point, unit?)` | Change a point of a zone plane to NAD83, and back. The unit is `meter`, `us-survey-foot` or `international-foot`. |
+| `PLANE_UNIT_METERS` | The length of each `PlaneUnit` in metres. A US survey foot is 1200/3937 m. |
+| `TransverseMercatorDefinition`, `LambertConformalConicDefinition`, `ConformalDefinition`, `StatePlaneZone`, `PlaneUnit` | The types of the definitions, the zones and the units. |
 
 ### Geohashes
 
@@ -352,6 +361,11 @@ A position of one region on an edge of another region does not join the two regi
 - The scale of `azimuthalEquidistant` along a geodesic from the center is 1. Across the geodesic, it is `s / m12`, with the reduced length `m12`. At 20 km from the center, it is less than 1.000002.
 - Each `fromPlane` accepts each finite point of the plane. The longitude of its result is normalized.
 - A map simplifies its regions with `simplifyRegions` first, on the Earth. Then it changes each position with `toPlane`.
+- `transverseMercator` uses the series of Krüger to the order 6 in the third flattening (Karney 2011). Within approximately 3900 km of the central meridian, the error is less than 1 mm.
+- `lambertConformalConic` uses the formulas of the EPSG guidance note 7-2. Its inverse finds the latitude by iteration. The scale is 1 on each standard parallel.
+- The two conformal projections give one scale factor at a point: `min` is equal to `max`.
+- The tests use the worked examples of the EPSG guidance note 7-2 and of the Ordnance Survey to 1 cm or less.
+- A State Plane zone uses the parameters of SPCS 83 on NAD83. In the contiguous states, NAD83 and WGS84 differ by approximately 1 to 2 m.
 
 ### Areas
 
@@ -504,6 +518,7 @@ Each `GeoError` has a `code` and a `path`. The path shows the position of the fa
 | `route` | A route has no edges, an index that is not an edge of the graph, or two edges that do not join. |
 | `date` | A date is not a date `YYYY-MM-DD`. |
 | `altitude` | The altitude of the sun is not a finite number from -90 to 90. |
+| `projection` | A projection definition is not correct, for example a scale factor that is not more than 0. Or a point has no finite point on the plane. |
 
 ## The differences from @procedures/geo
 

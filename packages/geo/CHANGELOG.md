@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.17
+
+- The entry `@mark1russell7/geo/projection` has two conformal projections on an ellipsoid, from a definition as data: `transverseMercator` and `lambertConformalConic` (EPSG method 9802). `conformalProjection` gives the projection of each kind.
+- `STATE_PLANE_ZONES` has the zones of SPCS 83 of New York, Vermont, New Hampshire and Maine. `fromStatePlane` and `toStatePlane` change a point of a zone in metres or feet to NAD83, and back.
+- The new exports are `GRS80`, `PLANE_UNIT_METERS`, `statePlaneZone` and `statePlaneProjection`, with the types of the definitions, the zones and the units. The new error code is `projection`.
+- PATCH: new exports before 1.0.0. The change adds functions, and it changes no function.
+
 ## 0.5.16
 
 - The new entry `@mark1russell7/geo/shapefile` reads shapefiles: `readShpHeader`, `shpRecordBytes`, `readShpRecord`, `shapeGeometry`, `readDbfHeader`, `dbfRecordOffset` and `readDbfRecord`.
