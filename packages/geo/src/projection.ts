@@ -7,10 +7,18 @@
  *   to each point are exact on the ellipsoid.
  * - Each projection gives its scale factors at a point, so a map can show a correct scale bar.
  *
+ * - `transverseMercator` and `lambertConformalConic` give the conformal projections of a definition as data.
+ * - `STATE_PLANE_ZONES` has zones of the State Plane Coordinate System of 1983, and `fromStatePlane` changes a point of a zone to NAD83.
+ *
  * The units of the plane are metres. The x axis points east, and the y axis points north.
  *
  * @packageDocumentation
  */
+
+export { conformalProjection, GRS80, lambertConformalConic, transverseMercator } from "./conformal.ts";
+export type { ConformalDefinition, LambertConformalConicDefinition, TransverseMercatorDefinition } from "./conformal.ts";
+export { fromStatePlane, PLANE_UNIT_METERS, STATE_PLANE_ZONES, statePlaneProjection, statePlaneZone, toStatePlane } from "./state-plane.ts";
+export type { PlaneUnit, StatePlaneZone } from "./state-plane.ts";
 
 import { GeoError } from "./errors.ts";
 import { atan2d, checkEllipsoid, geodesicDirect, geodesicInverse, geodesicReducedLength, sincosd, WGS84, type Ellipsoid } from "./geodesic.ts";

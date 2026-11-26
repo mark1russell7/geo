@@ -158,13 +158,28 @@ wayAccess: dist/index.d.ts#wayAccess
 
 ## ./projection (dist/projection.d.ts): names
 
+type ConformalDefinition: dist/projection.chunk.d.ts#ConformalDefinition
+GRS80: dist/projection.chunk.d.ts#GRS80
+type LambertConformalConicDefinition: dist/projection.chunk.d.ts#LambertConformalConicDefinition
+PLANE_UNIT_METERS: dist/projection.chunk.d.ts#PLANE_UNIT_METERS
 PlanePoint: dist/projection.chunk.d.ts#PlanePoint
+type PlaneUnit: dist/projection.chunk.d.ts#PlaneUnit
 Projection: dist/projection.chunk.d.ts#Projection
 ProjectionScale: dist/projection.chunk.d.ts#ProjectionScale
+STATE_PLANE_ZONES: dist/projection.chunk.d.ts#STATE_PLANE_ZONES
+type StatePlaneZone: dist/projection.chunk.d.ts#StatePlaneZone
+type TransverseMercatorDefinition: dist/projection.chunk.d.ts#TransverseMercatorDefinition
 WEB_MERCATOR: dist/projection.chunk.d.ts#WEB_MERCATOR
 WEB_MERCATOR_MAX_LATITUDE: dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_LATITUDE
 WEB_MERCATOR_MAX_METERS: dist/projection.chunk.d.ts#WEB_MERCATOR_MAX_METERS
 azimuthalEquidistant: dist/projection.chunk.d.ts#azimuthalEquidistant
+conformalProjection: dist/projection.chunk.d.ts#conformalProjection
+fromStatePlane: dist/projection.chunk.d.ts#fromStatePlane
+lambertConformalConic: dist/projection.chunk.d.ts#lambertConformalConic
+statePlaneProjection: dist/projection.chunk.d.ts#statePlaneProjection
+statePlaneZone: dist/projection.chunk.d.ts#statePlaneZone
+toStatePlane: dist/projection.chunk.d.ts#toStatePlane
+transverseMercator: dist/projection.chunk.d.ts#transverseMercator
 
 ## ./shapefile (dist/shapefile.d.ts): names
 
@@ -768,7 +783,7 @@ declare class GeoError extends RangeError {
 }
 
 ### dist/point.chunk.d.ts#GeoErrorCode
-type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route" | "date" | "altitude" | "shapefile";
+type GeoErrorCode = "not-finite" | "latitude-range" | "longitude-range" | "not-a-point" | "geojson-type" | "geojson-member" | "position" | "too-few-positions" | "ring-not-closed" | "too-deep" | "bbox" | "geohash-precision" | "geohash-length" | "geohash-character" | "too-many-cells" | "max-cells" | "radius" | "tolerance" | "vertices" | "vector" | "step" | "travel-mode" | "route" | "date" | "altitude" | "shapefile" | "projection";
 
 ### dist/point.chunk.d.ts#LatLon
 interface LatLon {
@@ -794,11 +809,17 @@ declare function parseLatLon(value: unknown): Result<LatLon, GeoError>;
 ### dist/point.chunk.d.ts#toPosition
 declare function toPosition(point: LatLon): Position;
 
+### dist/projection.chunk.d.ts#ConformalDefinition
+type ConformalDefinition = TransverseMercatorDefinition | LambertConformalConicDefinition;
+
 ### dist/projection.chunk.d.ts#Ellipsoid
 interface Ellipsoid {
   readonly equatorialRadiusMeters: number;
   readonly flattening: number;
 }
+
+### dist/projection.chunk.d.ts#GRS80
+declare const GRS80: Ellipsoid;
 
 ### dist/projection.chunk.d.ts#GeodesicDirect
 interface GeodesicDirect {
@@ -813,11 +834,29 @@ interface GeodesicInverse {
   readonly finalBearing: number;
 }
 
+### dist/projection.chunk.d.ts#LambertConformalConicDefinition
+interface LambertConformalConicDefinition {
+  readonly kind: "lambert-conformal-conic";
+  readonly standardParallel1: number;
+  readonly standardParallel2: number;
+  readonly latitudeOfOrigin: number;
+  readonly centralMeridian: number;
+  readonly falseEasting: number;
+  readonly falseNorthing: number;
+  readonly ellipsoid?: Ellipsoid;
+}
+
+### dist/projection.chunk.d.ts#PLANE_UNIT_METERS
+declare const PLANE_UNIT_METERS: Readonly<Record<PlaneUnit, number>>;
+
 ### dist/projection.chunk.d.ts#PlanePoint
 interface PlanePoint {
   readonly x: number;
   readonly y: number;
 }
+
+### dist/projection.chunk.d.ts#PlaneUnit
+type PlaneUnit = "meter" | "us-survey-foot" | "international-foot";
 
 ### dist/projection.chunk.d.ts#Projection
 interface Projection {
@@ -831,6 +870,30 @@ interface Projection {
 interface ProjectionScale {
   readonly max: number;
   readonly min: number;
+}
+
+### dist/projection.chunk.d.ts#STATE_PLANE_ZONES
+declare const STATE_PLANE_ZONES: readonly StatePlaneZone[];
+
+### dist/projection.chunk.d.ts#StatePlaneZone
+interface StatePlaneZone {
+  readonly fips: string;
+  readonly name: string;
+  readonly state: string;
+  readonly epsg: number;
+  readonly epsgUsFeet: number | null;
+  readonly definition: ConformalDefinition;
+}
+
+### dist/projection.chunk.d.ts#TransverseMercatorDefinition
+interface TransverseMercatorDefinition {
+  readonly kind: "transverse-mercator";
+  readonly latitudeOfOrigin: number;
+  readonly centralMeridian: number;
+  readonly scaleFactor: number;
+  readonly falseEasting: number;
+  readonly falseNorthing: number;
+  readonly ellipsoid?: Ellipsoid;
 }
 
 ### dist/projection.chunk.d.ts#WEB_MERCATOR
@@ -848,11 +911,32 @@ declare const WGS84: Ellipsoid;
 ### dist/projection.chunk.d.ts#azimuthalEquidistant
 declare function azimuthalEquidistant(center: LatLon, ellipsoid?: Ellipsoid): Projection;
 
+### dist/projection.chunk.d.ts#conformalProjection
+declare function conformalProjection(definition: ConformalDefinition): Projection;
+
+### dist/projection.chunk.d.ts#fromStatePlane
+declare function fromStatePlane(zone: StatePlaneZone, point: PlanePoint, unit?: PlaneUnit): LatLon;
+
 ### dist/projection.chunk.d.ts#geodesicDirect
 declare function geodesicDirect(from: LatLon, bearingDegrees: number, meters: number, ellipsoid?: Ellipsoid): GeodesicDirect;
 
 ### dist/projection.chunk.d.ts#geodesicInverse
 declare function geodesicInverse(from: LatLon, to: LatLon, ellipsoid?: Ellipsoid): GeodesicInverse;
+
+### dist/projection.chunk.d.ts#lambertConformalConic
+declare function lambertConformalConic(definition: LambertConformalConicDefinition): Projection;
+
+### dist/projection.chunk.d.ts#statePlaneProjection
+declare function statePlaneProjection(zone: StatePlaneZone): Projection;
+
+### dist/projection.chunk.d.ts#statePlaneZone
+declare function statePlaneZone(fips: string): StatePlaneZone | undefined;
+
+### dist/projection.chunk.d.ts#toStatePlane
+declare function toStatePlane(zone: StatePlaneZone, point: LatLon, unit?: PlaneUnit): PlanePoint;
+
+### dist/projection.chunk.d.ts#transverseMercator
+declare function transverseMercator(definition: TransverseMercatorDefinition): Projection;
 
 ### dist/shapefile.d.ts#DbfField
 export interface DbfField {
