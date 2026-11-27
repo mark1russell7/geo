@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.20
+
+An automated dependency update changes the shipped files, so this PATCH ships them.
+
 ## 0.5.19
 
 - The steps of `simplifyRegionsSteps` count the work of the tests of the topology: each pair of edges in a cell of the grid, and each position of a lobe in each test of a kept position.
