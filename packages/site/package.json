@@ -15,7 +15,7 @@
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",
     "@mark1russell7/geo": "workspace:*",
-    "d3-geo": "3.1.1"
+    "d3-geo": "3.1.2"
   },
   "devDependencies": {
     "@mark1russell7/cue": "^2.0.0",
